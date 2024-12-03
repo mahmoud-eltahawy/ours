@@ -1,4 +1,11 @@
+use std::path::PathBuf;
+
 pub mod app;
+
+#[derive(Debug, Clone)]
+pub struct ServerContext {
+    pub dir_path: PathBuf,
+}
 
 #[cfg(feature = "hydrate")]
 #[wasm_bindgen::prelude::wasm_bindgen]

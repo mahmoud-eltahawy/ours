@@ -4,6 +4,7 @@ use leptos_router::{
     components::{Route, Router, Routes},
     StaticSegment,
 };
+use std::path::PathBuf;
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
@@ -48,15 +49,39 @@ pub fn App() -> impl IntoView {
     }
 }
 
-/// Renders the home page of your application.
-#[island]
+#[server]
+pub async fn get_inner_files() -> Result<Vec<PathBuf>, ServerFnError> {
+    use crate::ServerContext;
+    use std::fs;
+    let context = use_context::<ServerContext>().unwrap();
+
+    let paths = fs::read_dir(&context.dir_path)
+        .unwrap()
+        .map(|x| x.unwrap().path())
+        .collect::<Vec<_>>();
+
+    Ok(paths)
+}
+#[component]
 fn HomePage() -> impl IntoView {
-    // Creates a reactive value to update the button
-    let count = RwSignal::new(0);
-    let on_click = move |_| *count.write() += 1;
+    let paths = Resource::new(|| (), |_| get_inner_files());
+
+    let paths_view = move || {
+        paths.get().and_then(|x| x.ok()).map(|xs| {
+            xs.into_iter()
+                .map(|x| x.to_str().unwrap().to_string())
+                .map(|x| {
+                    view! {
+                        <li>{x}</li>
+                    }
+                })
+                .collect_view()
+        })
+    };
 
     view! {
-        <h1 class="bg-black text-white">"Welcome to Leptos!"</h1>
-        <button on:click=on_click>"Click Me: " {count}</button>
+        <Suspense fallback=|| "">
+            <ol>{paths_view}</ol>
+        </Suspense>
     }
 }
