@@ -1,10 +1,29 @@
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 pub mod app;
 
 #[derive(Debug, Clone)]
 pub struct ServerContext {
-    pub dir_path: PathBuf,
+    pub root: PathBuf,
+}
+
+impl ServerContext {
+    pub fn new(root: PathBuf) -> Self {
+        Self { root }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum UnitKind {
+    Dirctory,
+    File,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Unit {
+    pub name: PathBuf,
+    pub kind: UnitKind,
 }
 
 #[cfg(feature = "hydrate")]

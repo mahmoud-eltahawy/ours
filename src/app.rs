@@ -1,10 +1,10 @@
+use crate::{Unit, UnitKind};
 use leptos::prelude::*;
-use leptos_meta::{provide_meta_context, MetaTags, Stylesheet, Title};
+use leptos_meta::{MetaTags, Stylesheet, Title, provide_meta_context};
 use leptos_router::{
-    components::{Route, Router, Routes},
     StaticSegment,
+    components::{Route, Router, Routes},
 };
-use std::path::PathBuf;
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
@@ -50,15 +50,25 @@ pub fn App() -> impl IntoView {
 }
 
 #[server]
-pub async fn get_inner_files() -> Result<Vec<PathBuf>, ServerFnError> {
-    use crate::ServerContext;
-    use std::fs;
+pub async fn get_inner_files() -> Result<Vec<Unit>, ServerFnError> {
+    use crate::{ServerContext, Unit, UnitKind};
+    use tokio::fs;
     let context = use_context::<ServerContext>().unwrap();
 
-    let paths = fs::read_dir(&context.dir_path)
-        .unwrap()
-        .map(|x| x.unwrap().path())
-        .collect::<Vec<_>>();
+    let mut dir = fs::read_dir(&context.root).await?;
+    let mut paths = Vec::new();
+    while let Some(x) = dir.next_entry().await? {
+        let kind = if x.file_type().await?.is_dir() {
+            UnitKind::Dirctory
+        } else {
+            UnitKind::File
+        };
+        let unit = Unit {
+            kind,
+            name: x.path(),
+        };
+        paths.push(unit);
+    }
 
     Ok(paths)
 }
@@ -69,10 +79,14 @@ fn HomePage() -> impl IntoView {
     let paths_view = move || {
         paths.get().and_then(|x| x.ok()).map(|xs| {
             xs.into_iter()
-                .map(|x| x.to_str().unwrap().to_string())
                 .map(|x| {
+                    let name = x.name.file_name().unwrap().to_str().unwrap().to_string();
+                    let color = match x.kind {
+                        UnitKind::Dirctory => "text-blue",
+                        UnitKind::File => "text-red",
+                    };
                     view! {
-                        <li>{x}</li>
+                        <span class={color}>{name}</span>
                     }
                 })
                 .collect_view()
@@ -81,7 +95,7 @@ fn HomePage() -> impl IntoView {
 
     view! {
         <Suspense fallback=|| "">
-            <ol>{paths_view}</ol>
+            <div class="flex flex-wrap gap-5 m-5 p-5">{paths_view}</div>
         </Suspense>
     }
 }

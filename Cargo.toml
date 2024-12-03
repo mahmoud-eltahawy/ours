@@ -1,7 +1,7 @@
 [package]
 name = "webls"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -20,6 +20,7 @@ wasm-bindgen = "=0.2.96"
 thiserror = "1"
 tracing = { version = "0.1", optional = true }
 http = "1"
+serde = { version = "1.0.215", features = ["derive"] }
 
 [features]
 hydrate = ["leptos/hydrate"]
@@ -70,12 +71,6 @@ site-addr = "127.0.0.1:3000"
 
 # The port to use for automatic reload monitoring
 reload-port = 3001
-
-# [Optional] Command to use when running end2end tests. It will run in the end2end dir.
-#   [Windows] for non-WSL use "npx.cmd playwright test"
-#   This binary name can be checked in Powershell with Get-Command npx
-end2end-cmd = "npx playwright test"
-end2end-dir = "end2end"
 
 #  The browserlist query used for optimizing the CSS.
 browserquery = "defaults"

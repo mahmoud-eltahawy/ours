@@ -10,11 +10,11 @@ async fn main() {
     use webls::app::*;
     use webls::ServerContext;
 
-    let Some(dir_path) = env::args().nth(1).and_then(|x| canonicalize(&x).ok()) else {
+    let Some(root) = env::args().nth(1).and_then(|x| canonicalize(&x).ok()) else {
         panic!("which directory i should target");
     };
 
-    let context = ServerContext { dir_path };
+    let context = ServerContext::new(root);
 
     let conf = get_configuration(None).unwrap();
     let addr = conf.leptos_options.site_addr;
