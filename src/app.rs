@@ -64,8 +64,8 @@ pub async fn get_inner_files() -> Result<Vec<Unit>, ServerFnError> {
             UnitKind::File
         };
         let unit = Unit {
+            path: x.path().strip_prefix(&context.root).unwrap().to_path_buf(),
             kind,
-            name: x.path(),
         };
         paths.push(unit);
     }
@@ -80,13 +80,12 @@ fn HomePage() -> impl IntoView {
         paths.get().and_then(|x| x.ok()).map(|xs| {
             xs.into_iter()
                 .map(|x| {
-                    let name = x.name.file_name().unwrap().to_str().unwrap().to_string();
-                    let color = match x.kind {
-                        UnitKind::Dirctory => "text-blue",
-                        UnitKind::File => "text-red",
-                    };
+                    let path = x.path.to_str().unwrap().to_string();
                     view! {
-                        <span class={color}>{name}</span>
+                        <div class="grid grid-cols-1">
+                            <UnitComp kind={x.kind}/>
+                            <span>{path}</span>
+                        </div>
                     }
                 })
                 .collect_view()
@@ -95,7 +94,18 @@ fn HomePage() -> impl IntoView {
 
     view! {
         <Suspense fallback=|| "">
-            <div class="flex flex-wrap gap-5 m-5 p-5">{paths_view}</div>
+            <section class="flex flex-wrap gap-5 m-5 p-5">{paths_view}</section>
         </Suspense>
+    }
+}
+
+#[component]
+fn UnitComp(kind: UnitKind) -> impl IntoView {
+    let icon_path = match kind {
+        UnitKind::Dirctory => "directory.png",
+        UnitKind::File => "file.png",
+    };
+    view! {
+        <img src={icon_path} width=77/>
     }
 }

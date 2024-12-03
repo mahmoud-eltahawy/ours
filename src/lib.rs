@@ -22,7 +22,7 @@ pub enum UnitKind {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Unit {
-    pub name: PathBuf,
+    pub path: PathBuf,
     pub kind: UnitKind,
 }
 
