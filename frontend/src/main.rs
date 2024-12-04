@@ -1,5 +1,5 @@
 use common::{Unit, UnitKind};
-use leptos::{logging::log, prelude::*};
+use leptos::prelude::*;
 use std::path::PathBuf;
 
 async fn get_inner_files(base: Option<PathBuf>) -> Vec<Unit> {
@@ -44,17 +44,16 @@ fn App() -> impl IntoView {
 fn UnitComp(unit: Unit, base: RwSignal<Option<PathBuf>>) -> impl IntoView {
     let name = unit.name();
     let ondblclick = {
-        // let kind = unit.kind.clone();
-        move || {
-            log!("double clicked")
-            // if let UnitKind::Dirctory = kind {
-            //     *base.write() = Some(unit.path.clone())
-            // }
+        let kind = unit.kind.clone();
+        move |_| {
+            if let UnitKind::Dirctory = kind {
+                *base.write() = Some(unit.path.clone())
+            }
         }
     };
     view! {
         <button
-            ondblclick=ondblclick
+            on:dblclick=ondblclick
             class="grid grid-cols-1 hover:text-white hover:bg-black">
             <UnitIconComp kind={unit.kind}/>
             <span>{name}</span>
