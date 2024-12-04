@@ -22,15 +22,32 @@ fn App() -> impl IntoView {
     let units = LocalResource::new(move || get_inner_files(base.get()));
 
     let units_view = move || {
-        units.get().map(|xs| {
-            xs.iter()
-                .map(|unit| {
-                    view! {
-                        <UnitComp unit={unit.clone()} base/>
+        units
+            .get()
+            .map(|xs| {
+                let xs = xs.iter().collect::<Vec<_>>();
+                let mut result = Vec::with_capacity(xs.len());
+                let mut follows = Vec::new();
+                for x in xs {
+                    match x.kind {
+                        UnitKind::Dirctory => result.push(x.clone()),
+                        UnitKind::File => follows.push(x.clone()),
                     }
-                })
-                .collect_view()
-        })
+                }
+                result.sort_by_key(|x| x.path.file_name().unwrap().to_str().unwrap().to_string());
+                follows.sort_by_key(|x| x.path.file_name().unwrap().to_str().unwrap().to_string());
+                result.extend(follows);
+                result
+            })
+            .map(|xs| {
+                xs.iter()
+                    .map(|unit| {
+                        view! {
+                            <UnitComp unit={unit.clone()} base/>
+                        }
+                    })
+                    .collect_view()
+            })
     };
 
     view! {
