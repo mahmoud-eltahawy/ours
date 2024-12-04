@@ -1,6 +1,6 @@
-use std::path::PathBuf;
+use std::{collections::HashSet, path::PathBuf};
 
-use leptos::{either::Either, logging::log, prelude::*};
+use leptos::{either::Either, prelude::*};
 use leptos_meta::{provide_meta_context, MetaTags, Stylesheet, Title};
 use leptos_router::{
     components::{Route, Router, Routes, A},
@@ -28,16 +28,18 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
     }
 }
 
-// #[component]
-// fn App() -> impl IntoView {
-//     view! {
-//     }
-// }
+type Selected = RwSignal<HashSet<PathBuf>>;
 
 #[component]
 pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
+    let selected: Selected = RwSignal::new(HashSet::new());
+    window_event_listener(leptos::ev::popstate, move |_| {
+        selected.update(|xs| xs.clear());
+    });
+
+    provide_context(selected);
 
     view! {
         // injects a stylesheet into the document <head>
@@ -49,10 +51,17 @@ pub fn App() -> impl IntoView {
 
 
         <Router>
-            <nav>
+            <nav class="flex flex-wrap">
                 <A href="/">
                     <img class="m-5 w-12 hover:w-16" src="home.png"/>
                 </A>
+                <button
+                    on:click=move |_| {
+                        selected.update(|xs| xs.clear());
+                    }
+                >
+                    <img class="m-5 w-12 hover:w-16" src="clear.png"/>
+                </button>
             </nav>
             <main>
                 <Routes fallback=|| "Page not found.".into_view()>
@@ -78,10 +87,6 @@ fn FilesBox() -> impl IntoView {
     };
 
     let units = Resource::new(get_pathbuf, move |x| get_inner_files(x));
-
-    Effect::new(move || {
-        log!("{:#?}", get_pathbuf());
-    });
 
     let units_view = move || {
         units.get().map(|xs| {
@@ -136,45 +141,55 @@ fn path_as_query(mut path: PathBuf) -> String {
 fn UnitComp(unit: Unit) -> impl IntoView {
     let navigate = use_navigate();
     let name = unit.name();
+    let selected = use_context::<Selected>().unwrap();
+
     let ondblclick = {
-        let kind = unit.kind.clone();
+        let unit = unit.clone();
         move |_| {
-            if let UnitKind::Dirctory = kind {
+            selected.update(|xs| xs.clear());
+            if let UnitKind::Dirctory = unit.kind {
                 navigate(&path_as_query(unit.path.clone()), Default::default());
             }
         }
     };
+    let onclick = {
+        let path = unit.path.clone();
+        move |_| {
+            selected.update(|xs| {
+                if !xs.insert(path.clone()) {
+                    xs.remove(&path);
+                };
+            })
+        }
+    };
+
     view! {
         <button
             on:dblclick=ondblclick
-            class="grid grid-cols-1 hover:text-white hover:bg-black">
-            <UnitIconComp kind={unit.kind}/>
+            on:click=onclick
+            class="grid grid-cols-1 hover:text-white hover:bg-black"
+        >
+            <UnitIconComp unit={unit}/>
             <span>{name}</span>
         </button>
     }
 }
 
 #[component]
-fn UnitIconComp(kind: UnitKind) -> impl IntoView {
-    let icon_path = match kind {
+fn UnitIconComp(unit: Unit) -> impl IntoView {
+    let selected = use_context::<Selected>().unwrap();
+    let is_selected = Memo::new({
+        let path = unit.path.clone();
+        move |_| selected.read().contains(&path)
+    });
+    let icon_path = move || match unit.kind {
+        UnitKind::Dirctory if is_selected.get() => "dark_directory.png",
+        UnitKind::File if is_selected.get() => "dark_file.png",
         UnitKind::Dirctory => "directory.png",
         UnitKind::File => "file.png",
     };
     view! {
         <img src={icon_path} width=77/>
-    }
-}
-
-/// Renders the home page of your application.
-#[component]
-fn HomePage() -> impl IntoView {
-    // Creates a reactive value to update the button
-    let count = RwSignal::new(0);
-    let on_click = move |_| *count.write() += 1;
-
-    view! {
-        <h1>"Welcome to Leptos!"</h1>
-        <button on:click=on_click>"Click Me: " {count}</button>
     }
 }
 
