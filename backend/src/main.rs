@@ -31,12 +31,10 @@ async fn main() {
 
 pub async fn get_inner_files(
     context: State<ServerContext>,
-    base: Json<Option<PathBuf>>,
+    base: Json<PathBuf>,
 ) -> Json<Vec<Unit>> {
-    let root = base
-        .0
-        .map(|x| context.root.join(x))
-        .unwrap_or(context.root.clone());
+    println!("the path : {:#?} \n\n\n", base);
+    let root = context.root.join(base.0);
     let mut dir = fs::read_dir(&root).await.unwrap();
     let mut paths = Vec::new();
     while let Some(x) = dir.next_entry().await.unwrap() {

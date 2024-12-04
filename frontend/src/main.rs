@@ -1,8 +1,13 @@
 use common::{Unit, UnitKind};
-use leptos::prelude::*;
-use std::path::PathBuf;
+use leptos::{logging::log, prelude::*};
+use leptos_router::{
+    components::{Route, Router, Routes, A},
+    hooks::{use_navigate, use_params_map, use_query_map},
+    path,
+};
+use std::{path::PathBuf, str::FromStr};
 
-async fn get_inner_files(base: Option<PathBuf>) -> Vec<Unit> {
+async fn get_inner_files(base: PathBuf) -> Vec<Unit> {
     let client = reqwest::Client::new();
 
     client
@@ -18,8 +23,40 @@ async fn get_inner_files(base: Option<PathBuf>) -> Vec<Unit> {
 
 #[component]
 fn App() -> impl IntoView {
-    let base = RwSignal::new(None);
-    let units = LocalResource::new(move || get_inner_files(base.get()));
+    view! {
+        <Router>
+            <nav>
+                <A href="/">"Home"</A>
+                <button on:click=move |_| {
+                    //back function
+                }>"back"</button>
+            </nav>
+            <main>
+                <Routes fallback=|| "not found">
+                    <Route path={path!("/")} view=FilesBox/>
+                </Routes>
+            </main>
+        </Router>
+    }
+}
+
+#[component]
+fn FilesBox() -> impl IntoView {
+    let query = use_query_map();
+    let get_pathbuf = move || {
+        let mut i = 0;
+        let mut result = PathBuf::new();
+        while let Some(x) = query.get().get(&i.to_string()) {
+            result.push(x);
+            i += 1;
+        }
+        result
+    };
+    let units = LocalResource::new(move || get_inner_files(get_pathbuf()));
+
+    Effect::new(move || {
+        log!("{:#?}", get_pathbuf());
+    });
 
     let units_view = move || {
         units
@@ -43,7 +80,7 @@ fn App() -> impl IntoView {
                 xs.iter()
                     .map(|unit| {
                         view! {
-                            <UnitComp unit={unit.clone()} base/>
+                            <UnitComp unit={unit.clone()}/>
                         }
                     })
                     .collect_view()
@@ -57,14 +94,29 @@ fn App() -> impl IntoView {
     }
 }
 
+fn path_as_query(mut path: PathBuf) -> String {
+    let mut list = Vec::new();
+    while let Some(x) = path.file_name() {
+        list.push(x.to_str().unwrap().to_string());
+        path.pop();
+    }
+    //
+    let mut result = Vec::new();
+    for (i, x) in list.into_iter().rev().enumerate() {
+        result.push(format!("{i}={x}"));
+    }
+    format!("/?{}", result.join("&&"))
+}
+
 #[component]
-fn UnitComp(unit: Unit, base: RwSignal<Option<PathBuf>>) -> impl IntoView {
+fn UnitComp(unit: Unit) -> impl IntoView {
+    let navigate = use_navigate();
     let name = unit.name();
     let ondblclick = {
         let kind = unit.kind.clone();
         move |_| {
             if let UnitKind::Dirctory = kind {
-                *base.write() = Some(unit.path.clone())
+                navigate(&path_as_query(unit.path.clone()), Default::default());
             }
         }
     };
@@ -90,5 +142,5 @@ fn UnitIconComp(kind: UnitKind) -> impl IntoView {
 }
 
 fn main() {
-    mount_to_body(|| view! { <App/> });
+    mount_to_body(App);
 }
