@@ -2,10 +2,10 @@ use common::{Unit, UnitKind};
 use leptos::{logging::log, prelude::*};
 use leptos_router::{
     components::{Route, Router, Routes, A},
-    hooks::{use_navigate, use_params_map, use_query_map},
+    hooks::{use_navigate, use_query_map},
     path,
 };
-use std::{path::PathBuf, str::FromStr};
+use std::path::PathBuf;
 
 async fn get_inner_files(base: PathBuf) -> Vec<Unit> {
     let client = reqwest::Client::new();
@@ -26,13 +26,12 @@ fn App() -> impl IntoView {
     view! {
         <Router>
             <nav>
-                <A href="/">"Home"</A>
-                <button on:click=move |_| {
-                    //back function
-                }>"back"</button>
+                <A href="/">
+                    <img class="m-5 w-12 hover:w-16" src="public/home.png"/>
+                </A>
             </nav>
             <main>
-                <Routes fallback=|| "not found">
+                <Routes fallback=|| "something went wrong">
                     <Route path={path!("/")} view=FilesBox/>
                 </Routes>
             </main>
@@ -44,14 +43,16 @@ fn App() -> impl IntoView {
 fn FilesBox() -> impl IntoView {
     let query = use_query_map();
     let get_pathbuf = move || {
+        let queries = query.get();
         let mut i = 0;
         let mut result = PathBuf::new();
-        while let Some(x) = query.get().get(&i.to_string()) {
+        while let Some(x) = queries.get(&i.to_string()) {
             result.push(x);
             i += 1;
         }
         result
     };
+
     let units = LocalResource::new(move || get_inner_files(get_pathbuf()));
 
     Effect::new(move || {
@@ -59,32 +60,26 @@ fn FilesBox() -> impl IntoView {
     });
 
     let units_view = move || {
-        units
-            .get()
-            .map(|xs| {
-                let xs = xs.iter().collect::<Vec<_>>();
-                let mut result = Vec::with_capacity(xs.len());
-                let mut follows = Vec::new();
-                for x in xs {
-                    match x.kind {
-                        UnitKind::Dirctory => result.push(x.clone()),
-                        UnitKind::File => follows.push(x.clone()),
-                    }
+        units.get().map(|xs| {
+            let mut all = Vec::with_capacity(xs.len());
+            let mut files = Vec::new();
+            for x in xs.iter() {
+                match x.kind {
+                    UnitKind::Dirctory => all.push(x.clone()),
+                    UnitKind::File => files.push(x.clone()),
                 }
-                result.sort_by_key(|x| x.path.file_name().unwrap().to_str().unwrap().to_string());
-                follows.sort_by_key(|x| x.path.file_name().unwrap().to_str().unwrap().to_string());
-                result.extend(follows);
-                result
-            })
-            .map(|xs| {
-                xs.iter()
-                    .map(|unit| {
-                        view! {
-                            <UnitComp unit={unit.clone()}/>
-                        }
-                    })
-                    .collect_view()
-            })
+            }
+            all.sort_by_key(|x| x.path.file_name().unwrap().to_str().unwrap().to_string());
+            files.sort_by_key(|x| x.path.file_name().unwrap().to_str().unwrap().to_string());
+            all.into_iter()
+                .chain(files)
+                .map(|unit| {
+                    view! {
+                        <UnitComp unit={unit.clone()}/>
+                    }
+                })
+                .collect_view()
+        })
     };
 
     view! {

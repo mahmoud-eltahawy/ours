@@ -33,7 +33,6 @@ pub async fn get_inner_files(
     context: State<ServerContext>,
     base: Json<PathBuf>,
 ) -> Json<Vec<Unit>> {
-    println!("the path : {:#?} \n\n\n", base);
     let root = context.root.join(base.0);
     let mut dir = fs::read_dir(&root).await.unwrap();
     let mut paths = Vec::new();
