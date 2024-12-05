@@ -23,11 +23,14 @@ fn Clear() -> impl IntoView {
         selected.update(|xs| xs.clear());
     };
 
+    let is_active = move || !selected.read().is_empty();
+
     view! {
         <button
+            disabled={move || !is_active()}
             on:click=on_click
         >
-            <Icon active={move || !selected.get().is_empty()} name="clear.png"/>
+            <Icon active={is_active} name="clear.png"/>
         </button>
     }
 }
@@ -39,11 +42,14 @@ fn Delete() -> impl IntoView {
         selected.update(|xs| xs.clear());
     };
 
+    let is_active = move || !selected.read().is_empty();
+
     view! {
         <button
+            disabled={move || !is_active()}
             on:click=on_click
         >
-            <Icon active={move || !selected.get().is_empty()} name="delete.png"/>
+            <Icon active={is_active} name="delete.png"/>
         </button>
     }
 }
@@ -54,12 +60,14 @@ fn Download() -> impl IntoView {
     let on_click = move |_| {
         selected.update(|xs| xs.clear());
     };
+    let is_active = move || !selected.read().is_empty();
 
     view! {
         <button
+            disabled={move || !is_active()}
             on:click=on_click
         >
-            <Icon active={move || !selected.get().is_empty()} name="download.png"/>
+            <Icon active={is_active} name="download.png"/>
         </button>
     }
 }
