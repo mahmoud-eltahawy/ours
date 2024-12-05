@@ -58,8 +58,8 @@ pub fn FilesBox() -> impl IntoView {
                     UnitKind::File => files.push(x.clone()),
                 }
             }
-            all.sort_by_key(|x| x.path.file_name().unwrap().to_str().unwrap().to_string());
-            files.sort_by_key(|x| x.path.file_name().unwrap().to_str().unwrap().to_string());
+            all.sort_by_key(|x| x.name());
+            files.sort_by_key(|x| x.name());
             Either::Right(
                 all.into_iter()
                     .chain(files)
@@ -139,11 +139,29 @@ fn UnitIconComp(unit: Unit) -> impl IntoView {
         let unit = unit.clone();
         move |_| selected.read().contains(&unit)
     });
-    let icon_name = move || match unit.kind {
-        UnitKind::Dirctory => "directory.png",
-        UnitKind::File => "file.png",
+    let icon_name = {
+        let kind = unit.kind.clone();
+        move || match kind {
+            UnitKind::Dirctory => "directory.png",
+            UnitKind::File => "file.png",
+        }
     };
+
     view! {
+        {
+            if unit.kind == UnitKind::File {
+                Either::Right(
+                view!{
+                    <a
+                        id={unit.name()}
+                        href={format!("/download/{}", unit.path.to_str().unwrap().to_string())}
+                        download={unit.name()}
+                        hidden></a>
+                })
+            } else {
+                Either::Left(())
+            }
+        }
         <Icon name={icon_name()} active={move || !is_selected.get()} />
     }
 }
