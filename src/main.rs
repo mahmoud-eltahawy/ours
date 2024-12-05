@@ -7,6 +7,7 @@ async fn main() {
     use leptos_axum::{generate_route_list, LeptosRoutes};
     use std::env::var;
     use std::fs::canonicalize;
+    use tower_http::services::ServeDir;
     use webls::app::*;
     use webls::ServerContext;
 
@@ -15,15 +16,17 @@ async fn main() {
     let leptos_options = conf.leptos_options;
     // Generate the list of routes in your Leptos App
     let routes = generate_route_list(App);
+    let webls_root = var("WEBLS_ROOT").unwrap();
+    let root = canonicalize(&webls_root).unwrap();
+
+    let serve_dir = ServeDir::new(root.clone());
 
     let app = Router::new()
         .leptos_routes_with_context(
             &leptos_options,
             routes,
             move || {
-                let webls_root = var("WEBLS_ROOT").unwrap();
-                let root = canonicalize(&webls_root).unwrap();
-                let context = ServerContext::new(root);
+                let context = ServerContext::new(root.clone());
                 provide_context(context);
             },
             {
@@ -32,10 +35,9 @@ async fn main() {
             },
         )
         .fallback(leptos_axum::file_and_error_handler(shell))
-        .with_state(leptos_options);
+        .with_state(leptos_options)
+        .fallback_service(serve_dir);
 
-    // run our app with hyper
-    // `axum::Server` is a re-export of `hyper::Server`
     log!("listening on http://{}", &addr);
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     axum::serve(listener, app.into_make_service())
@@ -44,8 +46,4 @@ async fn main() {
 }
 
 #[cfg(not(feature = "ssr"))]
-pub fn main() {
-    // no client-side main function
-    // unless we want this to work with e.g., Trunk for pure client-side testing
-    // see lib.rs for hydration function instead
-}
+pub fn main() {}
