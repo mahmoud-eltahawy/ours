@@ -1,6 +1,6 @@
 #!/usr/bin/env nu
 
-const webls_root = '/home/eltahawy/';
+const webls_root = '/home/eltahawy';
 
 def "main dev" [] {
   load-env {

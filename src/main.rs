@@ -36,7 +36,7 @@ async fn main() {
         )
         .fallback(leptos_axum::file_and_error_handler(shell))
         .with_state(leptos_options)
-        .fallback_service(serve_dir);
+        .nest_service("/download", serve_dir);
 
     log!("listening on http://{}", &addr);
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
