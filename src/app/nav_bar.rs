@@ -9,22 +9,57 @@ pub fn NavBar() -> impl IntoView {
             <A href="/">
                 <Icon name="home.png" active={|| true}/>
             </A>
-            <ClearButton/>
+            <Clear/>
+            <Download/>
+            <Delete/>
         </nav>
     }
 }
 
 #[component]
-fn ClearButton() -> impl IntoView {
+fn Clear() -> impl IntoView {
     let selected = use_context::<Selected>().unwrap();
+    let on_click = move |_| {
+        selected.update(|xs| xs.clear());
+    };
 
     view! {
         <button
-            on:click=move |_| {
-                selected.update(|xs| xs.clear());
-            }
+            on:click=on_click
         >
             <Icon active={move || !selected.get().is_empty()} name="clear.png"/>
+        </button>
+    }
+}
+
+#[component]
+fn Delete() -> impl IntoView {
+    let selected = use_context::<Selected>().unwrap();
+    let on_click = move |_| {
+        selected.update(|xs| xs.clear());
+    };
+
+    view! {
+        <button
+            on:click=on_click
+        >
+            <Icon active={move || !selected.get().is_empty()} name="delete.png"/>
+        </button>
+    }
+}
+
+#[component]
+fn Download() -> impl IntoView {
+    let selected = use_context::<Selected>().unwrap();
+    let on_click = move |_| {
+        selected.update(|xs| xs.clear());
+    };
+
+    view! {
+        <button
+            on:click=on_click
+        >
+            <Icon active={move || !selected.get().is_empty()} name="download.png"/>
         </button>
     }
 }
