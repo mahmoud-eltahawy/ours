@@ -14,13 +14,13 @@ impl ServerContext {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum UnitKind {
     Dirctory,
     File,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct Unit {
     pub path: PathBuf,
     pub kind: UnitKind,

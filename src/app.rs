@@ -6,7 +6,9 @@ use leptos_router::{
     StaticSegment,
 };
 use nav_bar::NavBar;
-use std::{collections::HashSet, path::PathBuf};
+use std::collections::HashSet;
+
+use crate::Unit;
 
 mod atoms;
 mod files_box;
@@ -30,7 +32,7 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
     }
 }
 
-type Selected = RwSignal<HashSet<PathBuf>>;
+type Selected = RwSignal<HashSet<Unit>>;
 
 #[component]
 pub fn App() -> impl IntoView {

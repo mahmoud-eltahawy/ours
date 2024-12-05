@@ -1,3 +1,5 @@
+use crate::UnitKind;
+
 use super::{atoms::Icon, Selected};
 use leptos::prelude::*;
 use leptos_router::components::A;
@@ -60,7 +62,10 @@ fn Download() -> impl IntoView {
     let on_click = move |_| {
         selected.update(|xs| xs.clear());
     };
-    let is_active = move || !selected.read().is_empty();
+    let is_active = move || {
+        let list = selected.read();
+        !list.is_empty() && !list.iter().any(|x| matches!(x.kind, UnitKind::Dirctory))
+    };
 
     view! {
         <button

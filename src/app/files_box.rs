@@ -110,11 +110,11 @@ fn UnitComp(unit: Unit) -> impl IntoView {
         }
     };
     let onclick = {
-        let path = unit.path.clone();
+        let unit = unit.clone();
         move |_| {
             selected.update(|xs| {
-                if !xs.insert(path.clone()) {
-                    xs.remove(&path);
+                if !xs.insert(unit.clone()) {
+                    xs.remove(&unit);
                 };
             })
         }
@@ -136,8 +136,8 @@ fn UnitComp(unit: Unit) -> impl IntoView {
 fn UnitIconComp(unit: Unit) -> impl IntoView {
     let selected = use_context::<Selected>().unwrap();
     let is_selected = Memo::new({
-        let path = unit.path.clone();
-        move |_| selected.read().contains(&path)
+        let unit = unit.clone();
+        move |_| selected.read().contains(&unit)
     });
     let icon_name = move || match unit.kind {
         UnitKind::Dirctory => "directory.png",
