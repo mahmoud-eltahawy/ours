@@ -5,16 +5,10 @@ async fn main() {
     use leptos::logging::log;
     use leptos::prelude::*;
     use leptos_axum::{generate_route_list, LeptosRoutes};
-    use std::env;
+    use std::env::var;
     use std::fs::canonicalize;
     use webls::app::*;
     use webls::ServerContext;
-
-    let Some(root) = env::args().nth(1).and_then(|x| canonicalize(&x).ok()) else {
-        panic!("which directory i should target");
-    };
-
-    let context = ServerContext::new(root);
 
     let conf = get_configuration(None).unwrap();
     let addr = conf.leptos_options.site_addr;
@@ -27,7 +21,10 @@ async fn main() {
             &leptos_options,
             routes,
             move || {
-                provide_context(context.clone());
+                let webls_root = var("WEBLS_ROOT").unwrap();
+                let root = canonicalize(&webls_root).unwrap();
+                let context = ServerContext::new(root);
+                provide_context(context);
             },
             {
                 let leptos_options = leptos_options.clone();
