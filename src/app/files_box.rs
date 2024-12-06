@@ -1,12 +1,12 @@
 use std::path::PathBuf;
 
-use super::{atoms::Icon, Selected};
-use crate::{Unit, UnitKind};
+use super::{atoms::Icon, CurrentPath, Selected};
+use crate::{app::LsResult, Unit, UnitKind};
 use leptos::{either::Either, prelude::*};
 use leptos_router::hooks::{use_navigate, use_query_map};
 
 #[server]
-async fn ls(base: PathBuf) -> Result<Vec<Unit>, ServerFnError> {
+pub async fn ls(base: PathBuf) -> Result<Vec<Unit>, ServerFnError> {
     use crate::{ServerContext, Unit, UnitKind};
     use tokio::fs;
     let context = use_context::<ServerContext>().unwrap();
@@ -30,9 +30,11 @@ async fn ls(base: PathBuf) -> Result<Vec<Unit>, ServerFnError> {
 }
 
 #[component]
-pub fn FilesBox() -> impl IntoView {
+pub fn FilesBox(current_path: CurrentPath) -> impl IntoView {
     let query = use_query_map();
-    let get_pathbuf = move || {
+    let units = use_context::<LsResult>().unwrap();
+
+    Effect::new(move || {
         let queries = query.get();
         let mut i = 0;
         let mut result = PathBuf::new();
@@ -40,10 +42,8 @@ pub fn FilesBox() -> impl IntoView {
             result.push(x);
             i += 1;
         }
-        result
-    };
-
-    let units = Resource::new(get_pathbuf, move |x| ls(x));
+        current_path.set(result);
+    });
 
     let units_view = move || {
         units.get().map(|xs| {

@@ -1,4 +1,4 @@
-use files_box::FilesBox;
+use files_box::{ls, FilesBox};
 use leptos::prelude::*;
 use leptos_meta::{provide_meta_context, MetaTags, Stylesheet, Title};
 use leptos_router::{
@@ -6,7 +6,7 @@ use leptos_router::{
     StaticSegment,
 };
 use nav_bar::NavBar;
-use std::collections::HashSet;
+use std::{collections::HashSet, path::PathBuf};
 
 use crate::Unit;
 
@@ -33,17 +33,23 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
 }
 
 type Selected = RwSignal<HashSet<Unit>>;
+type LsResult = Resource<std::result::Result<Vec<Unit>, ServerFnError>>;
+type CurrentPath = RwSignal<PathBuf>;
 
 #[component]
 pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
-    provide_meta_context();
     let selected: Selected = RwSignal::new(HashSet::new());
+    let current_path: CurrentPath = RwSignal::new(PathBuf::new());
+    let units: LsResult = Resource::new(move || current_path.get(), move |x| ls(x));
+
     window_event_listener(leptos::ev::popstate, move |_| {
         selected.update(|xs| xs.clear());
     });
 
+    provide_meta_context();
     provide_context(selected);
+    provide_context(units);
 
     view! {
         // injects a stylesheet into the document <head>
@@ -55,10 +61,10 @@ pub fn App() -> impl IntoView {
 
 
         <Router>
-            <NavBar/>
+            <NavBar current_path/>
             <main>
                 <Routes fallback=|| "Page not found.".into_view()>
-                    <Route path=StaticSegment("") view=FilesBox/>
+                    <Route path=StaticSegment("") view={move ||view! {<FilesBox current_path/>}}/>
                 </Routes>
             </main>
         </Router>

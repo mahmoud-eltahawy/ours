@@ -1,16 +1,17 @@
 use crate::UnitKind;
 
-use super::{atoms::Icon, Selected};
+use super::{atoms::Icon, CurrentPath, Selected};
 use leptos::{logging::log, prelude::*, tachys::dom::document};
 use leptos_router::components::A;
 use wasm_bindgen::JsCast;
 
 #[component]
-pub fn NavBar() -> impl IntoView {
+pub fn NavBar(current_path: CurrentPath) -> impl IntoView {
+    let is_active = move || current_path.read().file_name().is_some();
     view! {
         <nav class="flex flex-wrap">
-            <A href="/">
-                <Icon name="home.png" active={|| true}/>
+            <A href="/" class:disabled={move || !is_active()}>
+                <Icon name="home.png" active={is_active}/>
             </A>
             <Clear/>
             <Download/>
