@@ -104,8 +104,16 @@ fn UnitComp(unit: Unit) -> impl IntoView {
         let unit = unit.clone();
         move |_| {
             selected.update(|xs| xs.clear());
-            if let UnitKind::Dirctory = unit.kind {
-                navigate(&path_as_query(unit.path.clone()), Default::default());
+            match unit.kind {
+                UnitKind::Dirctory => {
+                    navigate(&path_as_query(unit.path.clone()), Default::default());
+                }
+                UnitKind::File => {
+                    unit.click_anchor();
+                    selected.update(|xs| {
+                        xs.remove(&unit);
+                    });
+                }
             }
         }
     };
@@ -154,7 +162,7 @@ fn UnitIconComp(unit: Unit) -> impl IntoView {
                 view!{
                     <a
                         id={unit.name()}
-                        href={format!("/download/{}", unit.path.to_str().unwrap().to_string())}
+                        href={format!("/download/{}", unit.path.to_str().unwrap())}
                         download={unit.name()}
                         hidden></a>
                 })

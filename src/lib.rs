@@ -1,5 +1,7 @@
+use leptos::prelude::document;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use wasm_bindgen::JsCast;
 
 pub mod app;
 
@@ -29,6 +31,14 @@ pub struct Unit {
 impl Unit {
     pub fn name(&self) -> String {
         self.path.file_name().unwrap().to_str().unwrap().to_string()
+    }
+
+    pub fn click_anchor(&self) {
+        document()
+            .get_element_by_id(&self.name())
+            .unwrap()
+            .unchecked_into::<web_sys::HtmlAnchorElement>()
+            .click();
     }
 }
 

@@ -1,9 +1,8 @@
 use crate::UnitKind;
 
 use super::{atoms::Icon, CurrentPath, Selected};
-use leptos::{logging::log, prelude::*, tachys::dom::document};
+use leptos::prelude::*;
 use leptos_router::components::A;
-use wasm_bindgen::JsCast;
 
 #[component]
 pub fn NavBar(current_path: CurrentPath) -> impl IntoView {
@@ -62,15 +61,9 @@ fn Delete() -> impl IntoView {
 fn Download() -> impl IntoView {
     let selected = use_context::<Selected>().unwrap();
     let on_click = move |_| {
-        log!("begin");
-        for unit in selected.read_untracked().iter() {
-            document()
-                .get_element_by_id(&unit.name())
-                .unwrap()
-                .unchecked_into::<web_sys::HtmlAnchorElement>()
-                .click();
+        for unit in selected.get_untracked().iter() {
+            unit.click_anchor();
         }
-        log!("end"); //FIX : throws error here
 
         selected.write().clear();
     };
