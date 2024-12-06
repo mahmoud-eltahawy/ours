@@ -1,7 +1,9 @@
-use crate::UnitKind;
+use std::path::PathBuf;
+
+use crate::{app::LsResult, UnitKind};
 
 use super::{atoms::Icon, CurrentPath, Selected};
-use leptos::prelude::*;
+use leptos::{logging::log, prelude::*, task::spawn_local};
 use leptos_router::components::A;
 
 #[component]
@@ -38,14 +40,45 @@ fn Clear() -> impl IntoView {
     }
 }
 
+#[server]
+pub async fn rm(bases: Vec<PathBuf>) -> Result<(), ServerFnError> {
+    use crate::ServerContext;
+    use tokio::fs::remove_file;
+    let context = use_context::<ServerContext>().unwrap();
+    for base in bases.into_iter().map(|x| context.root.join(x)) {
+        remove_file(base).await?;
+    }
+
+    Ok(())
+}
+
 #[component]
 fn Delete() -> impl IntoView {
     let selected = use_context::<Selected>().unwrap();
+    let ls_result = use_context::<LsResult>().unwrap();
     let on_click = move |_| {
-        selected.update(|xs| xs.clear());
+        spawn_local(async move {
+            let result = rm(selected
+                .read_untracked()
+                .iter()
+                .map(|x| x.path.clone())
+                .collect())
+            .await;
+            match result {
+                Ok(_) => {
+                    selected.update(|xs| xs.clear());
+                    ls_result.refetch();
+                }
+                Err(e) => log!("Error : {:#?}", e),
+            }
+            //
+        });
     };
 
-    let is_active = move || !selected.read().is_empty();
+    let is_active = move || {
+        let list = selected.read();
+        !list.is_empty() && !list.iter().any(|x| matches!(x.kind, UnitKind::Dirctory))
+    };
 
     view! {
         <button
