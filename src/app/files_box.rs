@@ -46,7 +46,7 @@ pub fn FilesBox(current_path: CurrentPath) -> impl IntoView {
     });
 
     let ls_result_view = move || {
-        ls_result.get().map(|x| x.ok()).flatten().map(|xs| {
+        ls_result.get().and_then(|x| x.ok()).map(|xs| {
             let mut all = Vec::with_capacity(xs.len());
             let mut files = Vec::new();
             for x in xs.iter() {
@@ -81,18 +81,19 @@ fn path_as_query(mut path: PathBuf) -> String {
         list.push(x.to_str().unwrap().to_string());
         path.pop();
     }
-    //
-    let mut result = Vec::new();
-    for (i, x) in list.into_iter().rev().enumerate() {
-        result.push(format!("{i}={x}"));
-    }
-    format!("/?{}", result.join("&&"))
+    let result = list
+        .into_iter()
+        .rev()
+        .enumerate()
+        .map(|(i, x)| format!("{i}={x}"))
+        .collect::<Vec<_>>()
+        .join("&&");
+    format!("/?{}", result)
 }
 
 #[component]
 fn UnitComp(unit: Unit) -> impl IntoView {
     let navigate = use_navigate();
-    let name = unit.name();
     let selected = use_context::<Selected>().unwrap();
 
     let ondblclick = {
@@ -123,11 +124,12 @@ fn UnitComp(unit: Unit) -> impl IntoView {
         }
     };
 
+    let name = unit.name();
     view! {
         <button
             on:dblclick=ondblclick
             on:click=onclick
-            class="grid grid-cols-1 hover:text-white hover:bg-black"
+            class="grid grid-cols-1 hover:text-white hover:bg-black justify-items-center"
         >
             <UnitIcon unit={unit}/>
             <span>{name}</span>

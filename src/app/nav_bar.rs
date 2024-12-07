@@ -25,7 +25,7 @@ pub fn NavBar(current_path: CurrentPath) -> impl IntoView {
 fn Clear() -> impl IntoView {
     let selected = use_context::<Selected>().unwrap();
     let on_click = move |_| {
-        selected.update(|xs| xs.clear());
+        selected.write().clear();
     };
 
     let is_active = move || !selected.read().is_empty();
@@ -66,12 +66,11 @@ fn Delete() -> impl IntoView {
             .await;
             match result {
                 Ok(_) => {
-                    selected.update(|xs| xs.clear());
+                    selected.write().clear();
                     ls_result.refetch();
                 }
                 Err(e) => log!("Error : {:#?}", e),
             }
-            //
         });
     };
 
