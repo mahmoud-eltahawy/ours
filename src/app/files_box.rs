@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use super::{atoms::Icon, CurrentPath, Selected};
 use crate::{app::LsResult, Unit, UnitKind};
-use leptos::{either::Either, prelude::*};
+use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_query_map};
 
 #[server]
@@ -32,7 +32,7 @@ pub async fn ls(base: PathBuf) -> Result<Vec<Unit>, ServerFnError> {
 #[component]
 pub fn FilesBox(current_path: CurrentPath) -> impl IntoView {
     let query = use_query_map();
-    let units = use_context::<LsResult>().unwrap();
+    let ls_result = use_context::<LsResult>().unwrap();
 
     Effect::new(move || {
         let queries = query.get();
@@ -45,11 +45,8 @@ pub fn FilesBox(current_path: CurrentPath) -> impl IntoView {
         current_path.set(result);
     });
 
-    let units_view = move || {
-        units.get().map(|xs| {
-            let Ok(xs) = xs else {
-                return Either::Left(());
-            };
+    let ls_result_view = move || {
+        ls_result.get().map(|x| x.ok()).flatten().map(|xs| {
             let mut all = Vec::with_capacity(xs.len());
             let mut files = Vec::new();
             for x in xs.iter() {
@@ -60,22 +57,20 @@ pub fn FilesBox(current_path: CurrentPath) -> impl IntoView {
             }
             all.sort_by_key(|x| x.name());
             files.sort_by_key(|x| x.name());
-            Either::Right(
-                all.into_iter()
-                    .chain(files)
-                    .map(|unit| {
-                        view! {
-                            <UnitComp unit={unit.clone()}/>
-                        }
-                    })
-                    .collect_view(),
-            )
+            all.into_iter()
+                .chain(files)
+                .map(|unit| {
+                    view! {
+                        <UnitComp unit={unit.clone()}/>
+                    }
+                })
+                .collect_view()
         })
     };
 
     view! {
         <Suspense fallback=|| "">
-            <section class="flex flex-wrap gap-5 m-5 p-5">{units_view}</section>
+            <section class="flex flex-wrap gap-5 m-5 p-5">{ls_result_view}</section>
         </Suspense>
     }
 }
@@ -134,42 +129,30 @@ fn UnitComp(unit: Unit) -> impl IntoView {
             on:click=onclick
             class="grid grid-cols-1 hover:text-white hover:bg-black"
         >
-            <UnitIconComp unit={unit}/>
+            <UnitIcon unit={unit}/>
             <span>{name}</span>
         </button>
     }
 }
 
 #[component]
-fn UnitIconComp(unit: Unit) -> impl IntoView {
+fn UnitIcon(unit: Unit) -> impl IntoView {
     let selected = use_context::<Selected>().unwrap();
-    let is_selected = Memo::new({
-        let unit = unit.clone();
-        move |_| selected.read().contains(&unit)
-    });
-    let icon_name = {
-        let kind = unit.kind.clone();
-        move || match kind {
-            UnitKind::Dirctory => "directory.png",
-            UnitKind::File => "file.png",
-        }
+    let name = match unit.kind {
+        UnitKind::Dirctory => "directory.png",
+        UnitKind::File => "file.png",
     };
 
+    let download_link = matches!(unit.kind, UnitKind::File).then_some(view! {
+        <a
+            id={unit.name()}
+            download={unit.name()}
+            href={format!("/download/{}", unit.path.to_str().unwrap())}
+            hidden></a>
+    });
+
     view! {
-        {
-            if unit.kind == UnitKind::File {
-                Either::Right(
-                view!{
-                    <a
-                        id={unit.name()}
-                        href={format!("/download/{}", unit.path.to_str().unwrap())}
-                        download={unit.name()}
-                        hidden></a>
-                })
-            } else {
-                Either::Left(())
-            }
-        }
-        <Icon name={icon_name()} active={move || !is_selected.get()} />
+        <Icon name active={move || !selected.read().contains(&unit)} />
+        {download_link}
     }
 }

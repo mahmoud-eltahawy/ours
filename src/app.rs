@@ -41,7 +41,7 @@ pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     let selected: Selected = RwSignal::new(HashSet::new());
     let current_path: CurrentPath = RwSignal::new(PathBuf::new());
-    let units: LsResult = Resource::new(move || current_path.get(), ls);
+    let ls_result: LsResult = Resource::new(move || current_path.get(), ls);
 
     window_event_listener(leptos::ev::popstate, move |_| {
         selected.update(|xs| xs.clear());
@@ -49,7 +49,7 @@ pub fn App() -> impl IntoView {
 
     provide_meta_context();
     provide_context(selected);
-    provide_context(units);
+    provide_context(ls_result);
 
     view! {
         // injects a stylesheet into the document <head>
