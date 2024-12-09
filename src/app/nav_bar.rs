@@ -3,9 +3,11 @@ use std::path::PathBuf;
 use crate::{app::LsResult, UnitKind};
 
 use super::{atoms::Icon, CurrentPath, Selected};
-use leptos::{logging::log, prelude::*, task::spawn_local};
+use leptos::{html, logging::log, prelude::*, task::spawn_local};
 use leptos_router::components::A;
 use server_fn::codec::{MultipartData, MultipartFormData};
+use wasm_bindgen::JsCast;
+use web_sys::{Event, FormData, HtmlFormElement, HtmlInputElement};
 
 #[component]
 pub fn NavBar(current_path: CurrentPath) -> impl IntoView {
@@ -139,12 +141,34 @@ async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
 #[component]
 fn Upload() -> impl IntoView {
     let selected = use_context::<Selected>().unwrap();
-    let on_click = move |_| {
-        log!("upload something");
-    };
 
     let is_active = move || selected.read().is_empty();
 
+    // let upload_action = Action::new_local(|data: &FormData| {
+    //     // `MultipartData` implements `From<FormData>`
+    //     upload(data.clone().into())
+    // });
+    let on_change = move |ev: Event| {
+        ev.prevent_default();
+        let target = ev
+            .target()
+            .unwrap()
+            .unchecked_into::<HtmlInputElement>()
+            .files()
+            .unwrap();
+        // let form_data = FormData::new_with_form(&target).unwrap();
+        // upload_action.dispatch_local(form_data);
+        let mut i = 0;
+        while let Some(file) = target.item(i) {
+            log!("{:#?}", file.name());
+            i += 1;
+        }
+    };
+    let input_ref: NodeRef<html::Input> = NodeRef::new();
+
+    let on_click = move |_| {
+        input_ref.get().unwrap().click();
+    };
     view! {
         <button
             disabled={move || !is_active()}
@@ -152,5 +176,21 @@ fn Upload() -> impl IntoView {
         >
             <Icon active={is_active} name="upload.png"/>
         </button>
+        <input node_ref={input_ref} on:change={on_change} type="file" name="file_to_upload" multiple hidden/>
     }
+    // <p>
+    //     {move || {
+    //         if upload_action.input_local().read().is_none() && upload_action.value().read().is_none()
+    //         {
+    //             "Upload a file.".to_string()
+    //         } else if upload_action.pending().get() {
+    //             "Uploading...".to_string()
+    //         } else if let Some(Ok(_)) = upload_action.value().get() {
+    //             "done".to_string()
+    //         } else {
+    //             format!("{:?}", upload_action.value().get())
+    //         }
+    //     }}
+
+    // </p>
 }
