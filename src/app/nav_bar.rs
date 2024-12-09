@@ -59,8 +59,8 @@ pub async fn rm(bases: Vec<PathBuf>) -> Result<(), ServerFnError> {
 
 #[component]
 fn Delete() -> impl IntoView {
-    let selected = use_context::<Selected>().unwrap();
-    let ls_result = use_context::<LsResult>().unwrap();
+    let selected: Selected = use_context().unwrap();
+    let ls_result: LsResult = use_context().unwrap();
     let on_click = move |_| {
         spawn_local(async move {
             let result = rm(selected
@@ -96,7 +96,7 @@ fn Delete() -> impl IntoView {
 
 #[component]
 fn Download() -> impl IntoView {
-    let selected = use_context::<Selected>().unwrap();
+    let selected: Selected = use_context().unwrap();
     let on_click = move |_| {
         for unit in selected.get_untracked().iter() {
             unit.click_anchor();
@@ -147,8 +147,9 @@ async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
 
 #[component]
 fn Upload() -> impl IntoView {
-    let selected = use_context::<Selected>().unwrap();
+    let selected: Selected = use_context().unwrap();
     let current_path: CurrentPath = use_context().unwrap();
+    let ls_result: LsResult = use_context().unwrap();
 
     let is_active = move || selected.read().is_empty();
 
@@ -176,28 +177,27 @@ fn Upload() -> impl IntoView {
     let on_click = move |_| {
         input_ref.get().unwrap().click();
     };
-    view! {
-        <button
-            disabled={move || !is_active()}
-            on:click=on_click
-        >
-            <Icon active={is_active} name="upload.png"/>
-        </button>
-        <input node_ref={input_ref} on:change={on_change} type="file" name="file_to_upload" multiple hidden/>
-    }
-    // <p>
-    //     {move || {
-    //         if upload_action.input_local().read().is_none() && upload_action.value().read().is_none()
-    //         {
-    //             "Upload a file.".to_string()
-    //         } else if upload_action.pending().get() {
-    //             "Uploading...".to_string()
-    //         } else if let Some(Ok(_)) = upload_action.value().get() {
-    //             "done".to_string()
-    //         } else {
-    //             format!("{:?}", upload_action.value().get())
-    //         }
-    //     }}
 
-    // </p>
+    Effect::new(move || {
+        if !upload_action.pending().get() {
+            ls_result.refetch();
+        }
+    });
+
+    view! {
+        <Show
+            when={move || !upload_action.pending().get()}
+            fallback={move || view!{
+                <Icon active={|| true} name="load.gif"/>
+            }}
+            >
+            <button
+                disabled={move || !is_active()}
+                on:click=on_click
+            >
+                <Icon active={is_active} name="upload.png"/>
+            </button>
+            <input node_ref={input_ref} on:change={on_change} type="file" name="file_to_upload" multiple hidden/>
+        </Show>
+    }
 }
