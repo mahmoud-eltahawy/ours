@@ -125,19 +125,20 @@ fn Download() -> impl IntoView {
  )]
 async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
     use crate::ServerContext;
-    // use tokio::fs;
+    use tokio::{
+        fs::File,
+        io::{AsyncWriteExt, BufWriter},
+    };
     let context = use_context::<ServerContext>().unwrap();
 
     let mut data = multipart.into_inner().unwrap();
 
     while let Some(mut field) = data.next_field().await? {
         let path = context.root.join(field.name().unwrap().to_string());
-        log!("  [Path] {path:#?}");
-        // let file = fs::File::create(path).await?;
+        let mut file = BufWriter::new(File::create(path).await?);
         while let Some(chunk) = field.chunk().await? {
-            let len = chunk.len();
-            log!("      [CHUNK] {len}");
-            // saving the file here
+            file.write(&chunk).await?;
+            file.flush().await?;
         }
     }
 
