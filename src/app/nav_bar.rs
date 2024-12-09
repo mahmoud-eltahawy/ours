@@ -7,7 +7,7 @@ use leptos::{html, logging::log, prelude::*, task::spawn_local};
 use leptos_router::components::A;
 use server_fn::codec::{MultipartData, MultipartFormData};
 use wasm_bindgen::JsCast;
-use web_sys::{Event, FormData, HtmlFormElement, HtmlInputElement};
+use web_sys::{Blob, Event, FormData, HtmlInputElement};
 
 #[component]
 pub fn NavBar(current_path: CurrentPath) -> impl IntoView {
@@ -127,10 +127,10 @@ async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
 
     while let Ok(Some(mut field)) = data.next_field().await {
         let name = field.name().unwrap_or_default().to_string();
-        println!("  [NAME] {name}");
+        log!("  [NAME] {name}");
         while let Ok(Some(chunk)) = field.chunk().await {
             let len = chunk.len();
-            println!("      [CHUNK] {len}");
+            log!("      [CHUNK] {len}");
             // saving the file here
         }
     }
@@ -144,10 +144,7 @@ fn Upload() -> impl IntoView {
 
     let is_active = move || selected.read().is_empty();
 
-    // let upload_action = Action::new_local(|data: &FormData| {
-    //     // `MultipartData` implements `From<FormData>`
-    //     upload(data.clone().into())
-    // });
+    let upload_action = Action::new_local(|data: &FormData| upload(data.clone().into()));
     let on_change = move |ev: Event| {
         ev.prevent_default();
         let target = ev
@@ -156,13 +153,14 @@ fn Upload() -> impl IntoView {
             .unchecked_into::<HtmlInputElement>()
             .files()
             .unwrap();
-        // let form_data = FormData::new_with_form(&target).unwrap();
-        // upload_action.dispatch_local(form_data);
+        let data = FormData::new().unwrap();
         let mut i = 0;
         while let Some(file) = target.item(i) {
-            log!("{:#?}", file.name());
+            let name = file.name();
+            data.append_with_blob(&name, &Blob::from(file)).unwrap();
             i += 1;
         }
+        upload_action.dispatch_local(data);
     };
     let input_ref: NodeRef<html::Input> = NodeRef::new();
 
