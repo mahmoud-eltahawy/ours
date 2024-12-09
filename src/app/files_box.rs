@@ -4,7 +4,6 @@ use super::{atoms::Icon, CurrentPath, Selected};
 use crate::{app::LsResult, Unit, UnitKind};
 use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_query_map};
-use server_fn::codec::{MultipartData,MultipartFormData};
 
 #[server]
 pub async fn ls(base: PathBuf) -> Result<Vec<Unit>, ServerFnError> {
@@ -28,27 +27,6 @@ pub async fn ls(base: PathBuf) -> Result<Vec<Unit>, ServerFnError> {
     }
 
     Ok(paths)
-}
-
-#[server(
-    input = MultipartFormData,    
-)]
-async fn upload(
-        multipart : MultipartData,    
-) -> Result<(), ServerFnError> {
-    let mut data = multipart.into_inner().unwrap();
-
-    while let Ok(Some(mut field)) = data.next_field().await {
-        let name = field.name().unwrap_or_default().to_string();
-        println!("  [NAME] {name}");
-        while let Ok(Some(chunk)) = field.chunk().await {
-            let len = chunk.len();
-            println!("      [CHUNK] {len}");
-            // saving the file here
-        }
-    }
-
-    Ok(())    
 }
 
 #[component]

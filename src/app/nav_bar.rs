@@ -5,6 +5,7 @@ use crate::{app::LsResult, UnitKind};
 use super::{atoms::Icon, CurrentPath, Selected};
 use leptos::{logging::log, prelude::*, task::spawn_local};
 use leptos_router::components::A;
+use server_fn::codec::{MultipartData, MultipartFormData};
 
 #[component]
 pub fn NavBar(current_path: CurrentPath) -> impl IntoView {
@@ -16,6 +17,7 @@ pub fn NavBar(current_path: CurrentPath) -> impl IntoView {
             </A>
             <Clear/>
             <Download/>
+            <Upload/>
             <Delete/>
         </nav>
     }
@@ -111,6 +113,44 @@ fn Download() -> impl IntoView {
             on:click=on_click
         >
             <Icon active={is_active} name="download.png"/>
+        </button>
+    }
+}
+
+#[server(
+     input = MultipartFormData,
+ )]
+async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
+    let mut data = multipart.into_inner().unwrap();
+
+    while let Ok(Some(mut field)) = data.next_field().await {
+        let name = field.name().unwrap_or_default().to_string();
+        println!("  [NAME] {name}");
+        while let Ok(Some(chunk)) = field.chunk().await {
+            let len = chunk.len();
+            println!("      [CHUNK] {len}");
+            // saving the file here
+        }
+    }
+
+    Ok(())
+}
+
+#[component]
+fn Upload() -> impl IntoView {
+    let selected = use_context::<Selected>().unwrap();
+    let on_click = move |_| {
+        log!("upload something");
+    };
+
+    let is_active = move || selected.read().is_empty();
+
+    view! {
+        <button
+            disabled={move || !is_active()}
+            on:click=on_click
+        >
+            <Icon active={is_active} name="upload.png"/>
         </button>
     }
 }
