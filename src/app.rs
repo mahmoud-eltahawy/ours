@@ -50,6 +50,7 @@ pub fn App() -> impl IntoView {
     provide_meta_context();
     provide_context(selected);
     provide_context(ls_result);
+    provide_context(current_path);
 
     view! {
         // injects a stylesheet into the document <head>
@@ -61,10 +62,10 @@ pub fn App() -> impl IntoView {
 
 
         <Router>
-            <NavBar current_path/>
+            <NavBar/>
             <main>
                 <Routes fallback=|| "Page not found.".into_view()>
-                    <Route path=StaticSegment("") view={move ||view! {<FilesBox current_path/>}}/>
+                    <Route path=StaticSegment("") view={move ||view! {<FilesBox/>}}/>
                 </Routes>
             </main>
         </Router>

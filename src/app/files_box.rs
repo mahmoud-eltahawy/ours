@@ -9,7 +9,7 @@ use leptos_router::hooks::{use_navigate, use_query_map};
 pub async fn ls(base: PathBuf) -> Result<Vec<Unit>, ServerFnError> {
     use crate::{ServerContext, Unit, UnitKind};
     use tokio::fs;
-    let context = use_context::<ServerContext>().unwrap();
+    let context: ServerContext = use_context().unwrap();
     let root = context.root.join(base);
     let mut dir = fs::read_dir(&root).await?;
     let mut paths = Vec::new();
@@ -30,10 +30,10 @@ pub async fn ls(base: PathBuf) -> Result<Vec<Unit>, ServerFnError> {
 }
 
 #[component]
-pub fn FilesBox(current_path: CurrentPath) -> impl IntoView {
+pub fn FilesBox() -> impl IntoView {
     let query = use_query_map();
-    let ls_result = use_context::<LsResult>().unwrap();
-
+    let ls_result: LsResult = use_context().unwrap();
+    let current_path: CurrentPath = use_context().unwrap();
     Effect::new(move || {
         let queries = query.get();
         let mut i = 0;

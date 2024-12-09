@@ -10,7 +10,8 @@ use wasm_bindgen::JsCast;
 use web_sys::{Blob, Event, FormData, HtmlInputElement};
 
 #[component]
-pub fn NavBar(current_path: CurrentPath) -> impl IntoView {
+pub fn NavBar() -> impl IntoView {
+    let current_path: CurrentPath = use_context().unwrap();
     let is_active = move || current_path.read().file_name().is_some();
     view! {
         <nav class="flex flex-wrap">
@@ -123,12 +124,17 @@ fn Download() -> impl IntoView {
      input = MultipartFormData,
  )]
 async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
+    use crate::ServerContext;
+    // use tokio::fs;
+    let context = use_context::<ServerContext>().unwrap();
+
     let mut data = multipart.into_inner().unwrap();
 
-    while let Ok(Some(mut field)) = data.next_field().await {
-        let name = field.name().unwrap_or_default().to_string();
-        log!("  [NAME] {name}");
-        while let Ok(Some(chunk)) = field.chunk().await {
+    while let Some(mut field) = data.next_field().await? {
+        let path = context.root.join(field.name().unwrap().to_string());
+        log!("  [Path] {path:#?}");
+        // let file = fs::File::create(path).await?;
+        while let Some(chunk) = field.chunk().await? {
             let len = chunk.len();
             log!("      [CHUNK] {len}");
             // saving the file here
@@ -141,6 +147,7 @@ async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
 #[component]
 fn Upload() -> impl IntoView {
     let selected = use_context::<Selected>().unwrap();
+    let current_path: CurrentPath = use_context().unwrap();
 
     let is_active = move || selected.read().is_empty();
 
@@ -156,8 +163,9 @@ fn Upload() -> impl IntoView {
         let data = FormData::new().unwrap();
         let mut i = 0;
         while let Some(file) = target.item(i) {
-            let name = file.name();
-            data.append_with_blob(&name, &Blob::from(file)).unwrap();
+            let path = current_path.get().join(file.name());
+            data.append_with_blob(&path.to_str().unwrap(), &Blob::from(file))
+                .unwrap();
             i += 1;
         }
         upload_action.dispatch_local(data);
