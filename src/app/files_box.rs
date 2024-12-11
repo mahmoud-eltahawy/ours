@@ -5,7 +5,7 @@ use crate::{
     app::{GlobalState, GlobalStateStoreFields},
     Unit, UnitKind,
 };
-use leptos::{either::Either, logging::log, prelude::*};
+use leptos::{either::Either, prelude::*};
 use leptos_router::hooks::{use_navigate, use_query_map};
 use reactive_stores::Store;
 
@@ -108,19 +108,21 @@ pub fn FilesBox() -> impl IntoView {
 fn MediaPlayer() -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
 
-    store.media_play().get().map(|x| match x.1 {
-        UnitKind::Video => Either::Left(view! {
-            <video width="80%" controls>
-               <source src={x.0}/>
-            </video>
-        }),
-        UnitKind::Audio => Either::Right(view! {
-            <audio  controls>
-               <source src={x.0}/>
-            </audio>
-        }),
-        UnitKind::Dirctory | UnitKind::File => unreachable!(),
-    })
+    move || {
+        store.media_play().get().map(|x| match x.1 {
+            UnitKind::Video => Either::Left(view! {
+                <video width="80%" controls>
+                   <source src={x.0}/>
+                </video>
+            }),
+            UnitKind::Audio => Either::Right(view! {
+                <audio  controls>
+                   <source src={x.0}/>
+                </audio>
+            }),
+            UnitKind::Dirctory | UnitKind::File => unreachable!(),
+        })
+    }
 }
 
 fn path_as_query(mut path: PathBuf) -> String {
@@ -148,15 +150,15 @@ fn UnitComp(unit: Unit) -> impl IntoView {
         let unit = unit.clone();
         move |_| {
             store.selected().write().clear();
-            match unit.kind {
+            match &unit.kind {
                 UnitKind::Dirctory => {
                     navigate(&path_as_query(unit.path.clone()), Default::default());
                 }
-                UnitKind::Video => {
-                    log!("u should open the video");
-                }
-                UnitKind::Audio => {
-                    log!("u should open the audio");
+                t @ (UnitKind::Video | UnitKind::Audio) => {
+                    *store.media_play().write() = Some((
+                        format!("/download/{}", unit.path.to_str().unwrap()),
+                        t.clone(),
+                    ));
                 }
                 UnitKind::File => {
                     unit.click_anchor();
