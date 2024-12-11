@@ -6,9 +6,10 @@ use leptos_router::{
     StaticSegment,
 };
 use nav_bar::NavBar;
+use reactive_stores::Store;
 use std::{collections::HashSet, path::PathBuf};
 
-use crate::Unit;
+use crate::{Unit, UnitKind};
 
 mod atoms;
 mod files_box;
@@ -32,35 +33,52 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
     }
 }
 
-type Selected = RwSignal<HashSet<Unit>>;
-type LsResult = Resource<std::result::Result<Vec<Unit>, ServerFnError>>;
-type CurrentPath = RwSignal<PathBuf>;
+#[derive(Clone, Debug, Default, Store)]
+struct GlobalState {
+    selected: HashSet<Unit>,
+    current_path: PathBuf,
+    media_play: Option<(String, UnitKind)>,
+    ls_result: Vec<Unit>,
+    ls_refetch_tick: bool,
+}
+
+impl GlobalState {
+    fn new() -> Self {
+        Self {
+            selected: HashSet::new(),
+            current_path: PathBuf::new(),
+            media_play: None,
+            ls_result: Vec::new(),
+            ls_refetch_tick: true,
+        }
+    }
+}
 
 #[component]
 pub fn App() -> impl IntoView {
-    // Provides context that manages stylesheets, titles, meta tags, etc.
-    let selected: Selected = RwSignal::new(HashSet::new());
-    let current_path: CurrentPath = RwSignal::new(PathBuf::new());
-    let ls_result: LsResult = Resource::new(move || current_path.get(), ls);
-
-    window_event_listener(leptos::ev::popstate, move |_| {
-        selected.update(|xs| xs.clear());
-    });
+    let store = Store::new(GlobalState::new());
+    let ls_result = Resource::new(move || store.current_path().get(), ls);
 
     provide_meta_context();
-    provide_context(selected);
-    provide_context(ls_result);
-    provide_context(current_path);
+    provide_context(store);
+
+    Effect::new(move || {
+        if let Some(xs) = ls_result.get().transpose().ok().flatten() {
+            *store.ls_result().write() = xs;
+        };
+    });
+    Effect::new(move || {
+        let _ = store.ls_refetch_tick().get();
+        ls_result.refetch();
+    });
+
+    window_event_listener(leptos::ev::popstate, move |_| {
+        store.selected().write().clear();
+    });
 
     view! {
-        // injects a stylesheet into the document <head>
-        // id=leptos means cargo-leptos will hot-reload this stylesheet
         <Stylesheet id="leptos" href="/pkg/webls.css"/>
-
-        // sets the document title
         <Title text="Welcome to Leptos"/>
-
-
         <Router>
             <NavBar/>
             <main>

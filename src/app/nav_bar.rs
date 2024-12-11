@@ -1,18 +1,22 @@
 use std::path::PathBuf;
 
-use crate::{app::LsResult, UnitKind};
+use crate::{
+    app::{GlobalState, GlobalStateStoreFields},
+    UnitKind,
+};
 
-use super::{atoms::Icon, CurrentPath, Selected};
+use super::atoms::Icon;
 use leptos::{html, logging::log, prelude::*, task::spawn_local};
 use leptos_router::components::A;
+use reactive_stores::Store;
 use server_fn::codec::{MultipartData, MultipartFormData};
 use wasm_bindgen::JsCast;
 use web_sys::{Blob, Event, FormData, HtmlInputElement};
 
 #[component]
 pub fn NavBar() -> impl IntoView {
-    let current_path: CurrentPath = use_context().unwrap();
-    let is_active = move || current_path.read().file_name().is_some();
+    let store: Store<GlobalState> = use_context().unwrap();
+    let is_active = move || store.current_path().read().file_name().is_some();
     view! {
         <nav class="flex flex-wrap">
             <A href="/" class:disabled={move || !is_active()}>
@@ -28,12 +32,12 @@ pub fn NavBar() -> impl IntoView {
 
 #[component]
 fn Clear() -> impl IntoView {
-    let selected = use_context::<Selected>().unwrap();
+    let store = use_context::<Store<GlobalState>>().unwrap();
     let on_click = move |_| {
-        selected.write().clear();
+        store.selected().write().clear();
     };
 
-    let is_active = move || !selected.read().is_empty();
+    let is_active = move || !store.selected().read().is_empty();
 
     view! {
         <button
@@ -59,11 +63,11 @@ pub async fn rm(bases: Vec<PathBuf>) -> Result<(), ServerFnError> {
 
 #[component]
 fn Delete() -> impl IntoView {
-    let selected: Selected = use_context().unwrap();
-    let ls_result: LsResult = use_context().unwrap();
+    let store: Store<GlobalState> = use_context().unwrap();
     let on_click = move |_| {
         spawn_local(async move {
-            let result = rm(selected
+            let result = rm(store
+                .selected()
                 .read_untracked()
                 .iter()
                 .map(|x| x.path.clone())
@@ -71,8 +75,8 @@ fn Delete() -> impl IntoView {
             .await;
             match result {
                 Ok(_) => {
-                    selected.write().clear();
-                    ls_result.refetch();
+                    store.selected().write().clear();
+                    store.ls_refetch_tick().update(|x| *x = !*x);
                 }
                 Err(e) => log!("Error : {:#?}", e),
             }
@@ -80,7 +84,7 @@ fn Delete() -> impl IntoView {
     };
 
     let is_active = move || {
-        let list = selected.read();
+        let list = store.selected().read();
         !list.is_empty() && !list.iter().any(|x| matches!(x.kind, UnitKind::Dirctory))
     };
 
@@ -96,8 +100,9 @@ fn Delete() -> impl IntoView {
 
 #[component]
 fn Download() -> impl IntoView {
-    let selected: Selected = use_context().unwrap();
+    let store: Store<GlobalState> = use_context().unwrap();
     let on_click = move |_| {
+        let selected = store.selected();
         for unit in selected.get_untracked().iter() {
             unit.click_anchor();
         }
@@ -106,7 +111,7 @@ fn Download() -> impl IntoView {
     };
 
     let is_active = move || {
-        let list = selected.read();
+        let list = store.selected().read();
         !list.is_empty() && !list.iter().any(|x| matches!(x.kind, UnitKind::Dirctory))
     };
 
@@ -147,11 +152,9 @@ async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
 
 #[component]
 fn Upload() -> impl IntoView {
-    let selected: Selected = use_context().unwrap();
-    let current_path: CurrentPath = use_context().unwrap();
-    let ls_result: LsResult = use_context().unwrap();
+    let store: Store<GlobalState> = use_context().unwrap();
 
-    let is_active = move || selected.read().is_empty();
+    let is_active = move || store.selected().read().is_empty();
 
     let upload_action = Action::new_local(|data: &FormData| upload(data.clone().into()));
     let on_change = move |ev: Event| {
@@ -165,7 +168,7 @@ fn Upload() -> impl IntoView {
         let data = FormData::new().unwrap();
         let mut i = 0;
         while let Some(file) = target.item(i) {
-            let path = current_path.get().join(file.name());
+            let path = store.current_path().get().join(file.name());
             data.append_with_blob(path.to_str().unwrap(), &Blob::from(file))
                 .unwrap();
             i += 1;
@@ -180,7 +183,7 @@ fn Upload() -> impl IntoView {
 
     Effect::new(move || {
         if !upload_action.pending().get() {
-            ls_result.refetch();
+            store.ls_refetch_tick().update(|x| *x = !*x);
         }
     });
 

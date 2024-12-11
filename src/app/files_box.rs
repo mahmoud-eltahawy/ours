@@ -1,9 +1,13 @@
 use std::path::PathBuf;
 
-use super::{atoms::Icon, CurrentPath, Selected};
-use crate::{app::LsResult, Unit, UnitKind};
+use super::atoms::Icon;
+use crate::{
+    app::{GlobalState, GlobalStateStoreFields},
+    Unit, UnitKind,
+};
 use leptos::{either::Either, logging::log, prelude::*};
 use leptos_router::hooks::{use_navigate, use_query_map};
+use reactive_stores::Store;
 
 #[server]
 pub async fn ls(base: PathBuf) -> Result<Vec<Unit>, ServerFnError> {
@@ -48,16 +52,10 @@ pub async fn ls(base: PathBuf) -> Result<Vec<Unit>, ServerFnError> {
     Ok(paths)
 }
 
-type MediaPlay = RwSignal<Option<(String, UnitKind)>>;
-
 #[component]
 pub fn FilesBox() -> impl IntoView {
     let query = use_query_map();
-    let ls_result: LsResult = use_context().unwrap();
-    let current_path: CurrentPath = use_context().unwrap();
-    let media: MediaPlay =
-        RwSignal::new(Some(("/download/record.mp4".to_string(), UnitKind::Video)));
-    provide_context(media);
+    let store: Store<GlobalState> = use_context().unwrap();
     Effect::new(move || {
         let queries = query.get();
         let mut i = 0;
@@ -66,36 +64,37 @@ pub fn FilesBox() -> impl IntoView {
             result.push(x);
             i += 1;
         }
-        current_path.set(result);
+        store.current_path().set(result);
     });
 
     let ls_result_view = move || {
-        ls_result.get().and_then(|x| x.ok()).map(|xs| {
-            let mut all = Vec::with_capacity(xs.len());
-            let mut files = Vec::new();
-            let mut videos = Vec::new();
-            let mut audios = Vec::new();
-            for x in xs.iter() {
-                match x.kind {
-                    UnitKind::Dirctory => all.push(x.clone()),
-                    UnitKind::File => files.push(x.clone()),
-                    UnitKind::Video => videos.push(x.clone()),
-                    UnitKind::Audio => audios.push(x.clone()),
-                }
+        let xs = store.ls_result().read();
+        let mut all = Vec::with_capacity(xs.len());
+        let mut files = Vec::new();
+        let mut videos = Vec::new();
+        let mut audios = Vec::new();
+        for x in xs.iter() {
+            match x.kind {
+                UnitKind::Dirctory => all.push(x.clone()),
+                UnitKind::Video => videos.push(x.clone()),
+                UnitKind::Audio => audios.push(x.clone()),
+                UnitKind::File => files.push(x.clone()),
             }
-            all.sort_by_key(|x| x.name());
-            files.sort_by_key(|x| x.name());
-            all.into_iter()
-                .chain(videos)
-                .chain(audios)
-                .chain(files)
-                .map(|unit| {
-                    view! {
-                        <UnitComp unit={unit.clone()}/>
-                    }
-                })
-                .collect_view()
-        })
+        }
+        all.sort_by_key(|x| x.name());
+        videos.sort_by_key(|x| x.name());
+        audios.sort_by_key(|x| x.name());
+        files.sort_by_key(|x| x.name());
+        all.into_iter()
+            .chain(videos)
+            .chain(audios)
+            .chain(files)
+            .map(|unit| {
+                view! {
+                    <UnitComp unit={unit.clone()}/>
+                }
+            })
+            .collect_view()
     };
 
     view! {
@@ -107,9 +106,9 @@ pub fn FilesBox() -> impl IntoView {
 }
 #[component]
 fn MediaPlayer() -> impl IntoView {
-    let media: MediaPlay = use_context().unwrap();
+    let store: Store<GlobalState> = use_context().unwrap();
 
-    media.get().map(|x| match x.1 {
+    store.media_play().get().map(|x| match x.1 {
         UnitKind::Video => Either::Left(view! {
             <video width="80%" controls>
                <source src={x.0}/>
@@ -143,12 +142,12 @@ fn path_as_query(mut path: PathBuf) -> String {
 #[component]
 fn UnitComp(unit: Unit) -> impl IntoView {
     let navigate = use_navigate();
-    let selected = use_context::<Selected>().unwrap();
+    let store = use_context::<Store<GlobalState>>().unwrap();
 
     let ondblclick = {
         let unit = unit.clone();
         move |_| {
-            selected.update(|xs| xs.clear());
+            store.selected().write().clear();
             match unit.kind {
                 UnitKind::Dirctory => {
                     navigate(&path_as_query(unit.path.clone()), Default::default());
@@ -161,7 +160,7 @@ fn UnitComp(unit: Unit) -> impl IntoView {
                 }
                 UnitKind::File => {
                     unit.click_anchor();
-                    selected.update(|xs| {
+                    store.selected().update(|xs| {
                         xs.remove(&unit);
                     });
                 }
@@ -171,7 +170,7 @@ fn UnitComp(unit: Unit) -> impl IntoView {
     let onclick = {
         let unit = unit.clone();
         move |_| {
-            selected.update(|xs| {
+            store.selected().update(|xs| {
                 if !xs.insert(unit.clone()) {
                     xs.remove(&unit);
                 };
@@ -194,7 +193,7 @@ fn UnitComp(unit: Unit) -> impl IntoView {
 
 #[component]
 fn UnitIcon(unit: Unit) -> impl IntoView {
-    let selected = use_context::<Selected>().unwrap();
+    let store = use_context::<Store<GlobalState>>().unwrap();
     let name = match unit.kind {
         UnitKind::Dirctory => "directory.png",
         UnitKind::File => "file.png",
@@ -202,7 +201,7 @@ fn UnitIcon(unit: Unit) -> impl IntoView {
         UnitKind::Audio => "audio.png",
     };
 
-    let download_link = matches!(unit.kind, UnitKind::File).then_some(view! {
+    let download_link = (unit.kind != UnitKind::Dirctory).then_some(view! {
         <a
             id={unit.name()}
             download={unit.name()}
@@ -211,7 +210,7 @@ fn UnitIcon(unit: Unit) -> impl IntoView {
     });
 
     view! {
-        <Icon name active={move || !selected.read().contains(&unit)} />
+        <Icon name active={move || !store.selected().read().contains(&unit)} />
         {download_link}
     }
 }
