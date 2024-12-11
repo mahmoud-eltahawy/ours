@@ -166,7 +166,7 @@ fn Upload() -> impl IntoView {
         let mut i = 0;
         while let Some(file) = target.item(i) {
             let path = current_path.get().join(file.name());
-            data.append_with_blob(&path.to_str().unwrap(), &Blob::from(file))
+            data.append_with_blob(path.to_str().unwrap(), &Blob::from(file))
                 .unwrap();
             i += 1;
         }

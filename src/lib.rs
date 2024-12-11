@@ -19,6 +19,8 @@ impl ServerContext {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum UnitKind {
     Dirctory,
+    Video,
+    Audio,
     File,
 }
 
