@@ -38,8 +38,8 @@ struct GlobalState {
     selected: HashSet<Unit>,
     current_path: PathBuf,
     media_play: Option<(String, UnitKind)>,
-    ls_result: Vec<Unit>,
-    ls_refetch_tick: bool,
+    units: Vec<Unit>,
+    units_refetch_tick: bool,
 }
 
 impl GlobalState {
@@ -48,8 +48,8 @@ impl GlobalState {
             selected: HashSet::new(),
             current_path: PathBuf::new(),
             media_play: None,
-            ls_result: Vec::new(),
-            ls_refetch_tick: true,
+            units: Vec::new(),
+            units_refetch_tick: true,
         }
     }
 }
@@ -64,11 +64,11 @@ pub fn App() -> impl IntoView {
 
     Effect::new(move || {
         if let Some(xs) = ls_result.get().transpose().ok().flatten() {
-            *store.ls_result().write() = xs;
+            *store.units().write() = xs;
         };
     });
     Effect::new(move || {
-        let _ = store.ls_refetch_tick().get();
+        let _ = store.units_refetch_tick().read();
         ls_result.refetch();
     });
 

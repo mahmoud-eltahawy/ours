@@ -57,10 +57,10 @@ pub fn FilesBox() -> impl IntoView {
     let query = use_query_map();
     let store: Store<GlobalState> = use_context().unwrap();
     Effect::new(move || {
-        let queries = query.get();
+        let queries = query.read();
         let mut i = 0;
         let mut result = PathBuf::new();
-        while let Some(x) = queries.get(&i.to_string()) {
+        while let Some(x) = queries.get_str(&i.to_string()) {
             result.push(x);
             i += 1;
         }
@@ -68,7 +68,7 @@ pub fn FilesBox() -> impl IntoView {
     });
 
     let ls_result_view = move || {
-        let xs = store.ls_result().read();
+        let xs = store.units().read();
         let mut all = Vec::with_capacity(xs.len());
         let mut files = Vec::new();
         let mut videos = Vec::new();

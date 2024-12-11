@@ -76,7 +76,7 @@ fn Delete() -> impl IntoView {
             match result {
                 Ok(_) => {
                     store.selected().write().clear();
-                    store.ls_refetch_tick().update(|x| *x = !*x);
+                    store.units_refetch_tick().update(|x| *x = !*x);
                 }
                 Err(e) => log!("Error : {:#?}", e),
             }
@@ -168,7 +168,7 @@ fn Upload() -> impl IntoView {
         let data = FormData::new().unwrap();
         let mut i = 0;
         while let Some(file) = target.item(i) {
-            let path = store.current_path().get().join(file.name());
+            let path = store.current_path().read().join(file.name());
             data.append_with_blob(path.to_str().unwrap(), &Blob::from(file))
                 .unwrap();
             i += 1;
@@ -183,7 +183,7 @@ fn Upload() -> impl IntoView {
 
     Effect::new(move || {
         if !upload_action.pending().get() {
-            store.ls_refetch_tick().update(|x| *x = !*x);
+            store.units_refetch_tick().update(|x| *x = !*x);
         }
     });
 
