@@ -38,7 +38,7 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
 struct GlobalState {
     selected: HashSet<Unit>,
     current_path: PathBuf,
-    media_play: Option<(String, UnitKind)>,
+    media_play: Option<Unit>,
     units: Vec<Unit>,
     units_refetch_tick: bool,
 }

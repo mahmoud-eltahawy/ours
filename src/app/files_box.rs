@@ -91,9 +91,8 @@ fn UnitComp(unit: Unit) -> impl IntoView {
                 UnitKind::Dirctory => {
                     navigate(&path_as_query(unit.path.clone()), Default::default());
                 }
-                t @ (UnitKind::Video | UnitKind::Audio) => {
-                    *store.media_play().write() =
-                        Some((unit.path.to_str().unwrap().to_string(), t.clone()));
+                UnitKind::Video | UnitKind::Audio => {
+                    *store.media_play().write() = Some(unit.clone());
                 }
                 UnitKind::File => {
                     unit.click_anchor();
