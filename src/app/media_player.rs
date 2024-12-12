@@ -10,39 +10,40 @@ pub fn MediaPlayer() -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let media_play = store.media_play();
 
-    let player = move |x: Unit| {
-        let src = format!("/download/{}", x.path.to_str().unwrap());
-        match x.kind {
-            UnitKind::Video => Either::Left(view! {
-                <video class="h-full w-full rounded-lg" autoplay controls>
-                   <source src={src}/>
-                  "Your browser does not support the video tag."
-                </video>
-            }),
-            UnitKind::Audio => Either::Right(view! {
-                <audio class="h-full w-full rounded-lg mt-10" autoplay controls>
-                   <source src={src}/>
-                  "Your browser does not support the audio tag."
-                </audio>
-            }),
-            UnitKind::Dirctory | UnitKind::File => unreachable!(),
-        }
-    };
-
     move || {
-        media_play.get().map(|x| {
+        media_play.get().map(|unit| {
             view! {
-                <section class="fixed bottom-2 right-2 bg-white text-3xl w-[60%] rounded-lg">
+                <section class="fixed bottom-2 right-2 bg-white text-2xl w-[60%] rounded-lg border-2 border-black p-2">
                     <div class="relative">
-                        <span class="absolute left-0 top-0 z-10 mr-10 text-nowrap">{x.name()}</span>
+                        <span class="absolute left-0 top-0 z-10 mr-10 text-nowrap">{unit.name()}</span>
                         <span class="absolute right-0 top-0 z-20">
                             <CloseButton/>
                         </span>
                     </div>
-                    {player(x)}
+                    <Player unit/>
                 </section>
             }
         })
+    }
+}
+
+#[component]
+fn Player(unit: Unit) -> impl IntoView {
+    let src = format!("/download/{}", unit.path.to_str().unwrap());
+    match unit.kind {
+        UnitKind::Video => Either::Left(view! {
+            <video class="h-full w-full rounded-lg" autoplay controls>
+               <source src={src}/>
+              "Your browser does not support the video tag."
+            </video>
+        }),
+        UnitKind::Audio => Either::Right(view! {
+            <audio class="h-full w-full rounded-lg mt-10" autoplay controls>
+               <source src={src}/>
+              "Your browser does not support the audio tag."
+            </audio>
+        }),
+        UnitKind::Dirctory | UnitKind::File => unreachable!(),
     }
 }
 
