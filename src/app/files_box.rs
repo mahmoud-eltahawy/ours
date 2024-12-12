@@ -19,14 +19,13 @@ pub async fn ls(base: PathBuf) -> Result<Vec<Unit>, ServerFnError> {
     let mut dir = fs::read_dir(&root).await?;
     let mut paths = Vec::new();
     while let Some(x) = dir.next_entry().await? {
-        let path = x.path();
         let kind = if x.file_type().await?.is_dir() {
             UnitKind::Dirctory
         } else {
             UnitKind::File
         };
         let unit = Unit {
-            path: path.strip_prefix(&context.root)?.to_path_buf(),
+            path: x.path().strip_prefix(&context.root)?.to_path_buf(),
             kind,
         };
         paths.push(unit);

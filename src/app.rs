@@ -43,7 +43,7 @@ struct GlobalState {
     units_refetch_tick: bool,
 }
 
-fn retype_units(mut units: Vec<Unit>) -> Vec<Unit> {
+fn retype_units(units: &mut Vec<Unit>) {
     const VIDEO_X: [&str; 38] = [
         "webm", "mkv", "flv", "vob", "ogv", "ogg", "rrc", "gifv", "mng", "mov", "avi", "qt", "wmv",
         "yuv", "rm", "asf", "amv", "mp4", "m4p", "m4v", "mpg", "mp2", "mpeg", "mpe", "mpv", "m4v",
@@ -66,7 +66,6 @@ fn retype_units(mut units: Vec<Unit>) -> Vec<Unit> {
             }
         };
     });
-    units
 }
 
 fn sort_units(units: Vec<Unit>) -> Vec<Unit> {
@@ -104,8 +103,9 @@ pub fn App() -> impl IntoView {
     provide_context(store);
 
     Effect::new(move || {
-        if let Some(xs) = ls_result.get().transpose().ok().flatten() {
-            *store.units().write() = sort_units(retype_units(xs));
+        if let Some(mut xs) = ls_result.get().transpose().ok().flatten() {
+            retype_units(&mut xs);
+            *store.units().write() = sort_units(xs);
         };
     });
 
@@ -124,8 +124,8 @@ pub fn App() -> impl IntoView {
         <Router>
             <NavBar/>
             <main>
-                <Routes fallback=|| "Page not found.".into_view()>
-                    <Route path=StaticSegment("") view={move ||view! {<FilesBox/>}}/>
+                <Routes fallback=|| "Page not found.">
+                    <Route path=StaticSegment("") view=FilesBox/>
                 </Routes>
             </main>
             <MediaPlayer/>
