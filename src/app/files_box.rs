@@ -92,10 +92,8 @@ fn UnitComp(unit: Unit) -> impl IntoView {
                     navigate(&path_as_query(unit.path.clone()), Default::default());
                 }
                 t @ (UnitKind::Video | UnitKind::Audio) => {
-                    *store.media_play().write() = Some((
-                        format!("/download/{}", unit.path.to_str().unwrap()),
-                        t.clone(),
-                    ));
+                    *store.media_play().write() =
+                        Some((unit.path.to_str().unwrap().to_string(), t.clone()));
                 }
                 UnitKind::File => {
                     unit.click_anchor();
