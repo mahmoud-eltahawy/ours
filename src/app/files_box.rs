@@ -67,41 +67,17 @@ pub fn FilesBox() -> impl IntoView {
         store.current_path().set(result);
     });
 
-    let ls_result_view = move || {
-        let xs = store.units().read();
-        let mut all = Vec::with_capacity(xs.len());
-        let mut files = Vec::new();
-        let mut videos = Vec::new();
-        let mut audios = Vec::new();
-        for x in xs.iter() {
-            match x.kind {
-                UnitKind::Dirctory => all.push(x.clone()),
-                UnitKind::Video => videos.push(x.clone()),
-                UnitKind::Audio => audios.push(x.clone()),
-                UnitKind::File => files.push(x.clone()),
-            }
-        }
-        all.sort_by_key(|x| x.name());
-        videos.sort_by_key(|x| x.name());
-        audios.sort_by_key(|x| x.name());
-        files.sort_by_key(|x| x.name());
-        all.into_iter()
-            .chain(videos)
-            .chain(audios)
-            .chain(files)
-            .map(|unit| {
-                view! {
-                    <UnitComp unit={unit.clone()}/>
-                }
-            })
-            .collect_view()
-    };
-
     view! {
-        <Suspense fallback=|| "">
-            <section class="flex flex-wrap gap-5 m-5 p-5">{ls_result_view}</section>
-            <MediaPlayer/>
-        </Suspense>
+        <section class="flex flex-wrap gap-5 m-5 p-5">
+            <For
+                each={move || store.units().get()}
+                key={|x| x.path.clone()}
+                let:unit
+            >
+                <UnitComp unit={unit}/>
+            </For>
+        </section>
+        <MediaPlayer/>
     }
 }
 #[component]
@@ -111,12 +87,12 @@ fn MediaPlayer() -> impl IntoView {
     move || {
         store.media_play().get().map(|x| match x.1 {
             UnitKind::Video => Either::Left(view! {
-                <video width="80%" controls>
+                <video width="50%" autoplay controls>
                    <source src={x.0}/>
                 </video>
             }),
             UnitKind::Audio => Either::Right(view! {
-                <audio  controls>
+                <audio autoplay controls>
                    <source src={x.0}/>
                 </audio>
             }),
