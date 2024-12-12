@@ -37,6 +37,8 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
 #[derive(Clone, Debug, Default, Store)]
 struct GlobalState {
     selected: HashSet<Unit>,
+    copies: HashSet<Unit>,
+    cuts: HashSet<Unit>,
     current_path: PathBuf,
     media_play: Option<Unit>,
     units: Vec<Unit>,

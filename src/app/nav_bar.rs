@@ -15,18 +15,29 @@ use web_sys::{Blob, Event, FormData, HtmlInputElement};
 
 #[component]
 pub fn NavBar() -> impl IntoView {
-    let store: Store<GlobalState> = use_context().unwrap();
-    let is_active = move || store.current_path().read().file_name().is_some();
     view! {
         <nav class="flex flex-wrap">
-            <A href="/" class:disabled={move || !is_active()}>
-                <Icon name="home.png" active={is_active}/>
-            </A>
+            <Home/>
             <Clear/>
             <Download/>
             <Upload/>
             <Delete/>
+            <Copy/>
+            <Cut/>
+            <Paste/>
         </nav>
+    }
+}
+
+#[component]
+fn Home() -> impl IntoView {
+    let store: Store<GlobalState> = use_context().unwrap();
+    let is_active = move || store.current_path().read().file_name().is_some();
+
+    view! {
+        <A href="/" class:disabled={move || !is_active()}>
+            <Icon name="home.png" active={is_active}/>
+        </A>
     }
 }
 
@@ -35,9 +46,15 @@ fn Clear() -> impl IntoView {
     let store = use_context::<Store<GlobalState>>().unwrap();
     let on_click = move |_| {
         store.selected().write().clear();
+        store.copies().write().clear();
+        store.cuts().write().clear();
     };
 
-    let is_active = move || !store.selected().read().is_empty();
+    let is_active = move || {
+        !store.selected().read().is_empty()
+            || !store.copies().read().is_empty()
+            || !store.cuts().read().is_empty()
+    };
 
     view! {
         <button
@@ -94,6 +111,144 @@ fn Delete() -> impl IntoView {
             on:click=on_click
         >
             <Icon active={is_active} name="delete.png"/>
+        </button>
+    }
+}
+
+#[server]
+pub async fn cp(from: Vec<PathBuf>, to: PathBuf) -> Result<(), ServerFnError> {
+    use crate::ServerContext;
+    use tokio::fs::copy;
+    let context = use_context::<ServerContext>().unwrap();
+    let to = context.root.join(to);
+    for base in from.into_iter().map(|x| context.root.join(x)) {
+        copy(&base, to.join(base.file_name().unwrap())).await?;
+    }
+    Ok(())
+}
+
+#[server]
+pub async fn cp_cut(from: Vec<PathBuf>, to: PathBuf) -> Result<(), ServerFnError> {
+    use crate::ServerContext;
+    use tokio::fs::{copy, remove_file};
+    let context = use_context::<ServerContext>().unwrap();
+    let to = context.root.join(to);
+    for base in from.into_iter().map(|x| context.root.join(x)) {
+        copy(&base, to.join(base.file_name().unwrap())).await?;
+        remove_file(base).await?;
+    }
+    Ok(())
+}
+
+#[component]
+fn Paste() -> impl IntoView {
+    let store: Store<GlobalState> = use_context().unwrap();
+    let on_click = move |_| {
+        spawn_local(async move {
+            let to = store.current_path().get_untracked();
+            let handle_result = |result| match result {
+                Ok(_) => {
+                    store.units_refetch_tick().update(|x| *x = !*x);
+                }
+                Err(e) => log!("Error : {:#?}", e),
+            };
+            if !store.copies().read().is_empty() {
+                let result = cp(
+                    store
+                        .copies()
+                        .read_untracked()
+                        .iter()
+                        .map(|x| x.path.clone())
+                        .collect(),
+                    to,
+                )
+                .await;
+                handle_result(result);
+                store.copies().write().clear();
+            } else if !store.cuts().read().is_empty() {
+                let result = cp_cut(
+                    store
+                        .cuts()
+                        .read_untracked()
+                        .iter()
+                        .map(|x| x.path.clone())
+                        .collect(),
+                    to,
+                )
+                .await;
+                handle_result(result);
+                store.cuts().write().clear();
+            }
+        });
+    };
+
+    let is_active = move || {
+        store.selected().read().is_empty()
+            && (!store.cuts().read().is_empty() || !store.copies().read().is_empty())
+    };
+
+    view! {
+        <button
+            disabled={move || !is_active()}
+            on:click=on_click
+        >
+            <Icon active={is_active} name="paste.png"/>
+        </button>
+    }
+}
+
+#[component]
+fn Copy() -> impl IntoView {
+    let store: Store<GlobalState> = use_context().unwrap();
+
+    let is_active = move || {
+        let selected = store.selected().read();
+        !selected.is_empty()
+            && !selected
+                .iter()
+                .any(|x| matches!(x.kind, UnitKind::Dirctory))
+            && store.copies().read().is_empty()
+    };
+
+    let on_click = move |_| {
+        store.copies().set(store.selected().get_untracked());
+        store.selected().write().clear();
+    };
+
+    view! {
+        <button
+            disabled={move || !is_active()}
+            on:click=on_click
+        >
+            <Icon active={is_active} name="copy.png"/>
+        </button>
+    }
+}
+
+#[component]
+fn Cut() -> impl IntoView {
+    let store: Store<GlobalState> = use_context().unwrap();
+
+    let is_active = move || {
+        let selected = store.selected().read();
+        !selected.is_empty()
+            && !selected
+                .iter()
+                .any(|x| matches!(x.kind, UnitKind::Dirctory))
+            && store.cuts().read().is_empty()
+    };
+
+    let on_click = move |_| {
+        store.cuts().set(store.selected().get_untracked());
+        store.selected().write().clear();
+    };
+
+    view! {
+        <button
+            disabled={move || !is_active()}
+            on:click=on_click
+        >
+            <Icon active={is_active} name="cut.png"/>
         </button>
     }
 }
