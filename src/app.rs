@@ -55,6 +55,32 @@ impl GlobalState {
     }
 }
 
+fn sort_units(units: Vec<Unit>) -> Vec<Unit> {
+    let mut all = Vec::with_capacity(units.len());
+    let mut files = Vec::new();
+    let mut videos = Vec::new();
+    let mut audios = Vec::new();
+    for unit in units.into_iter() {
+        match unit.kind {
+            UnitKind::Dirctory => all.push(unit),
+            UnitKind::Video => videos.push(unit),
+            UnitKind::Audio => audios.push(unit),
+            UnitKind::File => files.push(unit),
+        }
+    }
+
+    all.sort_by_key(|x| x.name());
+    videos.sort_by_key(|x| x.name());
+    audios.sort_by_key(|x| x.name());
+    files.sort_by_key(|x| x.name());
+
+    all.into_iter()
+        .chain(videos)
+        .chain(audios)
+        .chain(files)
+        .collect()
+}
+
 #[component]
 pub fn App() -> impl IntoView {
     let store = Store::new(GlobalState::new());
@@ -65,29 +91,7 @@ pub fn App() -> impl IntoView {
 
     Effect::new(move || {
         if let Some(xs) = ls_result.get().transpose().ok().flatten() {
-            let mut all = Vec::with_capacity(xs.len());
-            let mut files = Vec::new();
-            let mut videos = Vec::new();
-            let mut audios = Vec::new();
-            for x in xs.iter() {
-                match x.kind {
-                    UnitKind::Dirctory => all.push(x.clone()),
-                    UnitKind::Video => videos.push(x.clone()),
-                    UnitKind::Audio => audios.push(x.clone()),
-                    UnitKind::File => files.push(x.clone()),
-                }
-            }
-            all.sort_by_key(|x| x.name());
-            videos.sort_by_key(|x| x.name());
-            audios.sort_by_key(|x| x.name());
-            files.sort_by_key(|x| x.name());
-
-            *store.units().write() = all
-                .into_iter()
-                .chain(videos)
-                .chain(audios)
-                .chain(files)
-                .collect();
+            *store.units().write() = sort_units(xs);
         };
     });
 
