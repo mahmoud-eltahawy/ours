@@ -1,6 +1,6 @@
 use crate::{Unit, UnitKind};
 use files_box::{ls, FilesBox};
-use leptos::prelude::*;
+use leptos::{ev, prelude::*};
 use leptos_meta::{provide_meta_context, MetaTags, Stylesheet, Title};
 use leptos_router::{
     components::{Route, Router, Routes},
@@ -56,25 +56,25 @@ impl GlobalState {
 }
 
 fn sort_units(units: Vec<Unit>) -> Vec<Unit> {
-    let mut all = Vec::with_capacity(units.len());
-    let mut files = Vec::new();
-    let mut videos = Vec::new();
-    let mut audios = Vec::new();
+    let (mut directories, mut files, mut videos, mut audios) =
+        (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+
     for unit in units.into_iter() {
-        match unit.kind {
-            UnitKind::Dirctory => all.push(unit),
-            UnitKind::Video => videos.push(unit),
-            UnitKind::Audio => audios.push(unit),
-            UnitKind::File => files.push(unit),
-        }
+        let target = match unit.kind {
+            UnitKind::Dirctory => &mut directories,
+            UnitKind::Video => &mut videos,
+            UnitKind::Audio => &mut audios,
+            UnitKind::File => &mut files,
+        };
+        target.push(unit);
     }
 
-    all.sort_by_key(|x| x.name());
-    videos.sort_by_key(|x| x.name());
-    audios.sort_by_key(|x| x.name());
-    files.sort_by_key(|x| x.name());
+    [&mut directories, &mut videos, &mut audios, &mut files]
+        .iter_mut()
+        .for_each(|xs| xs.sort_by_key(|x| x.name()));
 
-    all.into_iter()
+    directories
+        .into_iter()
         .chain(videos)
         .chain(audios)
         .chain(files)
@@ -100,7 +100,7 @@ pub fn App() -> impl IntoView {
         ls_result.refetch();
     });
 
-    window_event_listener(leptos::ev::popstate, move |_| {
+    window_event_listener(ev::popstate, move |_| {
         store.selected().write().clear();
     });
 
