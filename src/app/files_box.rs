@@ -13,16 +13,6 @@ use reactive_stores::Store;
 pub async fn ls(base: PathBuf) -> Result<Vec<Unit>, ServerFnError> {
     use crate::{ServerContext, Unit, UnitKind};
     use tokio::fs;
-    const VIDEO_X: [&str; 38] = [
-        "webm", "mkv", "flv", "vob", "ogv", "ogg", "rrc", "gifv", "mng", "mov", "avi", "qt", "wmv",
-        "yuv", "rm", "asf", "amv", "mp4", "m4p", "m4v", "mpg", "mp2", "mpeg", "mpe", "mpv", "m4v",
-        "svi", "3gp", "3g2", "mxf", "roq", "nsv", "flv", "f4v", "f4p", "f4a", "f4b", "mod",
-    ];
-
-    const AUDIO_X: [&str; 20] = [
-        "wav", "mp3", "aiff", "raw", "flac", "alac", "ape", "wv", "tta", "aac", "m4a", "ogg",
-        "opus", "wma", "au", "gsm", "amr", "ra", "mmf", "cda",
-    ];
 
     let context: ServerContext = use_context().unwrap();
     let root = context.root.join(base);
@@ -33,14 +23,7 @@ pub async fn ls(base: PathBuf) -> Result<Vec<Unit>, ServerFnError> {
         let kind = if x.file_type().await?.is_dir() {
             UnitKind::Dirctory
         } else {
-            let ex = path.extension().and_then(|x| x.to_str());
-            if ex.is_some_and(|x| VIDEO_X.contains(&x)) {
-                UnitKind::Video
-            } else if ex.is_some_and(|x| AUDIO_X.contains(&x)) {
-                UnitKind::Audio
-            } else {
-                UnitKind::File
-            }
+            UnitKind::File
         };
         let unit = Unit {
             path: path.strip_prefix(&context.root)?.to_path_buf(),

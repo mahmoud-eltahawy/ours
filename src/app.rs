@@ -43,16 +43,30 @@ struct GlobalState {
     units_refetch_tick: bool,
 }
 
-impl GlobalState {
-    fn new() -> Self {
-        Self {
-            selected: HashSet::new(),
-            current_path: PathBuf::new(),
-            media_play: None,
-            units: Vec::new(),
-            units_refetch_tick: true,
+fn retype_units(mut units: Vec<Unit>) -> Vec<Unit> {
+    const VIDEO_X: [&str; 38] = [
+        "webm", "mkv", "flv", "vob", "ogv", "ogg", "rrc", "gifv", "mng", "mov", "avi", "qt", "wmv",
+        "yuv", "rm", "asf", "amv", "mp4", "m4p", "m4v", "mpg", "mp2", "mpeg", "mpe", "mpv", "m4v",
+        "svi", "3gp", "3g2", "mxf", "roq", "nsv", "flv", "f4v", "f4p", "f4a", "f4b", "mod",
+    ];
+
+    const AUDIO_X: [&str; 20] = [
+        "wav", "mp3", "aiff", "raw", "flac", "alac", "ape", "wv", "tta", "aac", "m4a", "ogg",
+        "opus", "wma", "au", "gsm", "amr", "ra", "mmf", "cda",
+    ];
+    units.iter_mut().for_each(|unit| {
+        if unit.kind != UnitKind::File {
+            return;
         }
-    }
+        if let Some(x) = unit.path.extension().and_then(|x| x.to_str()) {
+            if VIDEO_X.contains(&x) {
+                unit.kind = UnitKind::Video;
+            } else if AUDIO_X.contains(&x) {
+                unit.kind = UnitKind::Audio;
+            }
+        };
+    });
+    units
 }
 
 fn sort_units(units: Vec<Unit>) -> Vec<Unit> {
@@ -83,7 +97,7 @@ fn sort_units(units: Vec<Unit>) -> Vec<Unit> {
 
 #[component]
 pub fn App() -> impl IntoView {
-    let store = Store::new(GlobalState::new());
+    let store = Store::new(GlobalState::default());
     let ls_result = Resource::new(move || store.current_path().get(), ls);
 
     provide_meta_context();
@@ -91,7 +105,7 @@ pub fn App() -> impl IntoView {
 
     Effect::new(move || {
         if let Some(xs) = ls_result.get().transpose().ok().flatten() {
-            *store.units().write() = sort_units(xs);
+            *store.units().write() = sort_units(retype_units(xs));
         };
     });
 
