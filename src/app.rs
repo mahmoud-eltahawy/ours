@@ -1,3 +1,4 @@
+use crate::{Unit, UnitKind};
 use files_box::{ls, FilesBox};
 use leptos::prelude::*;
 use leptos_meta::{provide_meta_context, MetaTags, Stylesheet, Title};
@@ -5,14 +6,14 @@ use leptos_router::{
     components::{Route, Router, Routes},
     StaticSegment,
 };
+use media_player::MediaPlayer;
 use nav_bar::NavBar;
 use reactive_stores::Store;
 use std::{collections::HashSet, path::PathBuf};
 
-use crate::{Unit, UnitKind};
-
 mod atoms;
 mod files_box;
+mod media_player;
 mod nav_bar;
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
@@ -89,6 +90,7 @@ pub fn App() -> impl IntoView {
                 .collect();
         };
     });
+
     Effect::new(move || {
         let _ = store.units_refetch_tick().read();
         ls_result.refetch();
@@ -108,6 +110,7 @@ pub fn App() -> impl IntoView {
                     <Route path=StaticSegment("") view={move ||view! {<FilesBox/>}}/>
                 </Routes>
             </main>
+            <MediaPlayer/>
         </Router>
     }
 }

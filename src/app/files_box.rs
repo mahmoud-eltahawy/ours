@@ -5,7 +5,7 @@ use crate::{
     app::{GlobalState, GlobalStateStoreFields},
     Unit, UnitKind,
 };
-use leptos::{either::Either, prelude::*};
+use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_query_map};
 use reactive_stores::Store;
 
@@ -77,27 +77,6 @@ pub fn FilesBox() -> impl IntoView {
                 <UnitComp unit={unit}/>
             </For>
         </section>
-        <MediaPlayer/>
-    }
-}
-#[component]
-fn MediaPlayer() -> impl IntoView {
-    let store: Store<GlobalState> = use_context().unwrap();
-
-    move || {
-        store.media_play().get().map(|x| match x.1 {
-            UnitKind::Video => Either::Left(view! {
-                <video width="50%" autoplay controls>
-                   <source src={x.0}/>
-                </video>
-            }),
-            UnitKind::Audio => Either::Right(view! {
-                <audio autoplay controls>
-                   <source src={x.0}/>
-                </audio>
-            }),
-            UnitKind::Dirctory | UnitKind::File => unreachable!(),
-        })
     }
 }
 
