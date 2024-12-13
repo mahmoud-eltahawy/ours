@@ -1,4 +1,4 @@
-use crate::{Unit, Units};
+use crate::{Unit, UnitKind, Units};
 use files_box::{ls, FilesBox};
 use leptos::{ev, prelude::*};
 use leptos_meta::{provide_meta_context, MetaTags, Stylesheet, Title};
@@ -33,12 +33,79 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
         </html>
     }
 }
+#[derive(Default, Clone, Debug)]
+enum SelectedState {
+    Copy,
+    Cut,
+    #[default]
+    None,
+}
+
+#[derive(Default, Clone, Debug)]
+struct Selected {
+    units: HashSet<Unit>,
+    state: SelectedState,
+}
+
+impl Selected {
+    fn clear(&mut self) {
+        self.units.clear();
+        self.none();
+    }
+
+    fn as_paths(&self) -> Vec<PathBuf> {
+        self.units.iter().map(|x| x.path.clone()).collect()
+    }
+
+    fn has_dirs(&self) -> bool {
+        self.units
+            .iter()
+            .any(|x| matches!(x.kind, UnitKind::Dirctory))
+    }
+
+    fn is_clear(&self) -> bool {
+        self.units.is_empty()
+    }
+
+    fn copy(&mut self) {
+        self.state = SelectedState::Copy;
+    }
+
+    fn cut(&mut self) {
+        self.state = SelectedState::Cut;
+    }
+
+    fn none(&mut self) {
+        self.state = SelectedState::None;
+    }
+
+    fn remove_unit(&mut self, unit: &Unit) {
+        self.units.remove(unit);
+        if self.units.is_empty() {
+            self.none();
+        }
+    }
+
+    fn toggle_unit_selection(&mut self, unit: &Unit) {
+        if !self.units.insert(unit.clone()) {
+            self.remove_unit(unit);
+        }
+    }
+
+    fn is_selected(&self, unit: &Unit) -> bool {
+        self.units.contains(unit)
+    }
+
+    fn download_selected(self) {
+        for unit in self.units.into_iter() {
+            unit.click_anchor();
+        }
+    }
+}
 
 #[derive(Clone, Debug, Default, Store)]
 struct GlobalState {
-    selected: HashSet<Unit>,
-    copies: HashSet<Unit>,
-    cuts: HashSet<Unit>,
+    select: Selected,
     current_path: PathBuf,
     media_play: Option<Unit>,
     units: Vec<Unit>,
@@ -66,7 +133,7 @@ pub fn App() -> impl IntoView {
     });
 
     window_event_listener(ev::popstate, move |_| {
-        store.selected().write().clear();
+        store.select().write().clear();
     });
 
     view! {

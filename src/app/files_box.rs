@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use super::atoms::Icon;
 use crate::{
-    app::{GlobalState, GlobalStateStoreFields},
+    app::{GlobalState, GlobalStateStoreFields, SelectedState},
     Unit, UnitKind,
 };
 use leptos::prelude::*;
@@ -85,32 +85,27 @@ fn UnitComp(unit: Unit) -> impl IntoView {
 
     let ondblclick = {
         let unit = unit.clone();
-        move |_| {
-            store.selected().write().clear();
-            match &unit.kind {
-                UnitKind::Dirctory => {
-                    navigate(&path_as_query(unit.path.clone()), Default::default());
+        move |_| match &unit.kind {
+            UnitKind::Dirctory => {
+                if matches!(store.select().read().state, SelectedState::None) {
+                    store.select().write().clear();
                 }
-                UnitKind::Video | UnitKind::Audio => {
-                    *store.media_play().write() = Some(unit.clone());
-                }
-                UnitKind::File => {
-                    unit.click_anchor();
-                    store.selected().update(|xs| {
-                        xs.remove(&unit);
-                    });
-                }
+                navigate(&path_as_query(unit.path.clone()), Default::default());
+            }
+            UnitKind::Video | UnitKind::Audio => {
+                *store.media_play().write() = Some(unit.clone());
+            }
+            UnitKind::File => {
+                unit.click_anchor();
+                store.select().write().remove_unit(&unit);
             }
         }
     };
+
     let onclick = {
         let unit = unit.clone();
         move |_| {
-            store.selected().update(|xs| {
-                if !xs.insert(unit.clone()) {
-                    xs.remove(&unit);
-                };
-            })
+            store.select().write().toggle_unit_selection(&unit);
         }
     };
 
@@ -141,12 +136,12 @@ fn UnitIcon(unit: Unit) -> impl IntoView {
         <a
             id={unit.name()}
             download={unit.name()}
-            href={format!("/download/{}", unit.path.to_str().unwrap())}
+            href={format!("/download/{}", unit.path.to_str().unwrap_or_default())}
             hidden></a>
     });
 
     view! {
-        <Icon name active={move || !store.selected().read().contains(&unit)} />
+        <Icon name active={move || !store.select().read().is_selected(&unit)} />
         {download_link}
     }
 }

@@ -1,9 +1,6 @@
 use std::path::PathBuf;
 
-use crate::{
-    app::{GlobalState, GlobalStateStoreFields},
-    UnitKind,
-};
+use crate::app::{GlobalState, GlobalStateStoreFields, SelectedState};
 
 use super::atoms::Icon;
 use leptos::{html, logging::log, prelude::*, task::spawn_local};
@@ -45,16 +42,10 @@ fn Home() -> impl IntoView {
 fn Clear() -> impl IntoView {
     let store = use_context::<Store<GlobalState>>().unwrap();
     let on_click = move |_| {
-        store.selected().write().clear();
-        store.copies().write().clear();
-        store.cuts().write().clear();
+        store.select().write().clear();
     };
 
-    let is_active = move || {
-        !store.selected().read().is_empty()
-            || !store.copies().read().is_empty()
-            || !store.cuts().read().is_empty()
-    };
+    let is_active = move || !store.select().read().is_clear();
 
     view! {
         <button
@@ -83,16 +74,10 @@ fn Delete() -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let on_click = move |_| {
         spawn_local(async move {
-            let result = rm(store
-                .selected()
-                .read_untracked()
-                .iter()
-                .map(|x| x.path.clone())
-                .collect())
-            .await;
+            let result = rm(store.select().read_untracked().as_paths()).await;
             match result {
                 Ok(_) => {
-                    store.selected().write().clear();
+                    store.select().write().clear();
                     store.units_refetch_tick().update(|x| *x = !*x);
                 }
                 Err(e) => log!("Error : {:#?}", e),
@@ -101,8 +86,8 @@ fn Delete() -> impl IntoView {
     };
 
     let is_active = move || {
-        let list = store.selected().read();
-        !list.is_empty() && !list.iter().any(|x| matches!(x.kind, UnitKind::Dirctory))
+        let select = store.select().read();
+        !select.is_clear() && !select.has_dirs()
     };
 
     view! {
@@ -152,39 +137,31 @@ fn Paste() -> impl IntoView {
                 }
                 Err(e) => log!("Error : {:#?}", e),
             };
-            if !store.copies().read().is_empty() {
-                let result = cp(
-                    store
-                        .copies()
-                        .read_untracked()
-                        .iter()
-                        .map(|x| x.path.clone())
-                        .collect(),
-                    to,
-                )
-                .await;
-                handle_result(result);
-                store.copies().write().clear();
-            } else if !store.cuts().read().is_empty() {
-                let result = cp_cut(
-                    store
-                        .cuts()
-                        .read_untracked()
-                        .iter()
-                        .map(|x| x.path.clone())
-                        .collect(),
-                    to,
-                )
-                .await;
-                handle_result(result);
-                store.cuts().write().clear();
+            match store.select().read().state {
+                SelectedState::Copy => {
+                    let result = cp(store.select().read_untracked().as_paths(), to).await;
+                    handle_result(result);
+                    store.select().write().clear();
+                    store.select().write().none();
+                }
+                SelectedState::Cut => {
+                    let result = cp_cut(store.select().read_untracked().as_paths(), to).await;
+                    handle_result(result);
+                    store.select().write().clear();
+                    store.select().write().none();
+                }
+                SelectedState::None => (),
             }
         });
     };
 
     let is_active = move || {
-        store.selected().read().is_empty()
-            && (!store.cuts().read().is_empty() || !store.copies().read().is_empty())
+        let select = store.select().read();
+        !select.is_clear()
+            && match select.state {
+                SelectedState::Copy | SelectedState::Cut => true,
+                SelectedState::None => false,
+            }
     };
 
     view! {
@@ -202,17 +179,12 @@ fn Copy() -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
 
     let is_active = move || {
-        let selected = store.selected().read();
-        !selected.is_empty()
-            && !selected
-                .iter()
-                .any(|x| matches!(x.kind, UnitKind::Dirctory))
-            && store.copies().read().is_empty()
+        let select = store.select().read();
+        !select.is_clear() && !select.has_dirs()
     };
 
     let on_click = move |_| {
-        store.copies().set(store.selected().get_untracked());
-        store.selected().write().clear();
+        store.select().write().copy();
     };
 
     view! {
@@ -230,17 +202,12 @@ fn Cut() -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
 
     let is_active = move || {
-        let selected = store.selected().read();
-        !selected.is_empty()
-            && !selected
-                .iter()
-                .any(|x| matches!(x.kind, UnitKind::Dirctory))
-            && store.cuts().read().is_empty()
+        let select = store.select().read();
+        !select.is_clear() && !select.has_dirs()
     };
 
     let on_click = move |_| {
-        store.cuts().set(store.selected().get_untracked());
-        store.selected().write().clear();
+        store.select().write().cut();
     };
 
     view! {
@@ -257,17 +224,13 @@ fn Cut() -> impl IntoView {
 fn Download() -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let on_click = move |_| {
-        let selected = store.selected();
-        for unit in selected.get_untracked().iter() {
-            unit.click_anchor();
-        }
-
-        selected.write().clear();
+        store.select().get_untracked().download_selected();
+        store.select().write().clear();
     };
 
     let is_active = move || {
-        let list = store.selected().read();
-        !list.is_empty() && !list.iter().any(|x| matches!(x.kind, UnitKind::Dirctory))
+        let select = store.select().read();
+        !select.is_clear() && !select.has_dirs()
     };
 
     view! {
@@ -309,7 +272,7 @@ async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
 fn Upload() -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
 
-    let is_active = move || store.selected().read().is_empty();
+    let is_active = move || store.select().read().is_clear();
 
     let upload_action = Action::new_local(|data: &FormData| upload(data.clone().into()));
     let on_change = move |ev: Event| {
