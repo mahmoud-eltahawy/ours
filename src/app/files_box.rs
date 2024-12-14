@@ -5,7 +5,7 @@ use crate::{
     app::{GlobalState, GlobalStateStoreFields, SelectedState},
     Unit, UnitKind,
 };
-use leptos::prelude::*;
+use leptos::{either::Either, prelude::*};
 use leptos_router::hooks::{use_navigate, use_query_map};
 use reactive_stores::Store;
 
@@ -110,13 +110,32 @@ fn UnitComp(unit: Unit) -> impl IntoView {
     };
 
     let name = unit.name();
+    let icon = {
+        let unit = unit.clone();
+        move || {
+            let select = store.select().read();
+            let is_selected = select.is_selected(&unit);
+            match select.state {
+                SelectedState::Cut if is_selected => Either::Right(Either::Left(view! {
+                    <Icon active={|| true} name="cut.png"/>
+                })),
+                SelectedState::Copy if is_selected => Either::Right(Either::Right(view! {
+                    <Icon active={|| true} name="copy.png"/>
+                })),
+                _ => Either::Left(view! {
+                    <UnitIcon unit={unit.clone()}/>
+                }),
+            }
+        }
+    };
+
     view! {
         <button
             on:dblclick=ondblclick
             on:click=onclick
             class="grid grid-cols-1 hover:text-white hover:bg-black justify-items-center"
         >
-            <UnitIcon unit={unit}/>
+            {icon}
             <span>{name}</span>
         </button>
     }
