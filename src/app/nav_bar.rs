@@ -167,11 +167,7 @@ fn Paste() -> impl IntoView {
 
     let is_active = move || {
         let select = store.select().read();
-        !select.is_clear()
-            && match select.state {
-                SelectedState::Copy | SelectedState::Cut => true,
-                SelectedState::None => false,
-            }
+        !select.is_clear() && !matches!(select.state, SelectedState::None)
     };
 
     view! {
