@@ -1,6 +1,6 @@
 use leptos::prelude::document;
 use serde::{Deserialize, Serialize};
-use std::{cell::LazyCell, collections::HashSet, path::PathBuf};
+use std::{collections::HashSet, path::PathBuf, sync::LazyLock};
 use wasm_bindgen::JsCast;
 
 pub mod app;
@@ -49,7 +49,7 @@ trait Units {
 }
 
 //TODO : try make this happen at compile time
-const VIDEO_X: LazyCell<HashSet<&str>> = LazyCell::new(|| {
+static VIDEO_X: LazyLock<HashSet<&str>> = LazyLock::new(|| {
     HashSet::from([
         "webm", "mkv", "flv", "vob", "ogv", "ogg", "rrc", "gifv", "mng", "mov", "avi", "qt", "wmv",
         "yuv", "rm", "asf", "amv", "mp4", "m4p", "m4v", "mpg", "mp2", "mpeg", "mpe", "mpv", "m4v",
@@ -58,7 +58,7 @@ const VIDEO_X: LazyCell<HashSet<&str>> = LazyCell::new(|| {
 });
 
 //TODO : try make this happen at compile time
-const AUDIO_X: LazyCell<HashSet<&str>> = LazyCell::new(|| {
+static AUDIO_X: LazyLock<HashSet<&str>> = LazyLock::new(|| {
     HashSet::from([
         "wav", "mp3", "aiff", "raw", "flac", "alac", "ape", "wv", "tta", "aac", "m4a", "ogg",
         "opus", "wma", "au", "gsm", "amr", "ra", "mmf", "cda",
