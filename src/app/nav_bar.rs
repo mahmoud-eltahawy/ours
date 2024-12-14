@@ -128,27 +128,43 @@ pub async fn cp_cut(from: Vec<PathBuf>, to: PathBuf) -> Result<(), ServerFnError
 #[component]
 fn Paste() -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
+    let copy = Action::new(move |_: &()| {
+        cp(
+            store.select().read_untracked().as_paths(),
+            store.current_path().get_untracked(),
+        )
+    });
+    let cut = Action::new(move |_: &()| {
+        cp_cut(
+            store.select().read_untracked().as_paths(),
+            store.current_path().get_untracked(),
+        )
+    });
+
+    Effect::new(move || {
+        if !copy.pending().get() {
+            store.units_refetch_tick().update(|x| *x = !*x);
+            store.select().write().clear();
+            store.select().write().none();
+        }
+    });
+
+    Effect::new(move || {
+        if !cut.pending().get() {
+            store.units_refetch_tick().update(|x| *x = !*x);
+            store.select().write().clear();
+            store.select().write().none();
+        }
+    });
+
     let on_click = move |_| {
         spawn_local(async move {
-            let to = store.current_path().get_untracked();
-            let handle_result = |result| match result {
-                Ok(_) => {
-                    store.units_refetch_tick().update(|x| *x = !*x);
-                }
-                Err(e) => log!("Error : {:#?}", e),
-            };
             match store.select().read().state {
                 SelectedState::Copy => {
-                    let result = cp(store.select().read_untracked().as_paths(), to).await;
-                    handle_result(result);
-                    store.select().write().clear();
-                    store.select().write().none();
+                    copy.dispatch(());
                 }
                 SelectedState::Cut => {
-                    let result = cp_cut(store.select().read_untracked().as_paths(), to).await;
-                    handle_result(result);
-                    store.select().write().clear();
-                    store.select().write().none();
+                    cut.dispatch(());
                 }
                 SelectedState::None => (),
             }
