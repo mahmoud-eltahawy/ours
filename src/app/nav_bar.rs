@@ -143,32 +143,26 @@ fn Paste() -> impl IntoView {
 
     Effect::new(move || {
         if !copy.pending().get() {
-            store.units_refetch_tick().update(|x| *x = !*x);
             store.select().write().clear();
-            store.select().write().none();
+            store.units_refetch_tick().update(|x| *x = !*x);
         }
     });
 
     Effect::new(move || {
         if !cut.pending().get() {
-            store.units_refetch_tick().update(|x| *x = !*x);
             store.select().write().clear();
-            store.select().write().none();
+            store.units_refetch_tick().update(|x| *x = !*x);
         }
     });
 
-    let on_click = move |_| {
-        spawn_local(async move {
-            match store.select().read().state {
-                SelectedState::Copy => {
-                    copy.dispatch(());
-                }
-                SelectedState::Cut => {
-                    cut.dispatch(());
-                }
-                SelectedState::None => (),
-            }
-        });
+    let on_click = move |_| match store.select().read().state {
+        SelectedState::Copy => {
+            copy.dispatch(());
+        }
+        SelectedState::Cut => {
+            cut.dispatch(());
+        }
+        SelectedState::None => (),
     };
 
     let is_active = move || {
