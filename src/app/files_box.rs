@@ -117,10 +117,10 @@ fn UnitComp(unit: Unit) -> impl IntoView {
             let is_selected = select.is_selected(&unit);
             match select.state {
                 SelectedState::Cut if is_selected => Either::Right(Either::Left(view! {
-                    <Icon active={|| true} name="cut.png"/>
+                    <Icon active={|| true} name="cut"/>
                 })),
                 SelectedState::Copy if is_selected => Either::Right(Either::Right(view! {
-                    <Icon active={|| true} name="copy.png"/>
+                    <Icon active={|| true} name="copy"/>
                 })),
                 _ => Either::Left(view! {
                     <UnitIcon unit={unit.clone()}/>
@@ -145,10 +145,10 @@ fn UnitComp(unit: Unit) -> impl IntoView {
 fn UnitIcon(unit: Unit) -> impl IntoView {
     let store = use_context::<Store<GlobalState>>().unwrap();
     let name = match unit.kind {
-        UnitKind::Dirctory => "directory.png",
-        UnitKind::File => "file.png",
-        UnitKind::Video => "video.png",
-        UnitKind::Audio => "audio.png",
+        UnitKind::Dirctory => "directory",
+        UnitKind::File => "file",
+        UnitKind::Video => "video",
+        UnitKind::Audio => "audio",
     };
 
     let download_link = (unit.kind != UnitKind::Dirctory).then_some(view! {

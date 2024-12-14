@@ -33,7 +33,7 @@ fn Home() -> impl IntoView {
 
     view! {
         <A href="/" class:disabled={move || !is_active()}>
-            <Icon name="home.png" active={is_active}/>
+            <Icon name="home" active={is_active}/>
         </A>
     }
 }
@@ -52,7 +52,7 @@ fn Clear() -> impl IntoView {
             disabled={move || !is_active()}
             on:click=on_click
         >
-            <Icon active={is_active} name="clear.png"/>
+            <Icon active={is_active} name="clear"/>
         </button>
     }
 }
@@ -95,7 +95,7 @@ fn Delete() -> impl IntoView {
             disabled={move || !is_active()}
             on:click=on_click
         >
-            <Icon active={is_active} name="delete.png"/>
+            <Icon active={is_active} name="delete"/>
         </button>
     }
 }
@@ -169,7 +169,7 @@ fn Paste() -> impl IntoView {
             disabled={move || !is_active()}
             on:click=on_click
         >
-            <Icon active={is_active} name="paste.png"/>
+            <Icon active={is_active} name="paste"/>
         </button>
     }
 }
@@ -192,7 +192,7 @@ fn Copy() -> impl IntoView {
             disabled={move || !is_active()}
             on:click=on_click
         >
-            <Icon active={is_active} name="copy.png"/>
+            <Icon active={is_active} name="copy"/>
         </button>
     }
 }
@@ -215,7 +215,7 @@ fn Cut() -> impl IntoView {
             disabled={move || !is_active()}
             on:click=on_click
         >
-            <Icon active={is_active} name="cut.png"/>
+            <Icon active={is_active} name="cut"/>
         </button>
     }
 }
@@ -238,7 +238,7 @@ fn Download() -> impl IntoView {
             disabled={move || !is_active()}
             on:click=on_click
         >
-            <Icon active={is_active} name="download.png"/>
+            <Icon active={is_active} name="download"/>
         </button>
     }
 }
@@ -309,16 +309,16 @@ fn Upload() -> impl IntoView {
         <Show
             when={move || !upload_action.pending().get()}
             fallback={move || view!{
-                <Icon active={|| true} name="load.gif"/>
+                <img class="m-1 p-1" src="load.gif" width=65/>
             }}
             >
             <button
                 disabled={move || !is_active()}
                 on:click=on_click
             >
-                <Icon active={is_active} name="upload.png"/>
+                <Icon active={is_active} name="upload"/>
             </button>
-            <input node_ref={input_ref} on:change={on_change} type="file" name="file_to_upload" multiple hidden/>
+            <input node_ref={input_ref} on:change={on_change} type="file" multiple hidden/>
         </Show>
     }
 }

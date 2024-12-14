@@ -7,9 +7,9 @@ where
 {
     let path = move || {
         if active() {
-            name.to_string()
+            format!("{name}.png")
         } else {
-            format!("dark/{name}")
+            format!("dark/{name}.png")
         }
     };
     view! {
