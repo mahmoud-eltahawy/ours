@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
-use super::atoms::Icon;
+use super::atoms::ActiveIcon;
 use crate::{
-    app::{GlobalState, GlobalStateStoreFields, SelectedState},
+    app::{atoms::Icon, GlobalState, GlobalStateStoreFields, SelectedState},
     Unit, UnitKind,
 };
 use leptos::{either::Either, prelude::*};
@@ -117,10 +117,10 @@ fn UnitComp(unit: Unit) -> impl IntoView {
             let is_selected = select.is_selected(&unit);
             match select.state {
                 SelectedState::Cut if is_selected => Either::Right(Either::Left(view! {
-                    <Icon active={|| true} name="cut"/>
+                    <Icon name="cut"/>
                 })),
                 SelectedState::Copy if is_selected => Either::Right(Either::Right(view! {
-                    <Icon active={|| true} name="copy"/>
+                    <Icon name="copy"/>
                 })),
                 _ => Either::Left(view! {
                     <UnitIcon unit={unit.clone()}/>
@@ -160,7 +160,7 @@ fn UnitIcon(unit: Unit) -> impl IntoView {
     });
 
     view! {
-        <Icon name active={move || !store.select().read().is_selected(&unit)} />
+        <ActiveIcon name active={move || !store.select().read().is_selected(&unit)} />
         {download_link}
     }
 }

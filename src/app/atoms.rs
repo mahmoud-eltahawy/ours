@@ -1,18 +1,27 @@
 use leptos::prelude::*;
 
 #[component]
-pub fn Icon<F>(name: &'static str, active: F) -> impl IntoView
+pub fn ActiveIcon<F>(name: &'static str, active: F) -> impl IntoView
 where
     F: Fn() -> bool + 'static + Send,
 {
-    let path = move || {
+    let src = move || {
+        let name = format!("{name}.png");
         if active() {
-            format!("{name}.png")
+            name
         } else {
-            format!("dark/{name}.png")
+            format!("dark/{name}")
         }
     };
     view! {
-        <img class="m-1 p-1" src={path} width=65/>
+        <img class="m-1 p-1" src={src} width=65/>
+    }
+}
+
+#[component]
+pub fn Icon(name: &'static str) -> impl IntoView {
+    let name = format!("{name}.png");
+    view! {
+        <img class="m-1 p-1" src={name} width=65/>
     }
 }

@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use crate::app::{GlobalState, GlobalStateStoreFields, SelectedState};
 
-use super::atoms::Icon;
+use super::atoms::ActiveIcon;
 use leptos::{html, logging::log, prelude::*, task::spawn_local};
 use leptos_router::components::A;
 use reactive_stores::Store;
@@ -33,7 +33,7 @@ fn Home() -> impl IntoView {
 
     view! {
         <A href="/" class:disabled={move || !is_active()}>
-            <Icon name="home" active={is_active}/>
+            <ActiveIcon name="home" active={is_active}/>
         </A>
     }
 }
@@ -52,7 +52,7 @@ fn Clear() -> impl IntoView {
             disabled={move || !is_active()}
             on:click=on_click
         >
-            <Icon active={is_active} name="clear"/>
+            <ActiveIcon active={is_active} name="clear"/>
         </button>
     }
 }
@@ -95,7 +95,7 @@ fn Delete() -> impl IntoView {
             disabled={move || !is_active()}
             on:click=on_click
         >
-            <Icon active={is_active} name="delete"/>
+            <ActiveIcon active={is_active} name="delete"/>
         </button>
     }
 }
@@ -169,7 +169,7 @@ fn Paste() -> impl IntoView {
             disabled={move || !is_active()}
             on:click=on_click
         >
-            <Icon active={is_active} name="paste"/>
+            <ActiveIcon active={is_active} name="paste"/>
         </button>
     }
 }
@@ -192,7 +192,7 @@ fn Copy() -> impl IntoView {
             disabled={move || !is_active()}
             on:click=on_click
         >
-            <Icon active={is_active} name="copy"/>
+            <ActiveIcon active={is_active} name="copy"/>
         </button>
     }
 }
@@ -215,7 +215,7 @@ fn Cut() -> impl IntoView {
             disabled={move || !is_active()}
             on:click=on_click
         >
-            <Icon active={is_active} name="cut"/>
+            <ActiveIcon active={is_active} name="cut"/>
         </button>
     }
 }
@@ -238,7 +238,7 @@ fn Download() -> impl IntoView {
             disabled={move || !is_active()}
             on:click=on_click
         >
-            <Icon active={is_active} name="download"/>
+            <ActiveIcon active={is_active} name="download"/>
         </button>
     }
 }
@@ -316,7 +316,7 @@ fn Upload() -> impl IntoView {
                 disabled={move || !is_active()}
                 on:click=on_click
             >
-                <Icon active={is_active} name="upload"/>
+                <ActiveIcon active={is_active} name="upload"/>
             </button>
             <input node_ref={input_ref} on:change={on_change} type="file" multiple hidden/>
         </Show>
