@@ -61,10 +61,21 @@ fn Clear() -> impl IntoView {
 #[server]
 pub async fn mp4_remux(targets: Vec<PathBuf>) -> Result<(), ServerFnError> {
     use crate::ServerContext;
+    use tokio::{fs::remove_file, process::Command};
     let context = use_context::<ServerContext>().unwrap();
     for target in targets.into_iter().map(|x| context.root.join(x)) {
-        let target = context.root.join(target);
-        log!("{:#?}", target);
+        let from = context.root.join(target);
+        let mut to = from.clone();
+        to.set_extension("mp4");
+        let _ = remove_file(to.clone()).await;
+        Command::new("ffmpeg")
+            .arg("-i")
+            .arg(from.clone())
+            .arg(to)
+            .spawn()?
+            .wait()
+            .await?;
+        let _ = remove_file(from).await;
     }
     Ok(())
 }
@@ -84,7 +95,6 @@ fn ToMp4() -> impl IntoView {
             .map(|x| x.path.clone())
             .collect::<Vec<_>>();
 
-        log!("{:#?}", targets);
         remux.dispatch(targets);
 
         store.select().write().clear();
@@ -98,6 +108,12 @@ fn ToMp4() -> impl IntoView {
                 .iter()
                 .all(|x| matches!(x.kind, crate::UnitKind::Video))
     };
+
+    Effect::new(move || {
+        if !remux.pending().get() {
+            store.units_refetch_tick().update(|x| *x = !*x);
+        }
+    });
 
     view! {
         <button
