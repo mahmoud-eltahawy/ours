@@ -7,18 +7,21 @@ async fn main() {
     use leptos_axum::{generate_route_list, LeptosRoutes};
     use std::env::var;
     use std::fs::canonicalize;
+    use std::net::SocketAddr;
     use tower_http::services::ServeDir;
     use webls::app::*;
     use webls::ServerContext;
 
     let conf = get_configuration(None).unwrap();
-    let addr = conf.leptos_options.site_addr;
+    // let addr = conf.leptos_options.site_addr;
     let leptos_options = conf.leptos_options;
     // Generate the list of routes in your Leptos App
     let routes = generate_route_list(App);
     let webls_root = var("WEBLS_ROOT").unwrap();
+    let port = var("WEBLS_PORT").unwrap().parse().unwrap();
     let root = canonicalize(&webls_root).unwrap();
 
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
     let serve_dir = ServeDir::new(root.clone());
 
     let app = Router::new()
