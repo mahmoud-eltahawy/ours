@@ -22,6 +22,7 @@ pub fn NavBar() -> impl IntoView {
             <Copy/>
             <Cut/>
             <Paste/>
+            <ToMp4/>
         </nav>
     }
 }
@@ -53,6 +54,57 @@ fn Clear() -> impl IntoView {
             on:click=on_click
         >
             <ActiveIcon active={is_active} name="clear"/>
+        </button>
+    }
+}
+
+#[server]
+pub async fn mp4_remux(targets: Vec<PathBuf>) -> Result<(), ServerFnError> {
+    use crate::ServerContext;
+    let context = use_context::<ServerContext>().unwrap();
+    for target in targets.into_iter().map(|x| context.root.join(x)) {
+        let target = context.root.join(target);
+        log!("{:#?}", target);
+    }
+    Ok(())
+}
+
+#[component]
+fn ToMp4() -> impl IntoView {
+    let store = use_context::<Store<GlobalState>>().unwrap();
+
+    let remux = Action::new(move |input: &Vec<PathBuf>| mp4_remux(input.clone()));
+    let on_click = move |_| {
+        let targets = store
+            .select()
+            .read()
+            .units
+            .iter()
+            .filter(|x| x.path.extension().is_some_and(|x| x != "mp4"))
+            .map(|x| x.path.clone())
+            .collect::<Vec<_>>();
+
+        log!("{:#?}", targets);
+        remux.dispatch(targets);
+
+        store.select().write().clear();
+    };
+
+    let is_active = move || {
+        let select = store.select().read();
+        !select.is_clear()
+            && select
+                .units
+                .iter()
+                .all(|x| matches!(x.kind, crate::UnitKind::Video))
+    };
+
+    view! {
+        <button
+            disabled={move || !is_active()}
+            on:click=on_click
+        >
+            <ActiveIcon active={is_active} name="mp4"/>
         </button>
     }
 }
