@@ -110,6 +110,7 @@ struct GlobalState {
     media_play: Option<Unit>,
     units: Vec<Unit>,
     units_refetch_tick: bool,
+    mkdir_state: bool,
 }
 
 #[component]

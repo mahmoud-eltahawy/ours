@@ -8,6 +8,7 @@ use crate::{
 use leptos::{either::Either, prelude::*};
 use leptos_router::hooks::{use_navigate, use_query_map};
 use reactive_stores::Store;
+use web_sys::KeyboardEvent;
 
 #[server]
 pub async fn ls(base: PathBuf) -> Result<Vec<Unit>, ServerFnError> {
@@ -51,6 +52,7 @@ pub fn FilesBox() -> impl IntoView {
 
     view! {
         <section class="flex flex-wrap gap-5 m-5 p-5">
+            <Mkdir/>
             <For
                 each={move || store.units().get()}
                 key={|x| x.path.clone()}
@@ -59,6 +61,55 @@ pub fn FilesBox() -> impl IntoView {
                 <UnitComp unit={unit}/>
             </For>
         </section>
+    }
+}
+
+#[server]
+pub async fn mkdir(target: PathBuf) -> Result<(), ServerFnError> {
+    use crate::ServerContext;
+    use tokio::fs;
+    let context = use_context::<ServerContext>().unwrap();
+    let target = context.root.join(target);
+    fs::create_dir(target).await?;
+    Ok(())
+}
+
+#[component]
+fn Mkdir() -> impl IntoView {
+    let store: Store<GlobalState> = use_context().unwrap();
+    let mkdir_state = store.mkdir_state();
+    let value = RwSignal::new(String::new());
+
+    let mkdir = Action::new(move |input: &PathBuf| mkdir(input.clone()));
+    let enter = move |ev: KeyboardEvent| {
+        if ev.key() == "Enter" {
+            let path = store.current_path().get_untracked();
+            let new_path = path.join(value.get_untracked());
+            mkdir.dispatch(new_path);
+            *mkdir_state.write() = false;
+            value.write().clear();
+        }
+    };
+
+    Effect::new(move || {
+        if !mkdir.pending().get() {
+            store.units_refetch_tick().update(|x| *x = !*x);
+        }
+    });
+
+    let when = move || mkdir_state.get();
+    view! {
+        <Show when={when}>
+            <button>
+                <Icon name="directory"/>
+                <input
+                    class="p-2 border-2 border-black text-2xl"
+                    on:keypress={enter}
+                    type="text"
+                    bind:value={value}
+                />
+            </button>
+        </Show>
     }
 }
 

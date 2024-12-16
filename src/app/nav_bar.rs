@@ -23,6 +23,7 @@ pub fn NavBar() -> impl IntoView {
             <Cut/>
             <Paste/>
             <ToMp4/>
+            <Mkdir/>
         </nav>
     }
 }
@@ -121,6 +122,26 @@ fn ToMp4() -> impl IntoView {
             on:click=on_click
         >
             <ActiveIcon active={is_active} name="mp4"/>
+        </button>
+    }
+}
+
+#[component]
+fn Mkdir() -> impl IntoView {
+    let store = use_context::<Store<GlobalState>>().unwrap();
+
+    let on_click = move |_| {
+        *store.mkdir_state().write() = true;
+    };
+
+    let is_active = move || store.select().read().is_clear();
+
+    view! {
+        <button
+            disabled={move || !is_active()}
+            on:click=on_click
+        >
+            <ActiveIcon active={is_active} name="mkdir"/>
         </button>
     }
 }
