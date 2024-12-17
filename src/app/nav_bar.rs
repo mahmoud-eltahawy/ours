@@ -1,9 +1,12 @@
 use std::path::PathBuf;
 
-use crate::app::{GlobalState, GlobalStateStoreFields, SelectedState};
+use crate::{
+    app::{GlobalState, GlobalStateStoreFields, SelectedState},
+    Unit,
+};
 
 use super::atoms::ActiveIcon;
-use leptos::{html, logging::log, prelude::*, task::spawn_local};
+use leptos::{html, prelude::*};
 use leptos_router::components::A;
 use reactive_stores::Store;
 use server_fn::codec::{MultipartData, MultipartFormData};
@@ -147,12 +150,20 @@ fn Mkdir() -> impl IntoView {
 }
 
 #[server]
-pub async fn rm(bases: Vec<PathBuf>) -> Result<(), ServerFnError> {
-    use crate::ServerContext;
-    use tokio::fs::remove_file;
+pub async fn rm(bases: Vec<Unit>) -> Result<(), ServerFnError> {
+    use crate::{ServerContext, UnitKind};
+    use tokio::fs::{remove_dir_all, remove_file};
     let context = use_context::<ServerContext>().unwrap();
-    for base in bases.into_iter().map(|x| context.root.join(x)) {
-        remove_file(base).await?;
+    for base in bases.into_iter() {
+        let path = context.root.join(base.path);
+        match base.kind {
+            UnitKind::Dirctory => {
+                remove_dir_all(path).await?;
+            }
+            _ => {
+                remove_file(path).await?;
+            }
+        };
     }
 
     Ok(())
@@ -161,23 +172,19 @@ pub async fn rm(bases: Vec<PathBuf>) -> Result<(), ServerFnError> {
 #[component]
 fn Delete() -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
+    let remove = Action::new(move |input: &Vec<Unit>| rm(input.clone()));
     let on_click = move |_| {
-        spawn_local(async move {
-            let result = rm(store.select().read_untracked().as_paths()).await;
-            match result {
-                Ok(_) => {
-                    store.select().write().clear();
-                    store.units_refetch_tick().update(|x| *x = !*x);
-                }
-                Err(e) => log!("Error : {:#?}", e),
-            }
-        });
+        remove.dispatch(store.select().get_untracked().units.into_iter().collect());
     };
 
-    let is_active = move || {
-        let select = store.select().read();
-        !select.is_clear() && !select.has_dirs()
-    };
+    Effect::new(move || {
+        if !remove.pending().get() {
+            store.select().write().clear();
+            store.units_refetch_tick().update(|x| *x = !*x);
+        }
+    });
+
+    let is_active = move || !store.select().read().is_clear();
 
     view! {
         <button
