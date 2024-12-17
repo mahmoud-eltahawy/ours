@@ -1,6 +1,6 @@
 use leptos::prelude::document;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, path::PathBuf, sync::LazyLock};
+use std::path::PathBuf;
 use wasm_bindgen::JsCast;
 
 pub mod app;
@@ -48,22 +48,16 @@ trait Units {
     fn resort(self) -> Self;
 }
 
-//TODO : try make this happen at compile time
-static VIDEO_X: LazyLock<HashSet<&str>> = LazyLock::new(|| {
-    HashSet::from([
-        "webm", "mkv", "flv", "vob", "ogv", "ogg", "rrc", "gifv", "mng", "mov", "avi", "qt", "wmv",
-        "yuv", "rm", "asf", "amv", "mp4", "m4p", "m4v", "mpg", "mp2", "mpeg", "mpe", "mpv", "m4v",
-        "svi", "3gp", "3g2", "mxf", "roq", "nsv", "flv", "f4v", "f4p", "f4a", "f4b", "mod",
-    ])
-});
+const VIDEO_X: [&str; 38] = [
+    "webm", "mkv", "flv", "vob", "ogv", "ogg", "rrc", "gifv", "mng", "mov", "avi", "qt", "wmv",
+    "yuv", "rm", "asf", "amv", "mp4", "m4p", "m4v", "mpg", "mp2", "mpeg", "mpe", "mpv", "m4v",
+    "svi", "3gp", "3g2", "mxf", "roq", "nsv", "flv", "f4v", "f4p", "f4a", "f4b", "mod",
+];
 
-//TODO : try make this happen at compile time
-static AUDIO_X: LazyLock<HashSet<&str>> = LazyLock::new(|| {
-    HashSet::from([
-        "wav", "mp3", "aiff", "raw", "flac", "alac", "ape", "wv", "tta", "aac", "m4a", "ogg",
-        "opus", "wma", "au", "gsm", "amr", "ra", "mmf", "cda",
-    ])
-});
+const AUDIO_X: [&str; 20] = [
+    "wav", "mp3", "aiff", "raw", "flac", "alac", "ape", "wv", "tta", "aac", "m4a", "ogg", "opus",
+    "wma", "au", "gsm", "amr", "ra", "mmf", "cda",
+];
 
 impl Units for Vec<Unit> {
     fn retype(&mut self) {
