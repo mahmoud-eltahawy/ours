@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use crate::{
-    app::{GlobalState, GlobalStateStoreFields, SelectedState},
+    app::{atoms::Icon, GlobalState, GlobalStateStoreFields, SelectedState},
     Unit,
 };
 
@@ -15,18 +15,24 @@ use web_sys::{Blob, Event, FormData, HtmlInputElement};
 
 #[component]
 pub fn NavBar() -> impl IntoView {
+    let store: Store<GlobalState> = use_context().unwrap();
     view! {
-        <nav class="flex flex-wrap">
+        <nav class="flex flex-wrap place-content-center">
             <Home/>
             <Clear/>
             <Download/>
-            <Upload/>
-            <Delete/>
-            <Copy/>
-            <Cut/>
-            <Paste/>
-            <ToMp4/>
-            <Mkdir/>
+            <Show
+                when={move || store.password().get().is_some()}
+                fallback=Admin
+            >
+                <Upload/>
+                <Delete/>
+                <Copy/>
+                <Cut/>
+                <Paste/>
+                <ToMp4/>
+                <Mkdir/>
+            </Show>
         </nav>
     }
 }
@@ -58,6 +64,22 @@ fn Clear() -> impl IntoView {
             on:click=on_click
         >
             <ActiveIcon active={is_active} name="clear"/>
+        </button>
+    }
+}
+
+#[component]
+fn Admin() -> impl IntoView {
+    let store = use_context::<Store<GlobalState>>().unwrap();
+    let on_click = move |_| {
+        *store.login().write() = true;
+    };
+
+    view! {
+        <button
+            on:click=on_click
+        >
+            <Icon name="admin"/>
         </button>
     }
 }

@@ -10,6 +10,7 @@ use media_player::MediaPlayer;
 use nav_bar::NavBar;
 use reactive_stores::Store;
 use std::{collections::HashSet, path::PathBuf};
+use web_sys::KeyboardEvent;
 
 mod atoms;
 mod files_box;
@@ -111,6 +112,8 @@ struct GlobalState {
     units: Vec<Unit>,
     units_refetch_tick: bool,
     mkdir_state: bool,
+    password: Option<String>,
+    login: bool,
 }
 
 #[component]
@@ -148,6 +151,53 @@ pub fn App() -> impl IntoView {
                 </Routes>
             </main>
             <MediaPlayer/>
+            <Login/>
         </Router>
+    }
+}
+
+#[component]
+fn Login() -> impl IntoView {
+    let store: Store<GlobalState> = use_context().unwrap();
+    let pass = RwSignal::new(String::new());
+
+    let clean = move || {
+        *store.login().write() = false;
+        *pass.write() = String::new();
+    };
+
+    let okay = move || {
+        clean();
+        *store.password().write() = Some(pass.get_untracked());
+    };
+
+    let enter = move |ev: KeyboardEvent| {
+        if ev.key() == "Enter" {
+            okay();
+        }
+    };
+
+    view! {
+        <Show when={move || store.login().get()}>
+            <section class="grid grid-cols-1 gap-5 place-content-center bg-white rounded-lg border-black border-2 p-10 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                <h2 class="text-center text-3xl">Admin Login</h2>
+                <input
+                    class="p-5 rounded-lg text-2xl border-2 border-black"
+                    type="password"
+                    bind:value={pass}
+                    on:keypress={enter}
+                />
+                <div class="flex place-content-center gap-5">
+                    <button
+                        class="text-center text-2xl border-2 border-black rounded-lg p-5 bg-lime-800 hover:bg-lime-500"
+                        on:click={move |_| okay()}
+                    >okay</button>
+                    <button
+                        class="text-center text-2xl border-2 border-black rounded-lg p-5 bg-red-800 hover:bg-red-500"
+                        on:click={move |_| clean()}
+                    >cancel</button>
+                </div>
+            </section>
+        </Show>
     }
 }
