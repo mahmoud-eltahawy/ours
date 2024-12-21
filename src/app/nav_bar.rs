@@ -429,19 +429,20 @@ fn Upload(password: String) -> impl IntoView {
                 .unchecked_into::<HtmlInputElement>()
                 .files()
                 .unwrap();
-            let data = FormData::new().unwrap();
             let mut i = 0;
+            let current_path = store.current_path().read();
             while let Some(file) = target.item(i) {
-                let path = store.current_path().read().join(file.name());
+                let data = FormData::new().unwrap();
+                let path = current_path.join(file.name());
                 let args = UploadArgs {
                     path,
                     password: password.clone(),
                 };
                 let args = serde_json::to_string(&args).unwrap();
                 data.append_with_blob(&args, &Blob::from(file)).unwrap();
+                upload_action.dispatch_local(data);
                 i += 1;
             }
-            upload_action.dispatch_local(data);
         }
     };
     let input_ref: NodeRef<html::Input> = NodeRef::new();
