@@ -19,6 +19,7 @@ async fn main() {
     let routes = generate_route_list(App);
     let webls_root = var("WEBLS_ROOT").unwrap();
     let port = var("WEBLS_PORT").unwrap().parse().unwrap();
+    let password = String::from("0000");
     let root = canonicalize(&webls_root).unwrap();
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
@@ -29,7 +30,7 @@ async fn main() {
             &leptos_options,
             routes,
             move || {
-                let context = ServerContext::new(root.clone());
+                let context = ServerContext::new(root.clone(), password.clone());
                 provide_context(context);
             },
             {

@@ -10,11 +10,11 @@ use leptos_router::hooks::{use_navigate, use_query_map};
 use reactive_stores::Store;
 use web_sys::KeyboardEvent;
 
+#[cfg(feature = "ssr")]
+use {crate::ServerContext, tokio::fs};
+
 #[server]
 pub async fn ls(base: PathBuf) -> Result<Vec<Unit>, ServerFnError> {
-    use crate::{ServerContext, Unit, UnitKind};
-    use tokio::fs;
-
     let context: ServerContext = use_context().unwrap();
     let root = context.root.join(base);
     let mut dir = fs::read_dir(&root).await?;
@@ -66,8 +66,6 @@ pub fn FilesBox() -> impl IntoView {
 
 #[server]
 pub async fn mkdir(target: PathBuf) -> Result<(), ServerFnError> {
-    use crate::ServerContext;
-    use tokio::fs;
     let context = use_context::<ServerContext>().unwrap();
     let target = context.root.join(target);
     fs::create_dir(target).await?;

@@ -17,6 +17,9 @@ mod files_box;
 mod media_player;
 mod nav_bar;
 
+#[cfg(feature = "ssr")]
+use crate::ServerContext;
+
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
         <!DOCTYPE html>
@@ -156,24 +159,43 @@ pub fn App() -> impl IntoView {
     }
 }
 
+#[server]
+async fn login(password: String) -> Result<Option<String>, ServerFnError> {
+    let context = use_context::<ServerContext>().unwrap();
+    let result = if password == context.password {
+        Some(password)
+    } else {
+        None
+    };
+    Ok(result)
+}
+
 #[component]
 fn Login() -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let pass = RwSignal::new(String::new());
 
     let clean = move || {
-        *store.login().write() = false;
         *pass.write() = String::new();
+        *store.login().write() = false;
     };
 
-    let okay = move || {
+    let try_login = Action::new(move |input: &String| login(input.clone()));
+
+    let submit = move || {
+        try_login.dispatch(pass.get_untracked());
         clean();
-        *store.password().write() = Some(pass.get_untracked());
     };
+
+    Effect::new(move || {
+        if let Some(Ok(password)) = try_login.value().get() {
+            *store.password().write() = password;
+        }
+    });
 
     let enter = move |ev: KeyboardEvent| {
         if ev.key() == "Enter" {
-            okay();
+            submit();
         }
     };
 
@@ -190,7 +212,7 @@ fn Login() -> impl IntoView {
                 <div class="flex place-content-center gap-5">
                     <button
                         class="text-center text-2xl border-2 border-black rounded-lg p-5 bg-lime-800 hover:bg-lime-500"
-                        on:click={move |_| okay()}
+                        on:click={move |_| submit()}
                     >okay</button>
                     <button
                         class="text-center text-2xl border-2 border-black rounded-lg p-5 bg-red-800 hover:bg-red-500"

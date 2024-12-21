@@ -5,14 +5,17 @@ use wasm_bindgen::JsCast;
 
 pub mod app;
 
+#[cfg(feature = "ssr")]
 #[derive(Debug, Clone)]
 pub struct ServerContext {
     pub root: PathBuf,
+    pub password: String,
 }
 
+#[cfg(feature = "ssr")]
 impl ServerContext {
-    pub fn new(root: PathBuf) -> Self {
-        Self { root }
+    pub fn new(root: PathBuf, password: String) -> Self {
+        Self { root, password }
     }
 }
 

@@ -6,12 +6,22 @@ use crate::{
 };
 
 use super::atoms::ActiveIcon;
-use leptos::{html, prelude::*};
+use leptos::{either::either, html, prelude::*};
 use leptos_router::components::A;
 use reactive_stores::Store;
 use server_fn::codec::{MultipartData, MultipartFormData};
 use wasm_bindgen::JsCast;
 use web_sys::{Blob, Event, FormData, HtmlInputElement};
+
+#[cfg(feature = "ssr")]
+use {
+    crate::{ServerContext, UnitKind},
+    tokio::{
+        fs::{copy, remove_dir_all, remove_file, File},
+        io::{AsyncWriteExt, BufWriter},
+        process::Command,
+    },
+};
 
 #[component]
 pub fn NavBar() -> impl IntoView {
@@ -21,18 +31,24 @@ pub fn NavBar() -> impl IntoView {
             <Home/>
             <Clear/>
             <Download/>
-            <Show
-                when={move || store.password().get().is_some()}
-                fallback=Admin
-            >
-                <Upload/>
-                <Delete/>
-                <Copy/>
-                <Cut/>
-                <Paste/>
-                <ToMp4/>
-                <Mkdir/>
-            </Show>
+            {
+                move || {
+                    either!(
+                        store.password().get(),
+                        Some(password) => view! {
+                            <Upload password={password.clone()}/>
+                            <Delete password={password.clone()}/>
+                            <Mkdir password={password.clone()}/>
+                            <Copy password={password.clone()}/>
+                            <Cut password={password.clone()}/>
+                            <Paste password={password.clone()}/>
+                            <ToMp4 password/>
+
+                        },
+                        None =>view! {<Admin/>},
+                    )
+                }
+            }
         </nav>
     }
 }
@@ -86,8 +102,6 @@ fn Admin() -> impl IntoView {
 
 #[server]
 pub async fn mp4_remux(targets: Vec<PathBuf>) -> Result<(), ServerFnError> {
-    use crate::ServerContext;
-    use tokio::{fs::remove_file, process::Command};
     let context = use_context::<ServerContext>().unwrap();
     for target in targets.into_iter().map(|x| context.root.join(x)) {
         let from = context.root.join(target);
@@ -107,7 +121,7 @@ pub async fn mp4_remux(targets: Vec<PathBuf>) -> Result<(), ServerFnError> {
 }
 
 #[component]
-fn ToMp4() -> impl IntoView {
+fn ToMp4(password: String) -> impl IntoView {
     let store = use_context::<Store<GlobalState>>().unwrap();
 
     let remux = Action::new(move |input: &Vec<PathBuf>| mp4_remux(input.clone()));
@@ -152,7 +166,7 @@ fn ToMp4() -> impl IntoView {
 }
 
 #[component]
-fn Mkdir() -> impl IntoView {
+fn Mkdir(password: String) -> impl IntoView {
     let store = use_context::<Store<GlobalState>>().unwrap();
 
     let on_click = move |_| {
@@ -173,8 +187,6 @@ fn Mkdir() -> impl IntoView {
 
 #[server]
 pub async fn rm(bases: Vec<Unit>) -> Result<(), ServerFnError> {
-    use crate::{ServerContext, UnitKind};
-    use tokio::fs::{remove_dir_all, remove_file};
     let context = use_context::<ServerContext>().unwrap();
     for base in bases.into_iter() {
         let path = context.root.join(base.path);
@@ -192,7 +204,7 @@ pub async fn rm(bases: Vec<Unit>) -> Result<(), ServerFnError> {
 }
 
 #[component]
-fn Delete() -> impl IntoView {
+fn Delete(password: String) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let remove = Action::new(move |input: &Vec<Unit>| rm(input.clone()));
     let on_click = move |_| {
@@ -220,8 +232,6 @@ fn Delete() -> impl IntoView {
 
 #[server]
 pub async fn cp(from: Vec<PathBuf>, to: PathBuf) -> Result<(), ServerFnError> {
-    use crate::ServerContext;
-    use tokio::fs::copy;
     let context = use_context::<ServerContext>().unwrap();
     let to = context.root.join(to);
     for base in from.into_iter().map(|x| context.root.join(x)) {
@@ -232,8 +242,6 @@ pub async fn cp(from: Vec<PathBuf>, to: PathBuf) -> Result<(), ServerFnError> {
 
 #[server]
 pub async fn cp_cut(from: Vec<PathBuf>, to: PathBuf) -> Result<(), ServerFnError> {
-    use crate::ServerContext;
-    use tokio::fs::{copy, remove_file};
     let context = use_context::<ServerContext>().unwrap();
     let to = context.root.join(to);
     for base in from.into_iter().map(|x| context.root.join(x)) {
@@ -244,7 +252,7 @@ pub async fn cp_cut(from: Vec<PathBuf>, to: PathBuf) -> Result<(), ServerFnError
 }
 
 #[component]
-fn Paste() -> impl IntoView {
+fn Paste(password: String) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let copy = Action::new(move |_: &()| {
         cp(
@@ -299,7 +307,7 @@ fn Paste() -> impl IntoView {
 }
 
 #[component]
-fn Copy() -> impl IntoView {
+fn Copy(password: String) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
 
     let is_active = move || {
@@ -322,7 +330,7 @@ fn Copy() -> impl IntoView {
 }
 
 #[component]
-fn Cut() -> impl IntoView {
+fn Cut(password: String) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
 
     let is_active = move || {
@@ -371,11 +379,6 @@ fn Download() -> impl IntoView {
      input = MultipartFormData,
  )]
 async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
-    use crate::ServerContext;
-    use tokio::{
-        fs::File,
-        io::{AsyncWriteExt, BufWriter},
-    };
     let context = use_context::<ServerContext>().unwrap();
 
     let mut data = multipart.into_inner().unwrap();
@@ -393,7 +396,7 @@ async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
 }
 
 #[component]
-fn Upload() -> impl IntoView {
+fn Upload(password: String) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
 
     let is_active = move || store.select().read().is_clear();
