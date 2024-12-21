@@ -9,6 +9,7 @@ use super::atoms::ActiveIcon;
 use leptos::{either::either, html, prelude::*};
 use leptos_router::components::A;
 use reactive_stores::Store;
+use serde::{Deserialize, Serialize};
 use server_fn::codec::{MultipartData, MultipartFormData};
 use wasm_bindgen::JsCast;
 use web_sys::{Blob, Event, FormData, HtmlInputElement};
@@ -392,7 +393,8 @@ async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
     let mut data = multipart.into_inner().unwrap();
 
     while let Some(mut field) = data.next_field().await? {
-        let path = context.root.join(field.name().unwrap().to_string());
+        let UploadArgs { path, password } = serde_json::from_str(field.name().unwrap()).unwrap();
+        let path = context.root.join(path);
         let mut file = BufWriter::new(File::create(path).await?);
         while let Some(chunk) = field.chunk().await? {
             file.write(&chunk).await?;
@@ -403,6 +405,12 @@ async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
     Ok(())
 }
 
+#[derive(Serialize, Deserialize)]
+struct UploadArgs {
+    path: PathBuf,
+    password: String,
+}
+
 #[component]
 fn Upload(password: String) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
@@ -410,23 +418,31 @@ fn Upload(password: String) -> impl IntoView {
     let is_active = move || store.select().read().is_clear();
 
     let upload_action = Action::new_local(|data: &FormData| upload(data.clone().into()));
-    let on_change = move |ev: Event| {
-        ev.prevent_default();
-        let target = ev
-            .target()
-            .unwrap()
-            .unchecked_into::<HtmlInputElement>()
-            .files()
-            .unwrap();
-        let data = FormData::new().unwrap();
-        let mut i = 0;
-        while let Some(file) = target.item(i) {
-            let path = store.current_path().read().join(file.name());
-            data.append_with_blob(path.to_str().unwrap(), &Blob::from(file))
+    let on_change = {
+        //
+        let password = password.clone();
+        move |ev: Event| {
+            ev.prevent_default();
+            let target = ev
+                .target()
+                .unwrap()
+                .unchecked_into::<HtmlInputElement>()
+                .files()
                 .unwrap();
-            i += 1;
+            let data = FormData::new().unwrap();
+            let mut i = 0;
+            while let Some(file) = target.item(i) {
+                let path = store.current_path().read().join(file.name());
+                let args = UploadArgs {
+                    path,
+                    password: password.clone(),
+                };
+                let args = serde_json::to_string(&args).unwrap();
+                data.append_with_blob(&args, &Blob::from(file)).unwrap();
+                i += 1;
+            }
+            upload_action.dispatch_local(data);
         }
-        upload_action.dispatch_local(data);
     };
     let input_ref: NodeRef<html::Input> = NodeRef::new();
 
@@ -453,7 +469,7 @@ fn Upload(password: String) -> impl IntoView {
             >
                 <ActiveIcon active={is_active} name="upload"/>
             </button>
-            <input node_ref={input_ref} on:change={on_change} type="file" multiple hidden/>
+            <input node_ref={input_ref} on:change={on_change.clone()} type="file" multiple hidden/>
         </Show>
     }
 }

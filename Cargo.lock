@@ -2352,6 +2352,7 @@ dependencies = [
  "leptos_router",
  "reactive_stores",
  "serde",
+ "serde_json",
  "server_fn",
  "thiserror 1.0.69",
  "tokio",
