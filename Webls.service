@@ -1,0 +1,13 @@
+# remember to replace the HOME with your home path
+[Unit]
+Description=Webls server service
+After=network.target
+
+[Service]
+Environment=WEBLS_ROOT=HOME/webls_home WEBLS_PORT=3000 LEPTOS_SITE_ROOT=HOME/webls/target/site
+Type=simple
+ExecStart=HOME/webls/target/release/webls
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
