@@ -39,8 +39,8 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
 }
 #[derive(Default, Clone, Debug)]
 enum SelectedState {
-    Copy,
-    Cut,
+    Copy(String),
+    Cut(String),
     #[default]
     None,
 }
@@ -71,12 +71,12 @@ impl Selected {
         self.units.is_empty()
     }
 
-    fn copy(&mut self) {
-        self.state = SelectedState::Copy;
+    fn copy(&mut self, password: String) {
+        self.state = SelectedState::Copy(password);
     }
 
-    fn cut(&mut self) {
-        self.state = SelectedState::Cut;
+    fn cut(&mut self, password: String) {
+        self.state = SelectedState::Cut(password);
     }
 
     fn none(&mut self) {
@@ -114,7 +114,7 @@ struct GlobalState {
     media_play: Option<Unit>,
     units: Vec<Unit>,
     units_refetch_tick: bool,
-    mkdir_state: bool,
+    mkdir_state: Option<String>,
     password: Option<String>,
     login: bool,
 }

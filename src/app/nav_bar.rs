@@ -41,7 +41,7 @@ pub fn NavBar() -> impl IntoView {
                             <Mkdir password={password.clone()}/>
                             <Copy password={password.clone()}/>
                             <Cut password={password.clone()}/>
-                            <Paste password={password.clone()}/>
+                            <Paste/>
                             <ToMp4 password/>
 
                         },
@@ -101,7 +101,7 @@ fn Admin() -> impl IntoView {
 }
 
 #[server]
-pub async fn mp4_remux(targets: Vec<PathBuf>) -> Result<(), ServerFnError> {
+pub async fn mp4_remux(targets: Vec<PathBuf>, password: String) -> Result<(), ServerFnError> {
     let context = use_context::<ServerContext>().unwrap();
     for target in targets.into_iter().map(|x| context.root.join(x)) {
         let from = context.root.join(target);
@@ -124,7 +124,7 @@ pub async fn mp4_remux(targets: Vec<PathBuf>) -> Result<(), ServerFnError> {
 fn ToMp4(password: String) -> impl IntoView {
     let store = use_context::<Store<GlobalState>>().unwrap();
 
-    let remux = Action::new(move |input: &Vec<PathBuf>| mp4_remux(input.clone()));
+    let remux = Action::new(move |input: &Vec<PathBuf>| mp4_remux(input.clone(), password.clone()));
     let on_click = move |_| {
         let targets = store
             .select()
@@ -170,7 +170,7 @@ fn Mkdir(password: String) -> impl IntoView {
     let store = use_context::<Store<GlobalState>>().unwrap();
 
     let on_click = move |_| {
-        *store.mkdir_state().write() = true;
+        *store.mkdir_state().write() = Some(password.clone());
     };
 
     let is_active = move || store.select().read().is_clear();
@@ -186,7 +186,7 @@ fn Mkdir(password: String) -> impl IntoView {
 }
 
 #[server]
-pub async fn rm(bases: Vec<Unit>) -> Result<(), ServerFnError> {
+pub async fn rm(bases: Vec<Unit>, password: String) -> Result<(), ServerFnError> {
     let context = use_context::<ServerContext>().unwrap();
     for base in bases.into_iter() {
         let path = context.root.join(base.path);
@@ -206,7 +206,7 @@ pub async fn rm(bases: Vec<Unit>) -> Result<(), ServerFnError> {
 #[component]
 fn Delete(password: String) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
-    let remove = Action::new(move |input: &Vec<Unit>| rm(input.clone()));
+    let remove = Action::new(move |input: &Vec<Unit>| rm(input.clone(), password.clone()));
     let on_click = move |_| {
         remove.dispatch(store.select().get_untracked().units.into_iter().collect());
     };
@@ -231,7 +231,7 @@ fn Delete(password: String) -> impl IntoView {
 }
 
 #[server]
-pub async fn cp(from: Vec<PathBuf>, to: PathBuf) -> Result<(), ServerFnError> {
+pub async fn cp(from: Vec<PathBuf>, to: PathBuf, password: String) -> Result<(), ServerFnError> {
     let context = use_context::<ServerContext>().unwrap();
     let to = context.root.join(to);
     for base in from.into_iter().map(|x| context.root.join(x)) {
@@ -241,7 +241,11 @@ pub async fn cp(from: Vec<PathBuf>, to: PathBuf) -> Result<(), ServerFnError> {
 }
 
 #[server]
-pub async fn cp_cut(from: Vec<PathBuf>, to: PathBuf) -> Result<(), ServerFnError> {
+pub async fn cp_cut(
+    from: Vec<PathBuf>,
+    to: PathBuf,
+    password: String,
+) -> Result<(), ServerFnError> {
     let context = use_context::<ServerContext>().unwrap();
     let to = context.root.join(to);
     for base in from.into_iter().map(|x| context.root.join(x)) {
@@ -252,18 +256,22 @@ pub async fn cp_cut(from: Vec<PathBuf>, to: PathBuf) -> Result<(), ServerFnError
 }
 
 #[component]
-fn Paste(password: String) -> impl IntoView {
+fn Paste() -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
-    let copy = Action::new(move |_: &()| {
-        cp(
-            store.select().read_untracked().as_paths(),
-            store.current_path().get_untracked(),
-        )
+    let copy = Action::new({
+        move |password: &String| {
+            cp(
+                store.select().read_untracked().as_paths(),
+                store.current_path().get_untracked(),
+                password.clone(),
+            )
+        }
     });
-    let cut = Action::new(move |_: &()| {
+    let cut = Action::new(move |password: &String| {
         cp_cut(
             store.select().read_untracked().as_paths(),
             store.current_path().get_untracked(),
+            password.clone(),
         )
     });
 
@@ -281,12 +289,12 @@ fn Paste(password: String) -> impl IntoView {
         }
     });
 
-    let on_click = move |_| match store.select().read().state {
-        SelectedState::Copy => {
-            copy.dispatch(());
+    let on_click = move |_| match store.select().get().state {
+        SelectedState::Copy(password) => {
+            copy.dispatch(password);
         }
-        SelectedState::Cut => {
-            cut.dispatch(());
+        SelectedState::Cut(password) => {
+            cut.dispatch(password);
         }
         SelectedState::None => (),
     };
@@ -316,7 +324,7 @@ fn Copy(password: String) -> impl IntoView {
     };
 
     let on_click = move |_| {
-        store.select().write().copy();
+        store.select().write().copy(password.clone());
     };
 
     view! {
@@ -339,7 +347,7 @@ fn Cut(password: String) -> impl IntoView {
     };
 
     let on_click = move |_| {
-        store.select().write().cut();
+        store.select().write().cut(password.clone());
     };
 
     view! {

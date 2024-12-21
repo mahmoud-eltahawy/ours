@@ -1,17 +1,16 @@
 #[cfg(feature = "ssr")]
+use {
+    axum::Router,
+    leptos::{logging::log, prelude::*},
+    leptos_axum::{generate_route_list, LeptosRoutes},
+    std::{env::var, fs::canonicalize, net::SocketAddr},
+    tower_http::services::ServeDir,
+    webls::{app::*, ServerContext},
+};
+
+#[cfg(feature = "ssr")]
 #[tokio::main]
 async fn main() {
-    use axum::Router;
-    use leptos::logging::log;
-    use leptos::prelude::*;
-    use leptos_axum::{generate_route_list, LeptosRoutes};
-    use std::env::var;
-    use std::fs::canonicalize;
-    use std::net::SocketAddr;
-    use tower_http::services::ServeDir;
-    use webls::app::*;
-    use webls::ServerContext;
-
     let conf = get_configuration(None).unwrap();
     // let addr = conf.leptos_options.site_addr;
     let leptos_options = conf.leptos_options;

@@ -65,7 +65,7 @@ pub fn FilesBox() -> impl IntoView {
 }
 
 #[server]
-pub async fn mkdir(target: PathBuf) -> Result<(), ServerFnError> {
+pub async fn mkdir(target: PathBuf, password: String) -> Result<(), ServerFnError> {
     let context = use_context::<ServerContext>().unwrap();
     let target = context.root.join(target);
     fs::create_dir(target).await?;
@@ -78,14 +78,17 @@ fn Mkdir() -> impl IntoView {
     let mkdir_state = store.mkdir_state();
     let value = RwSignal::new(String::new());
 
-    let mkdir = Action::new(move |input: &PathBuf| mkdir(input.clone()));
+    let mkdir =
+        Action::new(move |input: &(PathBuf, String)| mkdir(input.0.clone(), input.1.clone()));
     let enter = move |ev: KeyboardEvent| {
         if ev.key() == "Enter" {
-            let path = store.current_path().get_untracked();
-            let new_path = path.join(value.get_untracked());
-            mkdir.dispatch(new_path);
-            *mkdir_state.write() = false;
-            value.write().clear();
+            if let Some(password) = mkdir_state.get() {
+                let path = store.current_path().get_untracked();
+                let new_path = path.join(value.get_untracked());
+                mkdir.dispatch((new_path, password));
+                *mkdir_state.write() = None;
+                value.write().clear();
+            }
         }
     };
 
@@ -95,7 +98,7 @@ fn Mkdir() -> impl IntoView {
         }
     });
 
-    let when = move || mkdir_state.get();
+    let when = move || mkdir_state.get().is_some();
     view! {
         <Show when={when}>
             <button>
@@ -164,11 +167,11 @@ fn UnitComp(unit: Unit) -> impl IntoView {
         move || {
             let select = store.select().read();
             let is_selected = select.is_selected(&unit);
-            match select.state {
-                SelectedState::Cut if is_selected => Either::Right(Either::Left(view! {
+            match &select.state {
+                SelectedState::Cut(_) if is_selected => Either::Right(Either::Left(view! {
                     <Icon name="cut"/>
                 })),
-                SelectedState::Copy if is_selected => Either::Right(Either::Right(view! {
+                SelectedState::Copy(_) if is_selected => Either::Right(Either::Right(view! {
                     <Icon name="copy"/>
                 })),
                 _ => Either::Left(view! {
