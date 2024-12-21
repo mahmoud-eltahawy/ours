@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, str::FromStr};
 
 use crate::{
     app::{atoms::Icon, GlobalState, GlobalStateStoreFields, SelectedState},
@@ -9,7 +9,6 @@ use super::atoms::ActiveIcon;
 use leptos::{either::either, html, prelude::*};
 use leptos_router::components::A;
 use reactive_stores::Store;
-use serde::{Deserialize, Serialize};
 use server_fn::codec::{MultipartData, MultipartFormData};
 use wasm_bindgen::JsCast;
 use web_sys::{Blob, Event, FormData, HtmlInputElement};
@@ -384,6 +383,7 @@ fn Download() -> impl IntoView {
     }
 }
 
+use leptos::logging::log;
 #[server(
      input = MultipartFormData,
  )]
@@ -393,7 +393,11 @@ async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
     let mut data = multipart.into_inner().unwrap();
 
     while let Some(mut field) = data.next_field().await? {
-        let UploadArgs { path, password } = serde_json::from_str(field.name().unwrap()).unwrap();
+        let name = field.name().unwrap();
+        let mut path = PathBuf::from_str(name).unwrap();
+        let password = path.file_name().unwrap().to_str().unwrap().to_string();
+        path.pop();
+        log!("Password : {password:#?}");
         let path = context.root.join(path);
         let mut file = BufWriter::new(File::create(path).await?);
         while let Some(chunk) = field.chunk().await? {
@@ -403,12 +407,6 @@ async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
     }
 
     Ok(())
-}
-
-#[derive(Serialize, Deserialize)]
-struct UploadArgs {
-    path: PathBuf,
-    password: String,
 }
 
 #[component]
@@ -434,12 +432,9 @@ fn Upload(password: String) -> impl IntoView {
             while let Some(file) = target.item(i) {
                 let data = FormData::new().unwrap();
                 let path = current_path.join(file.name());
-                let args = UploadArgs {
-                    path,
-                    password: password.clone(),
-                };
-                let args = serde_json::to_string(&args).unwrap();
-                data.append_with_blob(&args, &Blob::from(file)).unwrap();
+                let path = path.join(password.clone());
+                data.append_with_blob(path.to_str().unwrap(), &Blob::from(file))
+                    .unwrap();
                 upload_action.dispatch_local(data);
                 i += 1;
             }
