@@ -187,6 +187,8 @@ fn Login() -> impl IntoView {
         clean();
     };
 
+    //that is stupid but works for now
+    //it sends the password to the server and get it back if it right
     Effect::new(move || {
         if let Some(Ok(password)) = try_login.value().get() {
             *store.password().write() = password;

@@ -67,6 +67,9 @@ pub fn FilesBox() -> impl IntoView {
 #[server]
 pub async fn mkdir(target: PathBuf, password: String) -> Result<(), ServerFnError> {
     let context = use_context::<ServerContext>().unwrap();
+    if password != context.password {
+        return Err(ServerFnError::new("wrong password"));
+    };
     let target = context.root.join(target);
     fs::create_dir(target).await?;
     Ok(())

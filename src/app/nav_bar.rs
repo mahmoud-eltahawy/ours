@@ -1,4 +1,4 @@
-use std::{path::PathBuf, str::FromStr};
+use std::path::PathBuf;
 
 use crate::{
     app::{atoms::Icon, GlobalState, GlobalStateStoreFields, SelectedState},
@@ -103,6 +103,9 @@ fn Admin() -> impl IntoView {
 #[server]
 pub async fn mp4_remux(targets: Vec<PathBuf>, password: String) -> Result<(), ServerFnError> {
     let context = use_context::<ServerContext>().unwrap();
+    if password != context.password {
+        return Err(ServerFnError::new("wrong password"));
+    };
     for target in targets.into_iter().map(|x| context.root.join(x)) {
         let from = context.root.join(target);
         let mut to = from.clone();
@@ -188,6 +191,9 @@ fn Mkdir(password: String) -> impl IntoView {
 #[server]
 pub async fn rm(bases: Vec<Unit>, password: String) -> Result<(), ServerFnError> {
     let context = use_context::<ServerContext>().unwrap();
+    if password != context.password {
+        return Err(ServerFnError::new("wrong password"));
+    };
     for base in bases.into_iter() {
         let path = context.root.join(base.path);
         match base.kind {
@@ -233,6 +239,9 @@ fn Delete(password: String) -> impl IntoView {
 #[server]
 pub async fn cp(from: Vec<PathBuf>, to: PathBuf, password: String) -> Result<(), ServerFnError> {
     let context = use_context::<ServerContext>().unwrap();
+    if password != context.password {
+        return Err(ServerFnError::new("wrong password"));
+    };
     let to = context.root.join(to);
     for base in from.into_iter().map(|x| context.root.join(x)) {
         copy(&base, to.join(base.file_name().unwrap())).await?;
@@ -247,6 +256,9 @@ pub async fn cp_cut(
     password: String,
 ) -> Result<(), ServerFnError> {
     let context = use_context::<ServerContext>().unwrap();
+    if password != context.password {
+        return Err(ServerFnError::new("wrong password"));
+    };
     let to = context.root.join(to);
     for base in from.into_iter().map(|x| context.root.join(x)) {
         copy(&base, to.join(base.file_name().unwrap())).await?;
@@ -383,11 +395,13 @@ fn Download() -> impl IntoView {
     }
 }
 
-use leptos::logging::log;
 #[server(
      input = MultipartFormData,
  )]
 async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
+    use leptos::logging::log;
+    use std::str::FromStr;
+
     let context = use_context::<ServerContext>().unwrap();
 
     let mut data = multipart.into_inner().unwrap();
