@@ -4,6 +4,10 @@ use {
     leptos::{logging::log, prelude::*},
     leptos_axum::{generate_route_list, LeptosRoutes},
     std::{env::var, fs::canonicalize, net::SocketAddr},
+    tokio::{
+        fs,
+        io::{AsyncWriteExt, ErrorKind},
+    },
     tower_http::services::ServeDir,
     webls::{app::*, ServerContext},
 };
@@ -11,6 +15,8 @@ use {
 #[cfg(feature = "ssr")]
 #[tokio::main]
 async fn main() {
+    use std::path::PathBuf;
+
     let conf = get_configuration(None).unwrap();
     // let addr = conf.leptos_options.site_addr;
     let leptos_options = conf.leptos_options;
@@ -18,7 +24,21 @@ async fn main() {
     let routes = generate_route_list(App);
     let webls_root = var("WEBLS_ROOT").unwrap();
     let port = var("WEBLS_PORT").unwrap().parse().unwrap();
-    let password = String::from("0000");
+    let password_path: PathBuf = var("WEBLS_PASSWORD").unwrap().parse().unwrap();
+    let password = match fs::read_to_string(password_path.clone()).await {
+        Ok(pass) => pass.trim().to_string(),
+        Err(e) => match e.kind() {
+            ErrorKind::NotFound => {
+                let password = "0000";
+                let mut file = fs::File::create(password_path).await.unwrap();
+                file.write_all(password.as_bytes()).await.unwrap();
+                password.to_string()
+            }
+            e => {
+                panic!("Error : {:#?}", e);
+            }
+        },
+    };
     let root = canonicalize(&webls_root).unwrap();
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
