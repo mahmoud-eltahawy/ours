@@ -160,14 +160,9 @@ pub fn App() -> impl IntoView {
 }
 
 #[server]
-async fn login(password: String) -> Result<Option<String>, ServerFnError> {
+async fn login(password: String) -> Result<bool, ServerFnError> {
     let context = use_context::<ServerContext>().unwrap();
-    let result = if password == context.password {
-        Some(password)
-    } else {
-        None
-    };
-    Ok(result)
+    Ok(password == context.password)
 }
 
 #[component]
@@ -184,14 +179,16 @@ fn Login() -> impl IntoView {
 
     let submit = move || {
         try_login.dispatch(pass.get_untracked());
-        clean();
     };
 
-    //that is stupid but works for now
-    //it sends the password to the server and get it back if it right
     Effect::new(move || {
-        if let Some(Ok(password)) = try_login.value().get() {
-            *store.password().write() = password;
+        if let Some(Ok(right)) = try_login.value().get() {
+            if right {
+                *store.password().write() = Some(pass.get_untracked());
+                clean()
+            } else {
+                *pass.write() = String::new();
+            }
         }
     });
 
