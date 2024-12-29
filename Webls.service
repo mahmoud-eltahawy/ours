@@ -4,7 +4,7 @@ Description=Webls server service
 After=network.target
 
 [Service]
-Environment=WEBLS_ROOT=HOME/webls_home WEBLS_PORT=3000 LEPTOS_SITE_ROOT=HOME/webls/target/site
+Environment=WEBLS_ROOT="HOME/webls_home" WEBLS_PORT=3000 WEBLS_PASSWORD="HOME/password" LEPTOS_SITE_ROOT="HOME/webls/target/site"
 Type=simple
 ExecStart=HOME/webls/target/release/webls
 Restart=always

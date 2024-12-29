@@ -13,15 +13,11 @@ where
             format!("dark/{name}")
         }
     };
-    view! {
-        <img class="m-1 p-1" src={src} width=65/>
-    }
+    view! { <img class="m-1 p-1" src=src width=65 /> }
 }
 
 #[component]
 pub fn Icon(name: &'static str) -> impl IntoView {
     let name = format!("{name}.png");
-    view! {
-        <img class="m-1 p-1" src={name} width=65/>
-    }
+    view! { <img class="m-1 p-1" src=name width=65 /> }
 }

@@ -52,13 +52,9 @@ pub fn FilesBox() -> impl IntoView {
 
     view! {
         <section class="flex flex-wrap gap-5 m-5 p-5">
-            <Mkdir/>
-            <For
-                each={move || store.units().get()}
-                key={|x| x.path.clone()}
-                let:unit
-            >
-                <UnitComp unit={unit}/>
+            <Mkdir />
+            <For each=move || store.units().get() key=|x| x.path.clone() let:unit>
+                <UnitComp unit=unit />
             </For>
         </section>
     }
@@ -103,14 +99,14 @@ fn Mkdir() -> impl IntoView {
 
     let when = move || mkdir_state.get().is_some();
     view! {
-        <Show when={when}>
+        <Show when=when>
             <button>
-                <Icon name="directory"/>
+                <Icon name="directory" />
                 <input
                     class="p-2 border-2 border-black text-2xl"
-                    on:keypress={enter}
+                    on:keypress=enter
                     type="text"
-                    bind:value={value}
+                    bind:value=value
                 />
             </button>
         </Show>
@@ -171,15 +167,9 @@ fn UnitComp(unit: Unit) -> impl IntoView {
             let select = store.select().read();
             let is_selected = select.is_selected(&unit);
             match &select.state {
-                SelectedState::Cut(_) if is_selected => Either::Right(Either::Left(view! {
-                    <Icon name="cut"/>
-                })),
-                SelectedState::Copy(_) if is_selected => Either::Right(Either::Right(view! {
-                    <Icon name="copy"/>
-                })),
-                _ => Either::Left(view! {
-                    <UnitIcon unit={unit.clone()}/>
-                }),
+                SelectedState::Cut(_) if is_selected => Either::Right(Either::Left(view! { <Icon name="cut" /> })),
+                SelectedState::Copy(_) if is_selected => Either::Right(Either::Right(view! { <Icon name="copy" /> })),
+                _ => Either::Left(view! { <UnitIcon unit=unit.clone() /> }),
             }
         }
     };
@@ -208,14 +198,15 @@ fn UnitIcon(unit: Unit) -> impl IntoView {
 
     let download_link = (unit.kind != UnitKind::Dirctory).then_some(view! {
         <a
-            id={unit.name()}
-            download={unit.name()}
-            href={format!("/download/{}", unit.path.to_str().unwrap_or_default())}
-            hidden></a>
+            id=unit.name()
+            download=unit.name()
+            href=format!("/download/{}", unit.path.to_str().unwrap_or_default())
+            hidden
+        ></a>
     });
 
     view! {
-        <ActiveIcon name active={move || !store.select().read().is_selected(&unit)} />
+        <ActiveIcon name active=move || !store.select().read().is_selected(&unit) />
         {download_link}
     }
 }

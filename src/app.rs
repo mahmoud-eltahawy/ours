@@ -25,14 +25,14 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
         <!DOCTYPE html>
         <html lang="en">
             <head>
-                <meta charset="utf-8"/>
-                <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                <meta charset="utf-8" />
+                <meta name="viewport" content="width=device-width, initial-scale=1" />
                 <AutoReload options=options.clone() />
-                <HydrationScripts options/>
-                <MetaTags/>
+                <HydrationScripts options />
+                <MetaTags />
             </head>
             <body>
-                <App/>
+                <App />
             </body>
         </html>
     }
@@ -144,17 +144,17 @@ pub fn App() -> impl IntoView {
     });
 
     view! {
-        <Stylesheet id="leptos" href="/pkg/webls.css"/>
-        <Title text="Welcome to Leptos"/>
+        <Stylesheet id="leptos" href="/pkg/webls.css" />
+        <Title text="Welcome to Leptos" />
         <Router>
-            <NavBar/>
+            <NavBar />
             <main>
                 <Routes fallback=|| "Page not found.">
-                    <Route path=StaticSegment("") view=FilesBox/>
+                    <Route path=StaticSegment("") view=FilesBox />
                 </Routes>
             </main>
-            <MediaPlayer/>
-            <Login/>
+            <MediaPlayer />
+            <Login />
         </Router>
     }
 }
@@ -199,24 +199,28 @@ fn Login() -> impl IntoView {
     };
 
     view! {
-        <Show when={move || store.login().get()}>
+        <Show when=move || store.login().get()>
             <section class="grid grid-cols-1 gap-5 place-content-center bg-white rounded-lg border-black border-2 p-10 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
                 <h2 class="text-center text-3xl">Admin Login</h2>
                 <input
                     class="p-5 rounded-lg text-2xl border-2 border-black"
                     type="password"
-                    bind:value={pass}
-                    on:keypress={enter}
+                    bind:value=pass
+                    on:keypress=enter
                 />
                 <div class="flex place-content-center gap-5">
                     <button
                         class="text-center text-2xl border-2 border-black rounded-lg p-5 bg-lime-800 hover:bg-lime-500"
-                        on:click={move |_| submit()}
-                    >okay</button>
+                        on:click=move |_| submit()
+                    >
+                        okay
+                    </button>
                     <button
                         class="text-center text-2xl border-2 border-black rounded-lg p-5 bg-red-800 hover:bg-red-500"
-                        on:click={move |_| clean()}
-                    >cancel</button>
+                        on:click=move |_| clean()
+                    >
+                        cancel
+                    </button>
                 </div>
             </section>
         </Show>

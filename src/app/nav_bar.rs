@@ -28,13 +28,12 @@ pub fn NavBar() -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     view! {
         <nav class="flex flex-wrap place-content-center">
-            <Home/>
-            <Clear/>
-            <Download/>
-            {
-                move || {
-                    either!(
-                        store.password().get(),
+            <Home />
+            <Clear />
+            <Download />
+            {move || {
+                either!(
+                    store.password().get(),
                         Some(password) => view! {
                             <Upload password={password.clone()}/>
                             <Delete password={password.clone()}/>
@@ -46,9 +45,8 @@ pub fn NavBar() -> impl IntoView {
 
                         },
                         None =>view! {<Admin/>},
-                    )
-                }
-            }
+                )
+            }}
         </nav>
     }
 }
@@ -59,8 +57,8 @@ fn Home() -> impl IntoView {
     let is_active = move || store.current_path().read().file_name().is_some();
 
     view! {
-        <A href="/" class:disabled={move || !is_active()}>
-            <ActiveIcon name="home" active={is_active}/>
+        <A href="/" class:disabled=move || !is_active()>
+            <ActiveIcon name="home" active=is_active />
         </A>
     }
 }
@@ -75,11 +73,8 @@ fn Clear() -> impl IntoView {
     let is_active = move || !store.select().read().is_clear();
 
     view! {
-        <button
-            disabled={move || !is_active()}
-            on:click=on_click
-        >
-            <ActiveIcon active={is_active} name="clear"/>
+        <button disabled=move || !is_active() on:click=on_click>
+            <ActiveIcon active=is_active name="clear" />
         </button>
     }
 }
@@ -92,10 +87,8 @@ fn Admin() -> impl IntoView {
     };
 
     view! {
-        <button
-            on:click=on_click
-        >
-            <Icon name="admin"/>
+        <button on:click=on_click>
+            <Icon name="admin" />
         </button>
     }
 }
@@ -159,11 +152,8 @@ fn ToMp4(password: String) -> impl IntoView {
     });
 
     view! {
-        <button
-            disabled={move || !is_active()}
-            on:click=on_click
-        >
-            <ActiveIcon active={is_active} name="mp4"/>
+        <button disabled=move || !is_active() on:click=on_click>
+            <ActiveIcon active=is_active name="mp4" />
         </button>
     }
 }
@@ -179,11 +169,8 @@ fn Mkdir(password: String) -> impl IntoView {
     let is_active = move || store.select().read().is_clear();
 
     view! {
-        <button
-            disabled={move || !is_active()}
-            on:click=on_click
-        >
-            <ActiveIcon active={is_active} name="mkdir"/>
+        <button disabled=move || !is_active() on:click=on_click>
+            <ActiveIcon active=is_active name="mkdir" />
         </button>
     }
 }
@@ -227,11 +214,8 @@ fn Delete(password: String) -> impl IntoView {
     let is_active = move || !store.select().read().is_clear();
 
     view! {
-        <button
-            disabled={move || !is_active()}
-            on:click=on_click
-        >
-            <ActiveIcon active={is_active} name="delete"/>
+        <button disabled=move || !is_active() on:click=on_click>
+            <ActiveIcon active=is_active name="delete" />
         </button>
     }
 }
@@ -317,11 +301,8 @@ fn Paste() -> impl IntoView {
     };
 
     view! {
-        <button
-            disabled={move || !is_active()}
-            on:click=on_click
-        >
-            <ActiveIcon active={is_active} name="paste"/>
+        <button disabled=move || !is_active() on:click=on_click>
+            <ActiveIcon active=is_active name="paste" />
         </button>
     }
 }
@@ -340,11 +321,8 @@ fn Copy(password: String) -> impl IntoView {
     };
 
     view! {
-        <button
-            disabled={move || !is_active()}
-            on:click=on_click
-        >
-            <ActiveIcon active={is_active} name="copy"/>
+        <button disabled=move || !is_active() on:click=on_click>
+            <ActiveIcon active=is_active name="copy" />
         </button>
     }
 }
@@ -363,11 +341,8 @@ fn Cut(password: String) -> impl IntoView {
     };
 
     view! {
-        <button
-            disabled={move || !is_active()}
-            on:click=on_click
-        >
-            <ActiveIcon active={is_active} name="cut"/>
+        <button disabled=move || !is_active() on:click=on_click>
+            <ActiveIcon active=is_active name="cut" />
         </button>
     }
 }
@@ -386,11 +361,8 @@ fn Download() -> impl IntoView {
     };
 
     view! {
-        <button
-            disabled={move || !is_active()}
-            on:click=on_click
-        >
-            <ActiveIcon active={is_active} name="download"/>
+        <button disabled=move || !is_active() on:click=on_click>
+            <ActiveIcon active=is_active name="download" />
         </button>
     }
 }
@@ -468,18 +440,13 @@ fn Upload(password: String) -> impl IntoView {
 
     view! {
         <Show
-            when={move || !upload_action.pending().get()}
-            fallback={move || view!{
-                <img class="m-1 p-1" src="load.gif" width=65/>
-            }}
-            >
-            <button
-                disabled={move || !is_active()}
-                on:click=on_click
-            >
-                <ActiveIcon active={is_active} name="upload"/>
+            when=move || !upload_action.pending().get()
+            fallback=move || view! { <img class="m-1 p-1" src="load.gif" width=65 /> }
+        >
+            <button disabled=move || !is_active() on:click=on_click>
+                <ActiveIcon active=is_active name="upload" />
             </button>
-            <input node_ref={input_ref} on:change={on_change.clone()} type="file" multiple hidden/>
+            <input node_ref=input_ref on:change=on_change.clone() type="file" multiple hidden />
         </Show>
     }
 }
