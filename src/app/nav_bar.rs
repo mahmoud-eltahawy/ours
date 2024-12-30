@@ -54,11 +54,11 @@ pub fn NavBar() -> impl IntoView {
 #[component]
 fn Home() -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
-    let is_active = move || store.current_path().read().file_name().is_some();
+    let active = move || store.current_path().read().file_name().is_some();
 
     view! {
-        <A href="/" class:disabled=move || !is_active()>
-            <ActiveIcon name="home" active=is_active />
+        <A href="/" class:disabled=move || !active()>
+            <ActiveIcon name="home" active />
         </A>
     }
 }
@@ -70,11 +70,11 @@ fn Clear() -> impl IntoView {
         store.select().write().clear();
     };
 
-    let is_active = move || !store.select().read().is_clear();
+    let active = move || !store.select().read().is_clear();
 
     view! {
-        <button disabled=move || !is_active() on:click=on_click>
-            <ActiveIcon active=is_active name="clear" />
+        <button disabled=move || !active() on:click=on_click>
+            <ActiveIcon active name="clear" />
         </button>
     }
 }
@@ -88,7 +88,7 @@ fn Admin() -> impl IntoView {
 
     view! {
         <button on:click=on_click>
-            <Icon name="admin" />
+            <Icon src="admin" />
         </button>
     }
 }
@@ -136,7 +136,7 @@ fn ToMp4(password: String) -> impl IntoView {
         store.select().write().clear();
     };
 
-    let is_active = move || {
+    let active = move || {
         let select = store.select().read();
         !select.is_clear()
             && select
@@ -152,8 +152,8 @@ fn ToMp4(password: String) -> impl IntoView {
     });
 
     view! {
-        <button disabled=move || !is_active() on:click=on_click>
-            <ActiveIcon active=is_active name="mp4" />
+        <button disabled=move || !active() on:click=on_click>
+            <ActiveIcon active name="mp4" />
         </button>
     }
 }
@@ -166,11 +166,11 @@ fn Mkdir(password: String) -> impl IntoView {
         *store.mkdir_state().write() = Some(password.clone());
     };
 
-    let is_active = move || store.select().read().is_clear();
+    let active = move || store.select().read().is_clear();
 
     view! {
-        <button disabled=move || !is_active() on:click=on_click>
-            <ActiveIcon active=is_active name="mkdir" />
+        <button disabled=move || !active() on:click=on_click>
+            <ActiveIcon active name="mkdir" />
         </button>
     }
 }
@@ -211,11 +211,11 @@ fn Delete(password: String) -> impl IntoView {
         }
     });
 
-    let is_active = move || !store.select().read().is_clear();
+    let active = move || !store.select().read().is_clear();
 
     view! {
-        <button disabled=move || !is_active() on:click=on_click>
-            <ActiveIcon active=is_active name="delete" />
+        <button disabled=move || !active() on:click=on_click>
+            <ActiveIcon active name="delete" />
         </button>
     }
 }
@@ -295,14 +295,14 @@ fn Paste() -> impl IntoView {
         SelectedState::None => (),
     };
 
-    let is_active = move || {
+    let active = move || {
         let select = store.select().read();
         !select.is_clear() && !matches!(select.state, SelectedState::None)
     };
 
     view! {
-        <button disabled=move || !is_active() on:click=on_click>
-            <ActiveIcon active=is_active name="paste" />
+        <button disabled=move || !active() on:click=on_click>
+            <ActiveIcon active name="paste" />
         </button>
     }
 }
@@ -311,7 +311,7 @@ fn Paste() -> impl IntoView {
 fn Copy(password: String) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
 
-    let is_active = move || {
+    let active = move || {
         let select = store.select().read();
         !select.is_clear() && !select.has_dirs()
     };
@@ -321,8 +321,8 @@ fn Copy(password: String) -> impl IntoView {
     };
 
     view! {
-        <button disabled=move || !is_active() on:click=on_click>
-            <ActiveIcon active=is_active name="copy" />
+        <button disabled=move || !active() on:click=on_click>
+            <ActiveIcon active name="copy" />
         </button>
     }
 }
@@ -331,7 +331,7 @@ fn Copy(password: String) -> impl IntoView {
 fn Cut(password: String) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
 
-    let is_active = move || {
+    let active = move || {
         let select = store.select().read();
         !select.is_clear() && !select.has_dirs()
     };
@@ -341,8 +341,8 @@ fn Cut(password: String) -> impl IntoView {
     };
 
     view! {
-        <button disabled=move || !is_active() on:click=on_click>
-            <ActiveIcon active=is_active name="cut" />
+        <button disabled=move || !active() on:click=on_click>
+            <ActiveIcon active name="cut" />
         </button>
     }
 }
@@ -355,14 +355,14 @@ fn Download() -> impl IntoView {
         store.select().write().clear();
     };
 
-    let is_active = move || {
+    let active = move || {
         let select = store.select().read();
         !select.is_clear() && !select.has_dirs()
     };
 
     view! {
-        <button disabled=move || !is_active() on:click=on_click>
-            <ActiveIcon active=is_active name="download" />
+        <button disabled=move || !active() on:click=on_click>
+            <ActiveIcon active name="download" />
         </button>
     }
 }
@@ -399,7 +399,7 @@ async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
 fn Upload(password: String) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
 
-    let is_active = move || store.select().read().is_clear();
+    let active = move || store.select().read().is_clear();
 
     let upload_action = Action::new_local(|data: &FormData| upload(data.clone().into()));
     let on_change = {
@@ -443,8 +443,8 @@ fn Upload(password: String) -> impl IntoView {
             when=move || !upload_action.pending().get()
             fallback=move || view! { <img class="m-1 p-1" src="load.gif" width=65 /> }
         >
-            <button disabled=move || !is_active() on:click=on_click>
-                <ActiveIcon active=is_active name="upload" />
+            <button disabled=move || !active() on:click=on_click>
+                <ActiveIcon active name="upload" />
             </button>
             <input node_ref=input_ref on:change=on_change.clone() type="file" multiple hidden />
         </Show>

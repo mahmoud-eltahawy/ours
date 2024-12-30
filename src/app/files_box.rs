@@ -101,7 +101,7 @@ fn Mkdir() -> impl IntoView {
     view! {
         <Show when=when>
             <button>
-                <Icon name="directory" />
+                <Icon src="directory" />
                 <input
                     class="p-2 border-2 border-black text-2xl"
                     on:keypress=enter
@@ -167,8 +167,12 @@ fn UnitComp(unit: Unit) -> impl IntoView {
             let select = store.select().read();
             let is_selected = select.is_selected(&unit);
             match &select.state {
-                SelectedState::Cut(_) if is_selected => Either::Right(Either::Left(view! { <Icon name="cut" /> })),
-                SelectedState::Copy(_) if is_selected => Either::Right(Either::Right(view! { <Icon name="copy" /> })),
+                SelectedState::Cut(_) if is_selected => {
+                    Either::Right(Either::Left(view! { <Icon src="cut" /> }))
+                }
+                SelectedState::Copy(_) if is_selected => {
+                    Either::Right(Either::Right(view! { <Icon src="copy" /> }))
+                }
                 _ => Either::Left(view! { <UnitIcon unit=unit.clone() /> }),
             }
         }
@@ -189,12 +193,6 @@ fn UnitComp(unit: Unit) -> impl IntoView {
 #[component]
 fn UnitIcon(unit: Unit) -> impl IntoView {
     let store = use_context::<Store<GlobalState>>().unwrap();
-    let name = match unit.kind {
-        UnitKind::Dirctory => "directory",
-        UnitKind::File => "file",
-        UnitKind::Video => "video",
-        UnitKind::Audio => "audio",
-    };
 
     let download_link = (unit.kind != UnitKind::Dirctory).then_some(view! {
         <a
@@ -206,7 +204,10 @@ fn UnitIcon(unit: Unit) -> impl IntoView {
     });
 
     view! {
-        <ActiveIcon name active=move || !store.select().read().is_selected(&unit) />
+        <ActiveIcon
+            name=unit.kind.to_string()
+            active=move || !store.select().read().is_selected(&unit)
+        />
         {download_link}
     }
 }

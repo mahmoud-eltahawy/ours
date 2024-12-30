@@ -1,6 +1,6 @@
 use leptos::prelude::document;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::{fmt::Display, path::PathBuf};
 use wasm_bindgen::JsCast;
 
 pub mod app;
@@ -25,6 +25,18 @@ pub enum UnitKind {
     Video,
     Audio,
     File,
+}
+
+impl Display for UnitKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let result = match self {
+            UnitKind::Dirctory => "directory",
+            UnitKind::File => "file",
+            UnitKind::Video => "video",
+            UnitKind::Audio => "audio",
+        };
+        write!(f, "{}", result)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
