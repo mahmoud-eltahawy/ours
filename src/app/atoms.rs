@@ -10,11 +10,10 @@ where
 }
 
 #[derive(Default)]
-enum IconSize {
+pub enum IconSize {
     Small,
     #[default]
     Medium,
-    Large,
 }
 
 #[component]
@@ -32,7 +31,7 @@ where
 }
 
 #[component]
-fn BaseIcon<S, FSrc, FSize, FActive>(src: FSrc, size: FSize, active: FActive) -> impl IntoView
+pub fn BaseIcon<S, FSrc, FSize, FActive>(src: FSrc, size: FSize, active: FActive) -> impl IntoView
 where
     S: ToString,
     FSrc: Fn() -> S + 'static + Send,
@@ -50,7 +49,6 @@ where
     let width = move || match size() {
         IconSize::Small => 30,
         IconSize::Medium => 65,
-        IconSize::Large => 90,
     };
     view! { <img class="m-1 p-1" src=src width=width /> }
 }

@@ -370,7 +370,7 @@ fn Download() -> impl IntoView {
 #[server(
      input = MultipartFormData,
  )]
-async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
+pub async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
     use leptos::logging::log;
     use std::str::FromStr;
 
