@@ -14,15 +14,15 @@ pub fn MediaPlayer() -> impl IntoView {
     let media_play = store.media_play();
     let el = NodeRef::<Div>::new();
 
-    let inner_height = use_window()
+    let (inner_width, inner_height) = use_window()
         .as_ref()
-        .map(|w| w.inner_height().unwrap().as_f64().unwrap())
-        .unwrap_or(0.0);
-
-    let inner_width = use_window()
-        .as_ref()
-        .map(|w| w.inner_width().unwrap().as_f64().unwrap())
-        .unwrap_or(0.0);
+        .map(|w| {
+            (
+                w.inner_width().unwrap().as_f64().unwrap(),
+                w.inner_height().unwrap().as_f64().unwrap(),
+            )
+        })
+        .unwrap_or((0.0, 0.0));
 
     let UseDraggableReturn { style, .. } = use_draggable_with_options(
         el,
