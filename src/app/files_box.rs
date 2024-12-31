@@ -8,7 +8,7 @@ use crate::{
     },
     Unit, UnitKind,
 };
-use leptos::{either::Either, html::Section, prelude::*};
+use leptos::{either::Either, html::Ol, prelude::*};
 use leptos_router::hooks::{use_navigate, use_query_map};
 use leptos_use::{
     use_drop_zone_with_options, UseDropZoneEvent, UseDropZoneOptions, UseDropZoneReturn,
@@ -56,7 +56,7 @@ pub fn FilesBox() -> impl IntoView {
         store.current_path().set(result);
     });
 
-    let drop_zone_el = NodeRef::<Section>::new();
+    let drop_zone_el = NodeRef::<Ol>::new();
     let upload_action = Action::new_local(|data: &FormData| upload(data.clone().into()));
 
     let on_drop = move |ev: UseDropZoneEvent| {
@@ -90,19 +90,17 @@ pub fn FilesBox() -> impl IntoView {
     });
 
     view! {
-        <section
+        <ol
             class="w-full min-h-80 m-5 p-5 border-2 border-lime-500 rounded-lg"
             node_ref={drop_zone_el}
         >
-            <ol>
-                <li>
-                    <Mkdir />
-                </li>
-                <For each=move || store.units().get() key=|x| x.path.clone() let:unit>
-                    <UnitComp unit=unit is_over_drop_zone/>
-                </For>
-            </ol>
-        </section>
+            <li>
+                <Mkdir />
+            </li>
+            <For each=move || store.units().get() key=|x| x.path.clone() let:unit>
+                <UnitComp unit=unit is_over_drop_zone/>
+            </For>
+        </ol>
     }
 }
 
