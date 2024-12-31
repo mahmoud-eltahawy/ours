@@ -6,7 +6,7 @@ use crate::{
 };
 
 use super::atoms::ActiveIcon;
-use leptos::{either::either, html, prelude::*};
+use leptos::{either::either, html, prelude::*, tachys::dom::window};
 use leptos_router::components::A;
 use reactive_stores::Store;
 use server_fn::codec::{MultipartData, MultipartFormData};
@@ -207,7 +207,9 @@ fn Delete(password: String) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let remove = Action::new(move |input: &Vec<Unit>| rm(input.clone(), password.clone()));
     let on_click = move |_| {
-        remove.dispatch(store.select().get_untracked().units.into_iter().collect());
+        if let Ok(true) = window().confirm_with_message("are you sure you want to delete this") {
+            remove.dispatch(store.select().get_untracked().units.into_iter().collect());
+        };
     };
 
     Effect::new(move || {
