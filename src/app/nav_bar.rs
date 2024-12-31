@@ -117,7 +117,6 @@ pub async fn mp4_remux(targets: Vec<PathBuf>, password: String) -> Result<(), Se
             .spawn()?
             .wait()
             .await?;
-        let _ = remove_file(from).await;
     }
     Ok(())
 }

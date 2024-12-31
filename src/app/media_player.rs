@@ -29,7 +29,7 @@ pub fn MediaPlayer() -> impl IntoView {
         UseDraggableOptions::default()
             .initial_value(Position {
                 x: inner_width / 4.4,
-                y: inner_height / 3.3,
+                y: inner_height / 4.4,
             })
             .prevent_default(true),
     );
@@ -39,7 +39,7 @@ pub fn MediaPlayer() -> impl IntoView {
             view! {
                 <div
                     node_ref=el
-                    class="fixed bg-white rounded-lg text-2xl w-[70%] px-4 py-2 border border-gray-400/30 shadow hover:shadow-lg select-none cursor-move z-24"
+                    class="fixed bg-white rounded-lg text-2xl w-[50%] px-4 py-2 border border-gray-400/30 shadow hover:shadow-lg select-none cursor-move z-24"
                     style=style
                 >
                     <Bar name=unit.name() />
