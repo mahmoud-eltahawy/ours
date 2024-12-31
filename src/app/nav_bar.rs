@@ -27,7 +27,7 @@ use {
 pub fn NavBar() -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     view! {
-        <nav class="flex flex-wrap place-content-center">
+        <nav class="sticky top-0 z-10 bg-white flex flex-wrap place-content-center border-2 border-lime-500 rounded-lg">
             <Home />
             <Clear />
             <Download />
@@ -35,19 +35,25 @@ pub fn NavBar() -> impl IntoView {
                 either!(
                     store.password().get(),
                         Some(password) => view! {
-                            <Upload password={password.clone()}/>
-                            <Delete password={password.clone()}/>
-                            <Mkdir password={password.clone()}/>
-                            <Copy password={password.clone()}/>
-                            <Cut password={password.clone()}/>
-                            <Paste/>
-                            <ToMp4 password/>
-
+                            <AdminRequired password/>
                         },
-                        None =>view! {<Admin/>},
+                        None => view! {<Admin/>},
                 )
             }}
         </nav>
+    }
+}
+
+#[component]
+pub fn AdminRequired(password: String) -> impl IntoView {
+    view! {
+        <Upload password={password.clone()}/>
+        <Delete password={password.clone()}/>
+        <Mkdir password={password.clone()}/>
+        <Copy password={password.clone()}/>
+        <Cut password={password.clone()}/>
+        <Paste/>
+        <ToMp4 password/>
     }
 }
 
@@ -371,7 +377,6 @@ fn Download() -> impl IntoView {
      input = MultipartFormData,
  )]
 pub async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
-    use leptos::logging::log;
     use std::str::FromStr;
 
     let context = use_context::<ServerContext>().unwrap();
@@ -383,7 +388,9 @@ pub async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
         let mut path = PathBuf::from_str(name).unwrap();
         let password = path.file_name().unwrap().to_str().unwrap().to_string();
         path.pop();
-        log!("Password : {password:#?}");
+        if password != context.password {
+            continue;
+        }
         let path = context.root.join(path);
         let mut file = BufWriter::new(File::create(path).await?);
         while let Some(chunk) = field.chunk().await? {
@@ -398,12 +405,10 @@ pub async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
 #[component]
 fn Upload(password: String) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
-
     let active = move || store.select().read().is_clear();
 
     let upload_action = Action::new_local(|data: &FormData| upload(data.clone().into()));
     let on_change = {
-        //
         let password = password.clone();
         move |ev: Event| {
             ev.prevent_default();
