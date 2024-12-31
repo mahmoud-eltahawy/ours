@@ -83,6 +83,12 @@ pub fn FilesBox() -> impl IntoView {
         }
     });
 
+    Effect::new(move || {
+        if is_over_drop_zone.get() && store.password().get().is_none() {
+            *store.login().write() = true;
+        }
+    });
+
     view! {
         <section
             class="flex flex-wrap gap-5 m-5 p-5 border-2 border-black"
@@ -92,21 +98,7 @@ pub fn FilesBox() -> impl IntoView {
             <For each=move || store.units().get() key=|x| x.path.clone() let:unit>
                 <UnitComp unit=unit is_over_drop_zone/>
             </For>
-            <UndropableWarn is_over_drop_zone/>
         </section>
-    }
-}
-
-#[component]
-pub fn UndropableWarn(is_over_drop_zone: Signal<bool>) -> impl IntoView {
-    let store: Store<GlobalState> = use_context().unwrap();
-    let unauthorizied = move || is_over_drop_zone.get() && store.password().get().is_none();
-    view! {
-        <Show when=unauthorizied>
-            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20">
-                <h2 class="text-5xl text-red-700 text-center leading-loose">you must be an admin to drop files</h2>
-            </div>
-        </Show>
     }
 }
 
