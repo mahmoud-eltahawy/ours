@@ -201,7 +201,7 @@ fn Login() -> impl IntoView {
 
     view! {
         <Show when=move || store.login().get()>
-            <section class="grid grid-cols-1 gap-5 place-content-center bg-white rounded-lg border-black border-2 p-10 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+            <section class="grid grid-cols-1 gap-5 place-content-center bg-white rounded-lg border-black border-2 p-10 fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-24">
                 <h2 class="text-center text-3xl">Admin Login</h2>
                 <input
                     class="p-5 rounded-lg text-2xl border-2 border-black"

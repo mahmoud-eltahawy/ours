@@ -83,47 +83,74 @@ pub fn AdminRequired(password: String) -> impl IntoView {
 }
 
 #[component]
+fn Tool<Name, Active, OnClick>(name: Name, active: Active, onclick: OnClick) -> impl IntoView
+where
+    Name: ToString + Send + Clone + 'static,
+    Active: Fn() -> bool + Send + Clone + Copy + 'static,
+    OnClick: Fn() + Send + 'static,
+{
+    let on_click = move |_| onclick();
+    view! {
+        <button on:click=on_click disabled=move || !active()>
+            <ActiveIcon name active />
+        </button>
+    }
+}
+
+#[component]
 fn Home() -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let navigate = use_navigate();
     let active = move || store.current_path().read().file_name().is_some();
 
-    let on_click = move |_| navigate("/", NavigateOptions::default());
+    let onclick = move || navigate("/", NavigateOptions::default());
 
     view! {
-        <button on:click=on_click disabled=move || !active()>
-            <ActiveIcon name="home" active />
-        </button>
+        <Tool name="home" active onclick/>
     }
 }
 
 #[component]
 fn Clear() -> impl IntoView {
     let store = use_context::<Store<GlobalState>>().unwrap();
-    let on_click = move |_| {
+    let onclick = move || {
         store.select().write().clear();
     };
 
     let active = move || !store.select().read().is_clear();
 
     view! {
-        <button disabled=move || !active() on:click=on_click>
-            <ActiveIcon active name="clear" />
-        </button>
+        <Tool name="clear" active onclick/>
+    }
+}
+
+#[component]
+fn Download() -> impl IntoView {
+    let store: Store<GlobalState> = use_context().unwrap();
+    let onclick = move || {
+        store.select().get_untracked().download_selected();
+        store.select().write().clear();
+    };
+
+    let active = move || {
+        let select = store.select().read();
+        !select.is_clear() && !select.has_dirs()
+    };
+
+    view! {
+        <Tool name="download" active onclick/>
     }
 }
 
 #[component]
 fn Admin() -> impl IntoView {
     let store = use_context::<Store<GlobalState>>().unwrap();
-    let on_click = move |_| {
+    let onclick = move || {
         *store.login().write() = true;
     };
 
     view! {
-        <button on:click=on_click>
-            <Icon src="admin" />
-        </button>
+        <Tool name="admin" active=|| true onclick/>
     }
 }
 
@@ -378,26 +405,6 @@ fn Cut(password: String) -> impl IntoView {
     view! {
         <button disabled=move || !active() on:click=on_click>
             <ActiveIcon active name="cut" />
-        </button>
-    }
-}
-
-#[component]
-fn Download() -> impl IntoView {
-    let store: Store<GlobalState> = use_context().unwrap();
-    let on_click = move |_| {
-        store.select().get_untracked().download_selected();
-        store.select().write().clear();
-    };
-
-    let active = move || {
-        let select = store.select().read();
-        !select.is_clear() && !select.has_dirs()
-    };
-
-    view! {
-        <button disabled=move || !active() on:click=on_click>
-            <ActiveIcon active name="download" />
         </button>
     }
 }
