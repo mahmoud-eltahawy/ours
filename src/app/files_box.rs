@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use crate::{
     app::{
         atoms::{BaseIcon, Icon, IconSize},
-        nav_bar::upload,
+        nav_bar::upload::upload,
         GlobalState, GlobalStateStoreFields, SelectedState,
     },
     Unit, UnitKind,
