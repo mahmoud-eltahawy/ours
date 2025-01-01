@@ -1,24 +1,23 @@
 use std::path::PathBuf;
 
-use crate::{
-    app::{atoms::Icon, GlobalState, GlobalStateStoreFields, SelectedState},
-    Unit,
-};
+use crate::app::{atoms::Icon, GlobalState, GlobalStateStoreFields, SelectedState};
 
 use super::atoms::ActiveIcon;
-use leptos::{either::either, prelude::*, tachys::dom::window};
+use leptos::{either::either, prelude::*};
 use leptos_router::{hooks::use_navigate, NavigateOptions};
 use mp4::ToMp4;
 use reactive_stores::Store;
+use rm::Remove;
 use upload::Upload;
 
 mod mp4;
+mod rm;
 pub mod upload;
 
 #[cfg(feature = "ssr")]
 use {
-    crate::{ServerContext, UnitKind},
-    tokio::fs::{copy, remove_dir_all, remove_file},
+    crate::ServerContext,
+    tokio::fs::{copy, remove_file},
 };
 
 #[component]
@@ -71,7 +70,7 @@ pub fn More(more: RwSignal<bool>) -> impl IntoView {
 pub fn AdminRequired(password: String) -> impl IntoView {
     view! {
         <Upload password={password.clone()}/>
-        <Delete password={password.clone()}/>
+        <Remove password={password.clone()}/>
         <Mkdir password={password.clone()}/>
         <Copy password={password.clone()}/>
         <Cut password={password.clone()}/>
@@ -168,53 +167,6 @@ fn Mkdir(password: String) -> impl IntoView {
     view! {
         <button disabled=move || !active() on:click=on_click>
             <ActiveIcon active name="mkdir" />
-        </button>
-    }
-}
-
-#[server]
-pub async fn rm(bases: Vec<Unit>, password: String) -> Result<(), ServerFnError> {
-    let context = use_context::<ServerContext>().unwrap();
-    if password != context.password {
-        return Err(ServerFnError::new("wrong password"));
-    };
-    for base in bases.into_iter() {
-        let path = context.root.join(base.path);
-        match base.kind {
-            UnitKind::Dirctory => {
-                remove_dir_all(path).await?;
-            }
-            _ => {
-                remove_file(path).await?;
-            }
-        };
-    }
-
-    Ok(())
-}
-
-#[component]
-fn Delete(password: String) -> impl IntoView {
-    let store: Store<GlobalState> = use_context().unwrap();
-    let remove = Action::new(move |input: &Vec<Unit>| rm(input.clone(), password.clone()));
-    let on_click = move |_| {
-        if let Ok(true) = window().confirm_with_message("are you sure you want to delete this") {
-            remove.dispatch(store.select().get_untracked().units.into_iter().collect());
-        };
-    };
-
-    Effect::new(move || {
-        if !remove.pending().get() {
-            store.select().write().clear();
-            store.units_refetch_tick().update(|x| *x = !*x);
-        }
-    });
-
-    let active = move || !store.select().read().is_clear();
-
-    view! {
-        <button disabled=move || !active() on:click=on_click>
-            <ActiveIcon active name="delete" />
         </button>
     }
 }
