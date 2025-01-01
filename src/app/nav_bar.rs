@@ -7,7 +7,7 @@ use crate::{
 
 use super::atoms::ActiveIcon;
 use leptos::{either::either, html, prelude::*, tachys::dom::window};
-use leptos_router::components::A;
+use leptos_router::{hooks::use_navigate, NavigateOptions};
 use reactive_stores::Store;
 use server_fn::codec::{MultipartData, MultipartFormData};
 use wasm_bindgen::JsCast;
@@ -85,12 +85,15 @@ pub fn AdminRequired(password: String) -> impl IntoView {
 #[component]
 fn Home() -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
+    let navigate = use_navigate();
     let active = move || store.current_path().read().file_name().is_some();
 
+    let on_click = move |_| navigate("/", NavigateOptions::default());
+
     view! {
-        <A href="/" class:disabled=move || !active()>
+        <button on:click=on_click disabled=move || !active()>
             <ActiveIcon name="home" active />
-        </A>
+        </button>
     }
 }
 
