@@ -146,7 +146,7 @@ pub fn App() -> impl IntoView {
 
     view! {
         <Stylesheet id="leptos" href="/pkg/webls.css" />
-        <Title text="Welcome to Leptos" />
+        <Title text="eltahawy's locker" />
         <Router>
             <NavBar />
             <main>

@@ -154,15 +154,13 @@ fn Admin() -> impl IntoView {
 fn Mkdir(password: String) -> impl IntoView {
     let store = use_context::<Store<GlobalState>>().unwrap();
 
-    let on_click = move |_| {
+    let onclick = move || {
         *store.mkdir_state().write() = Some(password.clone());
     };
 
     let active = move || store.select().read().is_clear();
 
     view! {
-        <button disabled=move || !active() on:click=on_click>
-            <ActiveIcon active name="mkdir" />
-        </button>
+        <Tool name="mkdir" active onclick/>
     }
 }
