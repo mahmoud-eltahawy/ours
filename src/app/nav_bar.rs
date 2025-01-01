@@ -1,8 +1,7 @@
-use std::path::PathBuf;
-
-use crate::app::{atoms::Icon, GlobalState, GlobalStateStoreFields, SelectedState};
+use crate::app::{atoms::Icon, GlobalState, GlobalStateStoreFields};
 
 use super::atoms::ActiveIcon;
+use cut_copy::CutCopy;
 use leptos::{either::either, prelude::*};
 use leptos_router::{hooks::use_navigate, NavigateOptions};
 use mp4::ToMp4;
@@ -10,15 +9,10 @@ use reactive_stores::Store;
 use rm::Remove;
 use upload::Upload;
 
+mod cut_copy;
 mod mp4;
 mod rm;
 pub mod upload;
-
-#[cfg(feature = "ssr")]
-use {
-    crate::ServerContext,
-    tokio::fs::{copy, remove_file},
-};
 
 #[component]
 pub fn NavBar() -> impl IntoView {
@@ -56,9 +50,13 @@ pub fn More(more: RwSignal<bool>) -> impl IntoView {
     let on_click = move |_| {
         more.update(|x| *x = !*x);
     };
+    let less = move || !more.get();
     view! {
         <button
-            class="border bg-white fixed top-0 right-0 m-1 p-1 rounded-lg"
+            class="border bg-white m-1 p-1 rounded-lg"
+            class:fixed=less
+            class:top-0=less
+            class:right-0=less
             on:click=on_click
          >
             <Icon src="more"/>
@@ -72,9 +70,7 @@ pub fn AdminRequired(password: String) -> impl IntoView {
         <Upload password={password.clone()}/>
         <Remove password={password.clone()}/>
         <Mkdir password={password.clone()}/>
-        <Copy password={password.clone()}/>
-        <Cut password={password.clone()}/>
-        <Paste/>
+        <CutCopy password={password.clone()}/>
         <ToMp4 password/>
     }
 }
@@ -167,133 +163,6 @@ fn Mkdir(password: String) -> impl IntoView {
     view! {
         <button disabled=move || !active() on:click=on_click>
             <ActiveIcon active name="mkdir" />
-        </button>
-    }
-}
-
-#[server]
-pub async fn cp(from: Vec<PathBuf>, to: PathBuf, password: String) -> Result<(), ServerFnError> {
-    let context = use_context::<ServerContext>().unwrap();
-    if password != context.password {
-        return Err(ServerFnError::new("wrong password"));
-    };
-    let to = context.root.join(to);
-    for base in from.into_iter().map(|x| context.root.join(x)) {
-        copy(&base, to.join(base.file_name().unwrap())).await?;
-    }
-    Ok(())
-}
-
-#[server]
-pub async fn cp_cut(
-    from: Vec<PathBuf>,
-    to: PathBuf,
-    password: String,
-) -> Result<(), ServerFnError> {
-    let context = use_context::<ServerContext>().unwrap();
-    if password != context.password {
-        return Err(ServerFnError::new("wrong password"));
-    };
-    let to = context.root.join(to);
-    for base in from.into_iter().map(|x| context.root.join(x)) {
-        copy(&base, to.join(base.file_name().unwrap())).await?;
-        remove_file(base).await?;
-    }
-    Ok(())
-}
-
-#[component]
-fn Paste() -> impl IntoView {
-    let store: Store<GlobalState> = use_context().unwrap();
-    let copy = Action::new({
-        move |password: &String| {
-            cp(
-                store.select().read_untracked().as_paths(),
-                store.current_path().get_untracked(),
-                password.clone(),
-            )
-        }
-    });
-    let cut = Action::new(move |password: &String| {
-        cp_cut(
-            store.select().read_untracked().as_paths(),
-            store.current_path().get_untracked(),
-            password.clone(),
-        )
-    });
-
-    Effect::new(move || {
-        if !copy.pending().get() {
-            store.select().write().clear();
-            store.units_refetch_tick().update(|x| *x = !*x);
-        }
-    });
-
-    Effect::new(move || {
-        if !cut.pending().get() {
-            store.select().write().clear();
-            store.units_refetch_tick().update(|x| *x = !*x);
-        }
-    });
-
-    let on_click = move |_| match store.select().get().state {
-        SelectedState::Copy(password) => {
-            copy.dispatch(password);
-        }
-        SelectedState::Cut(password) => {
-            cut.dispatch(password);
-        }
-        SelectedState::None => (),
-    };
-
-    let active = move || {
-        let select = store.select().read();
-        !select.is_clear() && !matches!(select.state, SelectedState::None)
-    };
-
-    view! {
-        <button disabled=move || !active() on:click=on_click>
-            <ActiveIcon active name="paste" />
-        </button>
-    }
-}
-
-#[component]
-fn Copy(password: String) -> impl IntoView {
-    let store: Store<GlobalState> = use_context().unwrap();
-
-    let active = move || {
-        let select = store.select().read();
-        !select.is_clear() && !select.has_dirs()
-    };
-
-    let on_click = move |_| {
-        store.select().write().copy(password.clone());
-    };
-
-    view! {
-        <button disabled=move || !active() on:click=on_click>
-            <ActiveIcon active name="copy" />
-        </button>
-    }
-}
-
-#[component]
-fn Cut(password: String) -> impl IntoView {
-    let store: Store<GlobalState> = use_context().unwrap();
-
-    let active = move || {
-        let select = store.select().read();
-        !select.is_clear() && !select.has_dirs()
-    };
-
-    let on_click = move |_| {
-        store.select().write().cut(password.clone());
-    };
-
-    view! {
-        <button disabled=move || !active() on:click=on_click>
-            <ActiveIcon active name="cut" />
         </button>
     }
 }
