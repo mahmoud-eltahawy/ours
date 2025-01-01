@@ -19,7 +19,7 @@ impl ServerContext {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum UnitKind {
     Dirctory,
     Video,
@@ -58,9 +58,8 @@ impl Unit {
             .click();
     }
 }
-trait Units {
+trait Retype {
     fn retype(&mut self);
-    fn resort(self) -> Self;
 }
 
 const VIDEO_X: [&str; 39] = [
@@ -74,7 +73,7 @@ const AUDIO_X: [&str; 20] = [
     "wma", "au", "gsm", "amr", "ra", "mmf", "cda",
 ];
 
-impl Units for Vec<Unit> {
+impl Retype for Vec<Unit> {
     fn retype(&mut self) {
         self.iter_mut().for_each(|unit| {
             if unit.kind != UnitKind::File {
@@ -88,32 +87,6 @@ impl Units for Vec<Unit> {
                 }
             };
         });
-    }
-
-    fn resort(self) -> Self {
-        let (mut directories, mut files, mut videos, mut audios) =
-            (Vec::new(), Vec::new(), Vec::new(), Vec::new());
-
-        for unit in self.into_iter() {
-            let target = match unit.kind {
-                UnitKind::Dirctory => &mut directories,
-                UnitKind::Video => &mut videos,
-                UnitKind::Audio => &mut audios,
-                UnitKind::File => &mut files,
-            };
-            target.push(unit);
-        }
-
-        [&mut directories, &mut videos, &mut audios, &mut files]
-            .iter_mut()
-            .for_each(|xs| xs.sort_by_key(|x| x.name()));
-
-        directories
-            .into_iter()
-            .chain(videos)
-            .chain(audios)
-            .chain(files)
-            .collect()
     }
 }
 

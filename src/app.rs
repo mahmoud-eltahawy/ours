@@ -1,4 +1,4 @@
-use crate::{Unit, UnitKind, Units};
+use crate::{Retype, Unit, UnitKind};
 use files_box::{ls, FilesBox};
 use leptos::{ev, prelude::*};
 use leptos_meta::{provide_meta_context, MetaTags, Stylesheet, Title};
@@ -130,7 +130,8 @@ pub fn App() -> impl IntoView {
     Effect::new(move || {
         if let Some(mut xs) = ls_result.get().transpose().ok().flatten() {
             xs.retype();
-            *store.units().write() = xs.resort();
+            xs.sort_by_key(|x| (x.kind.clone(), x.name()));
+            *store.units().write() = xs;
         };
     });
 
