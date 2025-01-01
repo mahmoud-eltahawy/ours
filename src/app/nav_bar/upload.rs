@@ -43,7 +43,7 @@ pub async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
 }
 
 #[component]
-pub(crate) fn Upload(password: String) -> impl IntoView {
+pub fn Upload(password: String) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let active = move || store.select().read().is_clear();
 

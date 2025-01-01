@@ -8,18 +8,17 @@ use crate::{
 use super::atoms::ActiveIcon;
 use leptos::{either::either, prelude::*, tachys::dom::window};
 use leptos_router::{hooks::use_navigate, NavigateOptions};
+use mp4::ToMp4;
 use reactive_stores::Store;
 use upload::Upload;
 
+mod mp4;
 pub mod upload;
 
 #[cfg(feature = "ssr")]
 use {
     crate::{ServerContext, UnitKind},
-    tokio::{
-        fs::{copy, remove_dir_all, remove_file},
-        process::Command,
-    },
+    tokio::fs::{copy, remove_dir_all, remove_file},
 };
 
 #[component]
@@ -102,7 +101,10 @@ fn Home() -> impl IntoView {
     let navigate = use_navigate();
     let active = move || store.current_path().read().file_name().is_some();
 
-    let onclick = move || navigate("/", NavigateOptions::default());
+    let onclick = move || {
+        store.select().write().clear();
+        navigate("/", NavigateOptions::default())
+    };
 
     view! {
         <Tool name="home" active onclick/>
@@ -150,70 +152,6 @@ fn Admin() -> impl IntoView {
 
     view! {
         <Tool name="admin" active=|| true onclick/>
-    }
-}
-
-#[server]
-async fn mp4_remux(targets: Vec<PathBuf>, password: String) -> Result<(), ServerFnError> {
-    let context = use_context::<ServerContext>().unwrap();
-    if password != context.password {
-        return Err(ServerFnError::new("wrong password"));
-    };
-    for target in targets.into_iter().map(|x| context.root.join(x)) {
-        let from = context.root.join(target);
-        let mut to = from.clone();
-        to.set_extension("mp4");
-        let _ = remove_file(to.clone()).await;
-        Command::new("ffmpeg")
-            .arg("-i")
-            .arg(from.clone())
-            .arg(to)
-            .spawn()?
-            .wait()
-            .await?;
-    }
-    Ok(())
-}
-
-#[component]
-fn ToMp4(password: String) -> impl IntoView {
-    let store = use_context::<Store<GlobalState>>().unwrap();
-
-    let remux = Action::new(move |input: &Vec<PathBuf>| mp4_remux(input.clone(), password.clone()));
-    let on_click = move |_| {
-        let targets = store
-            .select()
-            .read()
-            .units
-            .iter()
-            .filter(|x| x.path.extension().is_some_and(|x| x != "mp4"))
-            .map(|x| x.path.clone())
-            .collect::<Vec<_>>();
-
-        remux.dispatch(targets);
-
-        store.select().write().clear();
-    };
-
-    let active = move || {
-        let select = store.select().read();
-        !select.is_clear()
-            && select
-                .units
-                .iter()
-                .all(|x| matches!(x.kind, crate::UnitKind::Video))
-    };
-
-    Effect::new(move || {
-        if !remux.pending().get() {
-            store.units_refetch_tick().update(|x| *x = !*x);
-        }
-    });
-
-    view! {
-        <button disabled=move || !active() on:click=on_click>
-            <ActiveIcon active name="mp4" />
-        </button>
     }
 }
 
