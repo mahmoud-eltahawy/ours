@@ -26,21 +26,46 @@ use {
 #[component]
 pub fn NavBar() -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
+    let more = RwSignal::new(true);
     view! {
-        <nav class="sticky top-0 z-10 bg-white flex flex-wrap place-content-center border-2 border-lime-500 rounded-lg">
-            <Home />
-            <Clear />
-            <Download />
-            {move || {
-                either!(
-                    store.password().get(),
-                        Some(password) => view! {
-                            <AdminRequired password/>
-                        },
-                        None => view! {<Admin/>},
-                )
-            }}
-        </nav>
+        <Show
+            when=move || more.get()
+            fallback=move || {
+                view! {
+                    <More more/>
+                }
+            }
+        >
+            <nav class="fixed top-0 right-0 z-10 h-screen w-24 bg-white flex flex-wrap place-content-center border-2 border-lime-500 rounded-lg">
+                <More more/>
+                <Home />
+                <Clear />
+                <Download />
+                {move || {
+                    either!(
+                        store.password().get(),
+                            Some(password) => view! {
+                                <AdminRequired password/>
+                            },
+                            None => view! {<Admin/>},
+                    )
+                }}
+            </nav>
+        </Show>
+    }
+}
+#[component]
+pub fn More(more: RwSignal<bool>) -> impl IntoView {
+    let on_click = move |_| {
+        more.update(|x| *x = !*x);
+    };
+    view! {
+        <button
+            class="border bg-white fixed top-0 right-0 m-1 p-1 rounded-lg"
+            on:click=on_click
+         >
+            <Icon src="more"/>
+        </button>
     }
 }
 
