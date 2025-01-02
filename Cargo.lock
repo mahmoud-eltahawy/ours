@@ -2537,6 +2537,7 @@ dependencies = [
  "leptos_meta",
  "leptos_router",
  "reactive_stores",
+ "send_wrapper",
  "serde",
  "server_fn",
  "thiserror 1.0.69",

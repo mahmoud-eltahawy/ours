@@ -3,6 +3,7 @@ use crate::app::{atoms::Icon, GlobalState, GlobalStateStoreFields, SelectedState
 use super::atoms::ActiveIcon;
 use leptos::{either::either, prelude::*};
 use leptos_router::{hooks::use_navigate, NavigateOptions};
+use leptos_use::UseDropZoneReturn;
 use mp4::ToMp4;
 use paste::Paste;
 use reactive_stores::Store;
@@ -15,7 +16,11 @@ mod rm;
 pub mod upload;
 
 #[component]
-pub fn NavBar() -> impl IntoView {
+pub fn NavBar(use_drop_zone_return: UseDropZoneReturn) -> impl IntoView {
+    let UseDropZoneReturn {
+        files,
+        is_over_drop_zone,
+    } = use_drop_zone_return;
     let store: Store<GlobalState> = use_context().unwrap();
     let more = RwSignal::new(true);
     view! {
@@ -30,11 +35,15 @@ pub fn NavBar() -> impl IntoView {
                 <Home />
                 <Clear />
                 <Download />
+                <Upload use_drop_zone_return=UseDropZoneReturn {
+                    files,
+                    is_over_drop_zone,
+                } />
                 {move || {
                     either!(
                         store.password().get(),
                             Some(password) => view! {
-                                <AdminRequired password/>
+                                <AdminRequired password />
                             },
                             None => view! {<Admin/>},
                     )
@@ -65,7 +74,6 @@ pub fn More(more: RwSignal<bool>) -> impl IntoView {
 #[component]
 pub fn AdminRequired(password: String) -> impl IntoView {
     view! {
-        <Upload password=password.clone() />
         <Remove password=password.clone() />
         <Mkdir password=password.clone() />
         <Paste password=password.clone() />

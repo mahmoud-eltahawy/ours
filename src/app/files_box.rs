@@ -3,18 +3,14 @@ use std::path::PathBuf;
 use crate::{
     app::{
         atoms::{BaseIcon, Icon, IconSize},
-        nav_bar::upload::upload,
         GlobalState, GlobalStateStoreFields, SelectedState,
     },
     Unit, UnitKind,
 };
 use leptos::{either::Either, html::Ol, prelude::*};
 use leptos_router::hooks::{use_navigate, use_query_map};
-use leptos_use::{
-    use_drop_zone_with_options, UseDropZoneEvent, UseDropZoneOptions, UseDropZoneReturn,
-};
 use reactive_stores::Store;
-use web_sys::{Blob, FormData, KeyboardEvent};
+use web_sys::KeyboardEvent;
 
 #[cfg(feature = "ssr")]
 use {crate::ServerContext, tokio::fs};
@@ -42,7 +38,7 @@ pub async fn ls(base: PathBuf) -> Result<Vec<Unit>, ServerFnError> {
 }
 
 #[component]
-pub fn FilesBox() -> impl IntoView {
+pub fn FilesBox(drop_zone_el: NodeRef<Ol>, is_over_drop_zone: Signal<bool>) -> impl IntoView {
     let query = use_query_map();
     let store: Store<GlobalState> = use_context().unwrap();
     Effect::new(move || {
@@ -54,39 +50,6 @@ pub fn FilesBox() -> impl IntoView {
             i += 1;
         }
         store.current_path().set(result);
-    });
-
-    let drop_zone_el = NodeRef::<Ol>::new();
-    let upload_action = Action::new_local(|data: &FormData| upload(data.clone().into()));
-
-    let on_drop = move |ev: UseDropZoneEvent| {
-        let current_path = store.current_path().read();
-        if let Some(password) = store.password().get_untracked() {
-            for file in ev.files {
-                let data = FormData::new().unwrap();
-                let path = current_path.join(file.name());
-                let path = path.join(password.clone());
-                data.append_with_blob(path.to_str().unwrap(), &Blob::from(file))
-                    .unwrap();
-                upload_action.dispatch_local(data);
-            }
-        };
-    };
-
-    let UseDropZoneReturn {
-        is_over_drop_zone, ..
-    } = use_drop_zone_with_options(drop_zone_el, UseDropZoneOptions::default().on_drop(on_drop));
-
-    Effect::new(move || {
-        if !upload_action.pending().get() {
-            store.units_refetch_tick().update(|x| *x = !*x);
-        }
-    });
-
-    Effect::new(move || {
-        if is_over_drop_zone.get() && store.password().get().is_none() {
-            *store.login().write() = true;
-        }
     });
 
     view! {

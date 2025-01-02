@@ -1,11 +1,12 @@
 use crate::{Retype, Unit, UnitKind};
 use files_box::{ls, FilesBox};
-use leptos::{ev, prelude::*};
+use leptos::{ev, html::Ol, prelude::*};
 use leptos_meta::{provide_meta_context, MetaTags, Stylesheet, Title};
 use leptos_router::{
     components::{Route, Router, Routes},
     StaticSegment,
 };
+use leptos_use::{use_drop_zone_with_options, UseDropZoneOptions, UseDropZoneReturn};
 use login::Login;
 use media_player::MediaPlayer;
 use nav_bar::NavBar;
@@ -144,14 +145,27 @@ pub fn App() -> impl IntoView {
         }
     });
 
+    let drop_zone_el = NodeRef::<Ol>::new();
+
+    let UseDropZoneReturn {
+        is_over_drop_zone,
+        files,
+    } = use_drop_zone_with_options(drop_zone_el, UseDropZoneOptions::default());
+
     view! {
         <Stylesheet id="leptos" href="/pkg/webls.css" />
         <Title text="eltahawy's locker" />
         <Router>
-            <NavBar />
+            <NavBar use_drop_zone_return=UseDropZoneReturn {
+                is_over_drop_zone,
+                files,
+            } />
             <main>
                 <Routes fallback=|| "Page not found.">
-                    <Route path=StaticSegment("") view=FilesBox />
+                    <Route
+                        path=StaticSegment("")
+                        view=move || view! { <FilesBox drop_zone_el is_over_drop_zone /> }
+                    />
                 </Routes>
             </main>
             <MediaPlayer />
