@@ -1,5 +1,5 @@
 use crate::{
-    app::{nav_bar::Tool, GlobalState, GlobalStateStoreFields},
+    app::{nav_bar::LoadableTool, GlobalState, GlobalStateStoreFields},
     UnitKind,
 };
 use leptos::prelude::*;
@@ -67,13 +67,15 @@ pub fn ToMp4(password: String) -> impl IntoView {
                 .any(|x| x.path.extension().is_some_and(|x| x != "mp4"))
     };
 
+    let finished = move || !remux.pending().get();
+
     Effect::new(move || {
-        if !remux.pending().get() {
+        if finished() {
             store.units_refetch_tick().update(|x| *x = !*x);
         }
     });
 
     view! {
-        <Tool active name="mp4" onclick/>
+        <LoadableTool active name="mp4" onclick finished/>
     }
 }

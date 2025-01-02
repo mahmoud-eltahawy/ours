@@ -141,7 +141,9 @@ pub fn App() -> impl IntoView {
     });
 
     window_event_listener(ev::popstate, move |_| {
-        store.select().write().clear();
+        if let SelectedState::None = store.select().get().state {
+            store.select().write().clear();
+        }
     });
 
     view! {

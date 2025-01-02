@@ -3,20 +3,18 @@ use {
     axum::Router,
     leptos::{logging::log, prelude::*},
     leptos_axum::{generate_route_list, LeptosRoutes},
-    std::{env::var, fs::canonicalize, net::SocketAddr},
+    std::{env::var, fs::canonicalize, net::SocketAddr, path::PathBuf, time::Duration},
     tokio::{
         fs,
         io::{AsyncWriteExt, ErrorKind},
     },
-    tower_http::services::ServeDir,
+    tower_http::{services::ServeDir, timeout::TimeoutLayer},
     webls::{app::*, ServerContext},
 };
 
 #[cfg(feature = "ssr")]
 #[tokio::main]
 async fn main() {
-    use std::path::PathBuf;
-
     let conf = get_configuration(None).unwrap();
     // let addr = conf.leptos_options.site_addr;
     let leptos_options = conf.leptos_options;
@@ -57,6 +55,7 @@ async fn main() {
                 move || shell(leptos_options.clone())
             },
         )
+        .layer(TimeoutLayer::new(Duration::from_secs(3 * 60 * 60)))
         .fallback(leptos_axum::file_and_error_handler(shell))
         .with_state(leptos_options)
         .nest_service("/download", serve_dir);

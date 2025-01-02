@@ -1,4 +1,4 @@
-use crate::app::{nav_bar::Tool, GlobalState, GlobalStateStoreFields};
+use crate::app::{nav_bar::LoadableTool, GlobalState, GlobalStateStoreFields};
 use leptos::{html, prelude::*};
 use reactive_stores::Store;
 use server_fn::codec::{MultipartData, MultipartFormData};
@@ -83,13 +83,9 @@ pub fn Upload(password: String) -> impl IntoView {
         }
     });
 
+    let finished = move || !upload_action.pending().get();
     view! {
-        <Show
-            when=move || !upload_action.pending().get()
-            fallback=move || view! { <img class="m-1 p-1" src="load.gif" width=65 /> }
-        >
-            <Tool name="upload" active onclick/>
-            <input node_ref=input_ref on:change=on_change.clone() type="file" multiple hidden />
-        </Show>
+        <LoadableTool name="upload" active onclick finished/>
+        <input node_ref=input_ref on:change=on_change type="file" multiple hidden />
     }
 }

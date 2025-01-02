@@ -1,4 +1,4 @@
-use crate::app::{nav_bar::Tool, GlobalState, GlobalStateStoreFields, SelectedState};
+use crate::app::{nav_bar::LoadableTool, GlobalState, GlobalStateStoreFields, SelectedState};
 use leptos::prelude::*;
 use reactive_stores::Store;
 use std::path::PathBuf;
@@ -37,7 +37,7 @@ async fn cp_cut(from: Vec<PathBuf>, to: PathBuf, password: String) -> Result<(),
 }
 
 #[component]
-fn Paste() -> impl IntoView {
+pub fn Paste(password: String) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let copy = Action::new({
         move |password: &String| {
@@ -56,15 +56,12 @@ fn Paste() -> impl IntoView {
         )
     });
 
-    Effect::new(move || {
-        if !copy.pending().get() {
-            store.select().write().clear();
-            store.units_refetch_tick().update(|x| *x = !*x);
-        }
-    });
+    let copy_finished = move || !copy.pending().get();
+    let cut_finished = move || !cut.pending().get();
+    let finished = move || cut_finished() && copy_finished();
 
     Effect::new(move || {
-        if !cut.pending().get() {
+        if finished() {
             store.select().write().clear();
             store.units_refetch_tick().update(|x| *x = !*x);
         }
@@ -86,12 +83,17 @@ fn Paste() -> impl IntoView {
     };
 
     view! {
-        <Tool active name="paste" onclick/>
+        <Copy password={password.clone()} finished=copy_finished/>
+        <Cut password={password.clone()} finished=cut_finished/>
+        <LoadableTool active name="paste" onclick finished/>
     }
 }
 
 #[component]
-fn Copy(password: String) -> impl IntoView {
+fn Copy<Finished>(password: String, finished: Finished) -> impl IntoView
+where
+    Finished: Fn() -> bool + Send + Sync + 'static,
+{
     let store: Store<GlobalState> = use_context().unwrap();
 
     let active = move || {
@@ -104,12 +106,15 @@ fn Copy(password: String) -> impl IntoView {
     };
 
     view! {
-        <Tool active name="copy" onclick/>
+        <LoadableTool active name="copy" onclick finished/>
     }
 }
 
 #[component]
-fn Cut(password: String) -> impl IntoView {
+fn Cut<Finished>(password: String, finished: Finished) -> impl IntoView
+where
+    Finished: Fn() -> bool + Send + Sync + 'static,
+{
     let store: Store<GlobalState> = use_context().unwrap();
 
     let active = move || {
@@ -122,15 +127,6 @@ fn Cut(password: String) -> impl IntoView {
     };
 
     view! {
-        <Tool active name="cut" onclick/>
-    }
-}
-
-#[component]
-pub fn CutCopy(password: String) -> impl IntoView {
-    view! {
-        <Copy password={password.clone()}/>
-        <Cut password={password.clone()}/>
-        <Paste/>
+        <LoadableTool active name="cut" onclick finished/>
     }
 }

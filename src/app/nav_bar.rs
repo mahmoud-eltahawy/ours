@@ -1,16 +1,16 @@
-use crate::app::{atoms::Icon, GlobalState, GlobalStateStoreFields};
+use crate::app::{atoms::Icon, GlobalState, GlobalStateStoreFields, SelectedState};
 
 use super::atoms::ActiveIcon;
-use cut_copy::CutCopy;
 use leptos::{either::either, prelude::*};
 use leptos_router::{hooks::use_navigate, NavigateOptions};
 use mp4::ToMp4;
+use paste::Paste;
 use reactive_stores::Store;
 use rm::Remove;
 use upload::Upload;
 
-mod cut_copy;
 mod mp4;
+mod paste;
 mod rm;
 pub mod upload;
 
@@ -70,7 +70,7 @@ pub fn AdminRequired(password: String) -> impl IntoView {
         <Upload password={password.clone()}/>
         <Remove password={password.clone()}/>
         <Mkdir password={password.clone()}/>
-        <CutCopy password={password.clone()}/>
+        <Paste password={password.clone()}/>
         <ToMp4 password/>
     }
 }
@@ -91,13 +91,38 @@ where
 }
 
 #[component]
+fn LoadableTool<Name, Active, OnClick, Finished>(
+    name: Name,
+    active: Active,
+    onclick: OnClick,
+    finished: Finished,
+) -> impl IntoView
+where
+    Name: ToString + Send + Sync + Clone + Copy + 'static,
+    Active: Fn() -> bool + Send + Sync + Clone + Copy + 'static,
+    OnClick: Fn() + Send + Sync + Clone + 'static,
+    Finished: Fn() -> bool + Send + Sync + 'static,
+{
+    view! {
+        <Show
+            when=finished
+            fallback=move || view! { <img class="m-1 p-1" src="load.gif" width=65/> }
+        >
+            <Tool name active onclick={onclick.clone()}/>
+        </Show>
+    }
+}
+
+#[component]
 fn Home() -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let navigate = use_navigate();
     let active = move || store.current_path().read().file_name().is_some();
 
     let onclick = move || {
-        store.select().write().clear();
+        if let SelectedState::None = store.select().get().state {
+            store.select().write().clear();
+        }
         navigate("/", NavigateOptions::default())
     };
 

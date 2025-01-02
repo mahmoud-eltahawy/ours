@@ -1,4 +1,4 @@
-use crate::app::nav_bar::Tool;
+use crate::app::nav_bar::LoadableTool;
 use crate::app::{GlobalState, GlobalStateStoreFields};
 use leptos::prelude::*;
 use leptos::tachys::dom::window;
@@ -38,8 +38,12 @@ pub fn Remove(password: String) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let remove = Action::new(move |input: &Vec<Unit>| rm(input.clone(), password.clone()));
     let onclick = move || {
-        if let Ok(true) = window().confirm_with_message("are you sure you want to delete this") {
-            remove.dispatch(store.select().get_untracked().units.into_iter().collect());
+        let units = store.select().get_untracked().units;
+        if let Ok(true) = window().confirm_with_message(&format!(
+            "are you sure you want to delete {:#?}",
+            units.iter().map(|x| x.name()).collect::<Vec<_>>()
+        )) {
+            remove.dispatch(units.into_iter().collect());
         };
     };
 
@@ -51,8 +55,9 @@ pub fn Remove(password: String) -> impl IntoView {
     });
 
     let active = move || !store.select().read().is_clear();
+    let finished = move || !remove.pending().get();
 
     view! {
-        <Tool active name="delete" onclick/>
+        <LoadableTool active name="delete" onclick finished/>
     }
 }
