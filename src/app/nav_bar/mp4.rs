@@ -75,7 +75,5 @@ pub fn ToMp4(password: String) -> impl IntoView {
         }
     });
 
-    view! {
-        <LoadableTool active name="mp4" onclick finished/>
-    }
+    view! { <LoadableTool active name="mp4" onclick finished /> }
 }

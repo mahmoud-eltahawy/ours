@@ -22,13 +22,11 @@ pub fn NavBar() -> impl IntoView {
         <Show
             when=move || more.get()
             fallback=move || {
-                view! {
-                    <More more/>
-                }
+                view! { <More more /> }
             }
         >
             <nav class="fixed top-0 right-0 z-10 h-screen w-24 bg-white flex flex-wrap place-content-center border-2 border-lime-500 rounded-lg">
-                <More more/>
+                <More more />
                 <Home />
                 <Clear />
                 <Download />
@@ -58,8 +56,8 @@ pub fn More(more: RwSignal<bool>) -> impl IntoView {
             class:top-0=less
             class:right-0=less
             on:click=on_click
-         >
-            <Icon src="more"/>
+        >
+            <Icon src="more" />
         </button>
     }
 }
@@ -67,11 +65,11 @@ pub fn More(more: RwSignal<bool>) -> impl IntoView {
 #[component]
 pub fn AdminRequired(password: String) -> impl IntoView {
     view! {
-        <Upload password={password.clone()}/>
-        <Remove password={password.clone()}/>
-        <Mkdir password={password.clone()}/>
-        <Paste password={password.clone()}/>
-        <ToMp4 password/>
+        <Upload password=password.clone() />
+        <Remove password=password.clone() />
+        <Mkdir password=password.clone() />
+        <Paste password=password.clone() />
+        <ToMp4 password />
     }
 }
 
@@ -106,9 +104,9 @@ where
     view! {
         <Show
             when=finished
-            fallback=move || view! { <img class="m-1 p-1" src="load.gif" width=65/> }
+            fallback=move || view! { <img class="m-1 p-1" src="load.gif" width=65 /> }
         >
-            <Tool name active onclick={onclick.clone()}/>
+            <Tool name active onclick=onclick.clone() />
         </Show>
     }
 }
@@ -126,9 +124,7 @@ fn Home() -> impl IntoView {
         navigate("/", NavigateOptions::default())
     };
 
-    view! {
-        <Tool name="home" active onclick/>
-    }
+    view! { <Tool name="home" active onclick /> }
 }
 
 #[component]
@@ -140,9 +136,7 @@ fn Clear() -> impl IntoView {
 
     let active = move || !store.select().read().is_clear();
 
-    view! {
-        <Tool name="clear" active onclick/>
-    }
+    view! { <Tool name="clear" active onclick /> }
 }
 
 #[component]
@@ -158,9 +152,7 @@ fn Download() -> impl IntoView {
         !select.is_clear() && !select.has_dirs()
     };
 
-    view! {
-        <Tool name="download" active onclick/>
-    }
+    view! { <Tool name="download" active onclick /> }
 }
 
 #[component]
@@ -170,9 +162,7 @@ fn Admin() -> impl IntoView {
         *store.login().write() = true;
     };
 
-    view! {
-        <Tool name="admin" active=|| true onclick/>
-    }
+    view! { <Tool name="admin" active=|| true onclick /> }
 }
 
 #[component]
@@ -185,7 +175,5 @@ fn Mkdir(password: String) -> impl IntoView {
 
     let active = move || store.select().read().is_clear();
 
-    view! {
-        <Tool name="mkdir" active onclick/>
-    }
+    view! { <Tool name="mkdir" active onclick /> }
 }

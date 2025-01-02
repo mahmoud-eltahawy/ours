@@ -57,7 +57,5 @@ pub fn Remove(password: String) -> impl IntoView {
     let active = move || !store.select().read().is_clear();
     let finished = move || !remove.pending().get();
 
-    view! {
-        <LoadableTool active name="delete" onclick finished/>
-    }
+    view! { <LoadableTool active name="delete" onclick finished /> }
 }

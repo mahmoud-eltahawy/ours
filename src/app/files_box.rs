@@ -92,13 +92,13 @@ pub fn FilesBox() -> impl IntoView {
     view! {
         <ol
             class="w-full min-h-80 m-5 p-5 border-2 border-lime-500 rounded-lg"
-            node_ref={drop_zone_el}
+            node_ref=drop_zone_el
         >
             <li>
                 <Mkdir />
             </li>
             <For each=move || store.units().get() key=|x| x.path.clone() let:unit>
-                <UnitComp unit=unit is_over_drop_zone/>
+                <UnitComp unit=unit is_over_drop_zone />
             </For>
         </ol>
     }
@@ -217,21 +217,21 @@ fn UnitComp(unit: Unit, is_over_drop_zone: Signal<bool>) -> impl IntoView {
                 SelectedState::Copy(_) if is_selected => {
                     Either::Right(Either::Right(view! { <Icon src="copy" /> }))
                 }
-                _ => Either::Left(view! { <UnitIcon unit=unit.clone() is_over_drop_zone/> }),
+                _ => Either::Left(view! { <UnitIcon unit=unit.clone() is_over_drop_zone /> }),
             }
         }
     };
 
     view! {
         <li>
-        <button
-            on:dblclick=ondblclick
-            on:click=onclick
-            class="grid grid-cols-2 hover:text-white hover:bg-black justify-items-left"
-        >
-            {icon}
-            <span class="mx-0 px-0 py-5">{name}</span>
-        </button>
+            <button
+                on:dblclick=ondblclick
+                on:click=onclick
+                class="grid grid-cols-2 hover:text-white hover:bg-black justify-items-left"
+            >
+                {icon}
+                <span class="mx-0 px-0 py-5">{name}</span>
+            </button>
         </li>
     }
 }

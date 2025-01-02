@@ -83,9 +83,9 @@ pub fn Paste(password: String) -> impl IntoView {
     };
 
     view! {
-        <Copy password={password.clone()} finished=copy_finished/>
-        <Cut password={password.clone()} finished=cut_finished/>
-        <LoadableTool active name="paste" onclick finished/>
+        <Copy password=password.clone() finished=copy_finished />
+        <Cut password=password.clone() finished=cut_finished />
+        <LoadableTool active name="paste" onclick finished />
     }
 }
 
@@ -105,9 +105,7 @@ where
         store.select().write().copy(password.clone());
     };
 
-    view! {
-        <LoadableTool active name="copy" onclick finished/>
-    }
+    view! { <LoadableTool active name="copy" onclick finished /> }
 }
 
 #[component]
@@ -126,7 +124,5 @@ where
         store.select().write().cut(password.clone());
     };
 
-    view! {
-        <LoadableTool active name="cut" onclick finished/>
-    }
+    view! { <LoadableTool active name="cut" onclick finished /> }
 }

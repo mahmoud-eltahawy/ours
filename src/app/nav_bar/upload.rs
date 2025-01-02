@@ -85,7 +85,7 @@ pub fn Upload(password: String) -> impl IntoView {
 
     let finished = move || !upload_action.pending().get();
     view! {
-        <LoadableTool name="upload" active onclick finished/>
+        <LoadableTool name="upload" active onclick finished />
         <input node_ref=input_ref on:change=on_change type="file" multiple hidden />
     }
 }
