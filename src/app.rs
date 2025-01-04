@@ -152,14 +152,17 @@ pub fn App() -> impl IntoView {
         files,
     } = use_drop_zone_with_options(drop_zone_el, UseDropZoneOptions::default());
 
+    Effect::new(move || {
+        if is_over_drop_zone.get() && store.password().get().is_none() {
+            *store.login().write() = true;
+        }
+    });
+
     view! {
         <Stylesheet id="leptos" href="/pkg/webls.css" />
         <Title text="eltahawy's locker" />
         <Router>
-            <NavBar use_drop_zone_return=UseDropZoneReturn {
-                is_over_drop_zone,
-                files,
-            } />
+            <NavBar files/>
             <main>
                 <Routes fallback=|| "Page not found.">
                     <Route

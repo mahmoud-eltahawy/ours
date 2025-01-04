@@ -1,7 +1,7 @@
 use crate::app::{nav_bar::LoadableTool, GlobalState, GlobalStateStoreFields};
 use leptos::{html, prelude::*};
-use leptos_use::UseDropZoneReturn;
 use reactive_stores::Store;
+use send_wrapper::SendWrapper;
 use server_fn::codec::{MultipartData, MultipartFormData};
 use wasm_bindgen::JsCast;
 use web_sys::{Blob, Event, FormData, HtmlInputElement};
@@ -44,10 +44,10 @@ async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
 }
 
 #[component]
-pub fn Upload(use_drop_zone_return: UseDropZoneReturn) -> impl IntoView {
+pub fn Upload(files: Signal<Vec<SendWrapper<web_sys::File>>>) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let upload_action = Action::new_local(|data: &FormData| upload(data.clone().into()));
-    let upload_files = RwSignal::new(Vec::<send_wrapper::SendWrapper<web_sys::File>>::new());
+    let upload_files = RwSignal::new(Vec::<SendWrapper<web_sys::File>>::new());
 
     Effect::new(move || {
         let current_path = store.current_path().read_untracked();
@@ -65,13 +65,7 @@ pub fn Upload(use_drop_zone_return: UseDropZoneReturn) -> impl IntoView {
     });
 
     Effect::new(move || {
-        *upload_files.write() = use_drop_zone_return.files.get();
-    });
-
-    Effect::new(move || {
-        if use_drop_zone_return.is_over_drop_zone.get() && store.password().get().is_none() {
-            *store.login().write() = true;
-        }
+        *upload_files.write() = files.get();
     });
 
     let on_change = {
@@ -86,7 +80,7 @@ pub fn Upload(use_drop_zone_return: UseDropZoneReturn) -> impl IntoView {
             let mut i = 0;
             let mut result = Vec::new();
             while let Some(file) = target.item(i) {
-                result.push(send_wrapper::SendWrapper::new(file));
+                result.push(SendWrapper::new(file));
                 i += 1;
             }
             *upload_files.write() = result;

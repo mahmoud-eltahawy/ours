@@ -3,11 +3,11 @@ use crate::app::{atoms::Icon, GlobalState, GlobalStateStoreFields, SelectedState
 use super::atoms::ActiveIcon;
 use leptos::{either::either, prelude::*};
 use leptos_router::{hooks::use_navigate, NavigateOptions};
-use leptos_use::UseDropZoneReturn;
 use mp4::ToMp4;
 use paste::Paste;
 use reactive_stores::Store;
 use rm::Remove;
+use send_wrapper::SendWrapper;
 use upload::Upload;
 
 mod mp4;
@@ -16,11 +16,7 @@ mod rm;
 pub mod upload;
 
 #[component]
-pub fn NavBar(use_drop_zone_return: UseDropZoneReturn) -> impl IntoView {
-    let UseDropZoneReturn {
-        files,
-        is_over_drop_zone,
-    } = use_drop_zone_return;
+pub fn NavBar(files: Signal<Vec<SendWrapper<web_sys::File>>>) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let more = RwSignal::new(true);
     view! {
@@ -35,10 +31,7 @@ pub fn NavBar(use_drop_zone_return: UseDropZoneReturn) -> impl IntoView {
                 <Home />
                 <Clear />
                 <Download />
-                <Upload use_drop_zone_return=UseDropZoneReturn {
-                    files,
-                    is_over_drop_zone,
-                } />
+                <Upload files />
                 {move || {
                     either!(
                         store.password().get(),
