@@ -6,12 +6,15 @@ use leptos_router::{
     components::{Route, Router, Routes},
     StaticSegment,
 };
-use leptos_use::{use_drop_zone_with_options, UseDropZoneOptions, UseDropZoneReturn};
+use leptos_use::{
+    use_drop_zone_with_options, use_event_listener, use_window, UseDropZoneOptions,
+    UseDropZoneReturn,
+};
 use login::Login;
 use media_player::MediaPlayer;
 use nav_bar::NavBar;
 use reactive_stores::Store;
-use std::{collections::HashSet, path::PathBuf};
+use std::path::PathBuf;
 
 mod atoms;
 mod files_box;
@@ -46,7 +49,7 @@ enum SelectedState {
 
 #[derive(Default, Clone, Debug)]
 struct Selected {
-    units: HashSet<Unit>,
+    units: Vec<Unit>,
     state: SelectedState,
 }
 
@@ -83,15 +86,18 @@ impl Selected {
     }
 
     fn remove_unit(&mut self, unit: &Unit) {
-        self.units.remove(unit);
+        self.units.retain(|x| x != unit);
         if self.units.is_empty() {
             self.none();
         }
     }
 
     fn toggle_unit_selection(&mut self, unit: &Unit) {
-        if !self.units.insert(unit.clone()) {
+        if self.units.contains(unit) {
             self.remove_unit(unit);
+        } else {
+            self.units.push(unit.clone());
+            self.units.sort_units();
         }
     }
 
@@ -103,6 +109,16 @@ impl Selected {
         for unit in self.units.into_iter() {
             unit.click_anchor();
         }
+    }
+}
+
+trait SortUnits {
+    fn sort_units(&mut self);
+}
+
+impl SortUnits for Vec<Unit> {
+    fn sort_units(&mut self) {
+        self.sort_by_key(|x| (x.kind.clone(), x.name()));
     }
 }
 
@@ -129,7 +145,7 @@ pub fn App() -> impl IntoView {
     Effect::new(move || {
         if let Some(mut xs) = ls_result.get().transpose().ok().flatten() {
             xs.retype();
-            xs.sort_by_key(|x| (x.kind.clone(), x.name()));
+            xs.sort_units();
             *store.units().write() = xs;
         };
     });
@@ -139,12 +155,11 @@ pub fn App() -> impl IntoView {
         ls_result.refetch();
     });
 
-    window_event_listener(ev::popstate, move |_| {
+    let _ = use_event_listener(use_window(), ev::popstate, move |_| {
         if let SelectedState::None = store.select().get().state {
             store.select().write().clear();
         }
     });
-
     let drop_zone_el = NodeRef::<Ol>::new();
 
     let UseDropZoneReturn {

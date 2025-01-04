@@ -7,8 +7,9 @@ use crate::{
     },
     Unit, UnitKind,
 };
-use leptos::{either::Either, html::Ol, prelude::*};
+use leptos::{either::Either, ev, html::Ol, logging::log, prelude::*};
 use leptos_router::hooks::{use_navigate, use_query_map};
+use leptos_use::{use_event_listener, use_window};
 use reactive_stores::Store;
 use web_sys::KeyboardEvent;
 
@@ -41,6 +42,8 @@ pub async fn ls(base: PathBuf) -> Result<Vec<Unit>, ServerFnError> {
 pub fn FilesBox(drop_zone_el: NodeRef<Ol>, is_over_drop_zone: Signal<bool>) -> impl IntoView {
     let query = use_query_map();
     let store: Store<GlobalState> = use_context().unwrap();
+    let navigate = use_navigate();
+
     Effect::new(move || {
         let queries = query.read();
         let mut i = 0;
@@ -50,6 +53,59 @@ pub fn FilesBox(drop_zone_el: NodeRef<Ol>, is_over_drop_zone: Signal<bool>) -> i
             i += 1;
         }
         store.current_path().set(result);
+    });
+
+    let _ = use_event_listener(use_window(), ev::keydown, move |ev| {
+        let key = ev.key();
+        let ctrl = ev.ctrl_key();
+        let alt = ev.alt_key();
+        let shift = ev.shift_key();
+        if ctrl {
+            log!("ctrl");
+        };
+        if shift {
+            log!("shift");
+        };
+        if alt {
+            log!("alt")
+        };
+        log!("keydown : {}", key);
+        match key.as_str() {
+            "Backspace" => {
+                let mut path = store.current_path().get_untracked();
+                if path.pop() {
+                    navigate(&path_as_query(path), Default::default());
+                }
+            }
+            "Enter" => {
+                match &store
+                    .select()
+                    .get_untracked()
+                    .units
+                    .iter()
+                    .collect::<Vec<_>>()[..]
+                {
+                    [Unit {
+                        path,
+                        kind: UnitKind::Dirctory,
+                    }] => {
+                        navigate(&path_as_query(path.clone()), Default::default());
+                    }
+                    [] => (),
+                    list => {
+                        if let Some(Unit {
+                            path,
+                            kind: UnitKind::Dirctory,
+                        }) = list.first()
+                        {
+                            store.select().write().clear();
+                            navigate(&path_as_query(path.clone()), Default::default());
+                        }
+                    }
+                };
+            }
+            _ => (),
+        };
     });
 
     view! {
