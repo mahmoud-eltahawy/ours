@@ -13,24 +13,22 @@ use {
 };
 
 #[server]
-async fn mp4_remux(targets: Vec<PathBuf>, password: String) -> Result<(), ServerFnError> {
+async fn mp4_remux(target: PathBuf, password: String) -> Result<(), ServerFnError> {
     let context = use_context::<ServerContext>().unwrap();
     if password != context.password {
         return Err(ServerFnError::new("wrong password"));
     };
-    for target in targets.into_iter().map(|x| context.root.join(x)) {
-        let from = context.root.join(target);
-        let mut to = from.clone();
-        to.set_extension("mp4");
-        let _ = remove_file(to.clone()).await;
-        Command::new("ffmpeg")
-            .arg("-i")
-            .arg(from.clone())
-            .arg(to)
-            .spawn()?
-            .wait()
-            .await?;
-    }
+    let from = context.root.join(target);
+    let mut to = from.clone();
+    to.set_extension("mp4");
+    let _ = remove_file(to.clone()).await;
+    Command::new("ffmpeg")
+        .arg("-i")
+        .arg(from.clone())
+        .arg(to)
+        .spawn()?
+        .wait()
+        .await?;
     Ok(())
 }
 
@@ -38,7 +36,7 @@ async fn mp4_remux(targets: Vec<PathBuf>, password: String) -> Result<(), Server
 pub fn ToMp4(password: String) -> impl IntoView {
     let store = use_context::<Store<GlobalState>>().unwrap();
 
-    let remux = Action::new(move |input: &Vec<PathBuf>| mp4_remux(input.clone(), password.clone()));
+    let remux = Action::new(move |input: &PathBuf| mp4_remux(input.clone(), password.clone()));
     let onclick = move || {
         let targets = store
             .select()
@@ -48,8 +46,9 @@ pub fn ToMp4(password: String) -> impl IntoView {
             .filter(|x| x.path.extension().is_some_and(|x| x != "mp4"))
             .map(|x| x.path.clone())
             .collect::<Vec<_>>();
-
-        remux.dispatch(targets);
+        for target in targets {
+            remux.dispatch(target);
+        }
 
         store.select().write().clear();
     };
