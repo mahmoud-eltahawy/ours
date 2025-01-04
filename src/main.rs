@@ -55,7 +55,7 @@ async fn main() {
                 move || shell(leptos_options.clone())
             },
         )
-        .layer(TimeoutLayer::new(Duration::from_secs(3 * 60 * 60)))
+        .layer(TimeoutLayer::new(Duration::from_secs(24 * 60 * 60)))
         .fallback(leptos_axum::file_and_error_handler(shell))
         .with_state(leptos_options)
         .nest_service("/download", serve_dir);

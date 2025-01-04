@@ -29,6 +29,7 @@ async fn mp4_remux(target: PathBuf, password: String) -> Result<(), ServerFnErro
         .spawn()?
         .wait()
         .await?;
+    let _ = remove_file(from).await;
     Ok(())
 }
 
