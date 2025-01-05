@@ -1,10 +1,10 @@
-use leptos::{either::Either, html::Div, prelude::*};
+use leptos::{html::Div, prelude::*};
 use leptos_use::{
     core::Position, use_draggable_with_options, use_window, UseDraggableOptions, UseDraggableReturn,
 };
 use reactive_stores::Store;
 
-use crate::{Unit, UnitKind};
+use crate::Unit;
 
 use super::{GlobalState, GlobalStateStoreFields};
 
@@ -39,7 +39,7 @@ pub fn MediaPlayer() -> impl IntoView {
             view! {
                 <div
                     node_ref=el
-                    class="fixed bg-white rounded-lg text-2xl w-[50%] px-4 py-2 border border-gray-400/30 shadow hover:shadow-lg select-none cursor-move z-24"
+                    class="fixed bg-white rounded-lg text-2xl md:w-[50%] w-[95%] w-[90%] px-4 py-2 border border-gray-400/30 shadow hover:shadow-lg select-none cursor-move z-24"
                     style=style
                 >
                     <Bar name=unit.name() />
@@ -104,19 +104,16 @@ fn CloseIcon() -> impl IntoView {
 #[component]
 fn Player(unit: Unit) -> impl IntoView {
     let src = format!("/download/{}", unit.path.to_str().unwrap());
-    match unit.kind {
-        UnitKind::Video => Either::Left(view! {
-            <video class="h-full w-full rounded-lg cursor-default" autoplay controls>
-                <source src=src />
-                "Your browser does not support the video tag."
-            </video>
-        }),
-        UnitKind::Audio => Either::Right(view! {
-            <audio class="h-full w-full rounded-lg mt-10 cursor-default" autoplay controls>
-                <source src=src />
-                "Your browser does not support the audio tag."
-            </audio>
-        }),
-        UnitKind::Dirctory | UnitKind::File => unreachable!(),
+    view! {
+        <video
+           id="my-player"
+           preload="auto"
+           class="h-full w-full rounded-lg cursor-default video-js"
+           autoplay
+           controls
+        >
+            <source src=src />
+            "Your browser does not support the video tag."
+        </video>
     }
 }
