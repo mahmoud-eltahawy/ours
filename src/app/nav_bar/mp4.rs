@@ -9,17 +9,29 @@ use std::path::PathBuf;
 #[cfg(feature = "ssr")]
 use {
     crate::ServerContext,
-    tokio::{fs::remove_file, process::Command},
+    tokio::{fs::remove_file, process::Command, task::JoinSet},
 };
 
 #[server]
-async fn mp4_remux(target: PathBuf, password: String) -> Result<(), ServerFnError> {
+async fn mp4_remux(targets: Vec<PathBuf>, password: String) -> Result<(), ServerFnError> {
     let context = use_context::<ServerContext>().unwrap();
     if password != context.password {
         return Err(ServerFnError::new("wrong password"));
     };
-    let from = context.root.join(target);
-    any_to_mp4(from).await?;
+
+    let mut set = JoinSet::new();
+    targets
+        .into_iter()
+        .map(|target| context.root.join(target))
+        .map(any_to_mp4)
+        .for_each(|x| {
+            set.spawn(x);
+        });
+
+    while let Some(x) = set.join_next().await {
+        let _ = x?;
+    }
+
     Ok(())
 }
 
@@ -43,7 +55,7 @@ pub async fn any_to_mp4(from: PathBuf) -> Result<(), ServerFnError> {
 pub fn ToMp4(password: String) -> impl IntoView {
     let store = use_context::<Store<GlobalState>>().unwrap();
 
-    let remux = Action::new(move |input: &PathBuf| mp4_remux(input.clone(), password.clone()));
+    let remux = Action::new(move |input: &Vec<PathBuf>| mp4_remux(input.clone(), password.clone()));
     let onclick = move || {
         let targets = store
             .select()
@@ -53,9 +65,7 @@ pub fn ToMp4(password: String) -> impl IntoView {
             .filter(|x| x.path.extension().is_some_and(|x| x != "mp4"))
             .map(|x| x.path.clone())
             .collect::<Vec<_>>();
-        for target in targets {
-            remux.dispatch(target);
-        }
+        remux.dispatch(targets);
 
         store.select().write().clear();
     };
