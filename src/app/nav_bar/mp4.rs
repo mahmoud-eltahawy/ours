@@ -19,24 +19,32 @@ async fn mp4_remux(targets: Vec<PathBuf>, password: String) -> Result<(), Server
         return Err(ServerFnError::new("wrong password"));
     };
 
-    let mut set = JoinSet::new();
-    targets
-        .into_iter()
-        .map(|target| context.root.join(target))
-        .map(any_to_mp4)
-        .for_each(|x| {
-            set.spawn(x);
-        });
-
-    while let Some(x) = set.join_next().await {
-        let _ = x?;
-    }
+    par_mp4_remux(
+        targets
+            .into_iter()
+            .map(|target| context.root.join(target))
+            .collect(),
+    )
+    .await?;
 
     Ok(())
 }
 
 #[cfg(feature = "ssr")]
-pub async fn any_to_mp4(from: PathBuf) -> Result<(), ServerFnError> {
+pub async fn par_mp4_remux(targets: Vec<PathBuf>) -> Result<(), ServerFnError> {
+    let mut set = JoinSet::new();
+    targets.into_iter().map(any_to_mp4).for_each(|x| {
+        set.spawn(x);
+    });
+
+    while let Some(x) = set.join_next().await {
+        let _ = x?;
+    }
+    Ok(())
+}
+
+#[cfg(feature = "ssr")]
+async fn any_to_mp4(from: PathBuf) -> Result<(), ServerFnError> {
     let mut to = from.clone();
     to.set_extension("mp4");
     let _ = remove_file(to.clone()).await;

@@ -8,13 +8,12 @@ use web_sys::{Blob, Event, FormData, HtmlInputElement};
 
 #[cfg(feature = "ssr")]
 use {
-    super::mp4::any_to_mp4,
+    super::mp4::par_mp4_remux,
     crate::{ServerContext, VIDEO_X},
     std::{path::PathBuf, str::FromStr},
     tokio::{
         fs::File,
         io::{AsyncWriteExt, BufWriter},
-        task::JoinSet,
     },
 };
 
@@ -47,13 +46,7 @@ async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
             non_mp4_paths.push(path);
         };
     }
-    let mut set = JoinSet::new();
-    non_mp4_paths.into_iter().map(any_to_mp4).for_each(|x| {
-        set.spawn(x);
-    });
-    while let Some(x) = set.join_next().await {
-        let _ = x?;
-    }
+    par_mp4_remux(non_mp4_paths).await?;
 
     Ok(())
 }
