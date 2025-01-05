@@ -1,6 +1,6 @@
 use crate::{Retype, Unit, UnitKind};
 use files_box::{ls, FilesBox};
-use leptos::{ev, html::Ol, prelude::*};
+use leptos::{ev, html::Ol, logging::log, prelude::*};
 use leptos_meta::{provide_meta_context, MetaTags, Stylesheet, Title};
 use leptos_router::{
     components::{Route, Router, Routes},
@@ -170,6 +170,34 @@ pub fn App() -> impl IntoView {
     Effect::new(move || {
         if is_over_drop_zone.get() && store.password().get().is_none() {
             *store.login().write() = true;
+        }
+    });
+
+    let _ = use_event_listener(use_window(), ev::keydown, move |ev| {
+        log!("{:#?}", ev.key());
+        let login_first = move || {
+            if store.password().read_untracked().is_none() {
+                *store.login().write() = true;
+            }
+        };
+        match ev.key().as_str() {
+            "Delete" => {
+                login_first();
+            }
+            "c" => {
+                if ev.ctrl_key() {
+                    login_first();
+                }
+            }
+            "x" => {
+                if ev.ctrl_key() {
+                    login_first();
+                }
+            }
+            "Escape" => {
+                store.select().write().clear();
+            }
+            _ => {}
         }
     });
 

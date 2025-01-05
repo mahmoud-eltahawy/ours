@@ -1,5 +1,6 @@
 use crate::app::{nav_bar::LoadableTool, GlobalState, GlobalStateStoreFields, SelectedState};
-use leptos::prelude::*;
+use leptos::{ev, prelude::*};
+use leptos_use::{use_event_listener, use_window};
 use reactive_stores::Store;
 use std::path::PathBuf;
 
@@ -82,6 +83,12 @@ pub fn Paste(password: String) -> impl IntoView {
         !select.is_clear() && !matches!(select.state, SelectedState::None)
     };
 
+    let _ = use_event_listener(use_window(), ev::keydown, move |ev| {
+        if ev.key().as_str() == "v" && ev.ctrl_key() && active() {
+            onclick();
+        }
+    });
+
     view! {
         <Copy password=password.clone() finished=copy_finished />
         <Cut password=password.clone() finished=cut_finished />
@@ -105,6 +112,15 @@ where
         store.select().write().copy(password.clone());
     };
 
+    let _ = use_event_listener(use_window(), ev::keydown, {
+        let onclick = onclick.clone();
+        move |ev| {
+            if ev.key().as_str() == "c" && ev.ctrl_key() && active() {
+                onclick();
+            }
+        }
+    });
+
     view! { <LoadableTool active name="copy" onclick finished /> }
 }
 
@@ -120,9 +136,21 @@ where
         !select.is_clear() && !select.has_dirs()
     };
 
-    let onclick = move || {
-        store.select().write().cut(password.clone());
+    let onclick = {
+        let password = password.clone();
+        move || {
+            store.select().write().cut(password.clone());
+        }
     };
+
+    let _ = use_event_listener(use_window(), ev::keydown, {
+        let onclick = onclick.clone();
+        move |ev| {
+            if ev.key().as_str() == "x" && ev.ctrl_key() && active() {
+                onclick();
+            }
+        }
+    });
 
     view! { <LoadableTool active name="cut" onclick finished /> }
 }

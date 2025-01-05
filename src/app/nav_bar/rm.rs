@@ -1,7 +1,9 @@
 use crate::app::nav_bar::LoadableTool;
 use crate::app::{GlobalState, GlobalStateStoreFields};
-use leptos::prelude::*;
+use leptos::logging::log;
 use leptos::tachys::dom::window;
+use leptos::{ev, prelude::*};
+use leptos_use::{use_event_listener, use_window};
 use reactive_stores::Store;
 
 use crate::Unit;
@@ -56,6 +58,12 @@ pub fn Remove(password: String) -> impl IntoView {
 
     let active = move || !store.select().read().is_clear();
     let finished = move || !remove.pending().get();
+
+    let _ = use_event_listener(use_window(), ev::keydown, move |ev| {
+        if ev.key().as_str() == "Delete" && active() {
+            onclick();
+        }
+    });
 
     view! { <LoadableTool active name="delete" onclick finished /> }
 }

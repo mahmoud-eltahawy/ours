@@ -61,6 +61,7 @@ pub fn FilesBox(drop_zone_el: NodeRef<Ol>, is_over_drop_zone: Signal<bool>) -> i
                 let mut path = store.current_path().get_untracked();
                 if path.pop() {
                     navigate(&path_as_query(path), Default::default());
+                    store.select().write().clear();
                 }
             }
             "Enter" => {
@@ -70,8 +71,8 @@ pub fn FilesBox(drop_zone_el: NodeRef<Ol>, is_over_drop_zone: Signal<bool>) -> i
                 }) = store.select().get_untracked().units.first()
                 {
                     navigate(&path_as_query(path.clone()), Default::default());
+                    store.select().write().clear();
                 };
-                store.select().write().clear();
             }
             _ => (),
         };
