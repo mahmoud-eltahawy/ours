@@ -7,33 +7,55 @@ use std::path::PathBuf;
 #[cfg(feature = "ssr")]
 use {
     crate::ServerContext,
-    tokio::fs::{copy, remove_file},
+    tokio::{
+        fs::{copy, remove_file},
+        task::JoinSet,
+    },
 };
 
 #[server]
-async fn cp(from: Vec<PathBuf>, to: PathBuf, password: String) -> Result<(), ServerFnError> {
+async fn cp(targets: Vec<PathBuf>, to: PathBuf, password: String) -> Result<(), ServerFnError> {
     let context = use_context::<ServerContext>().unwrap();
     if password != context.password {
         return Err(ServerFnError::new("wrong password"));
     };
     let to = context.root.join(to);
-    for base in from.into_iter().map(|x| context.root.join(x)) {
-        copy(&base, to.join(base.file_name().unwrap())).await?;
+    let mut set = JoinSet::new();
+    for base in targets.into_iter().map(|x| context.root.join(x)) {
+        let name = base.file_name().unwrap().to_str().unwrap().to_string();
+        set.spawn(copy(base, to.join(name)));
     }
+
+    while let Some(x) = set.join_next().await {
+        let _ = x?;
+    }
+
     Ok(())
 }
 
 #[server]
-async fn cp_cut(from: Vec<PathBuf>, to: PathBuf, password: String) -> Result<(), ServerFnError> {
+async fn mv(targets: Vec<PathBuf>, to: PathBuf, password: String) -> Result<(), ServerFnError> {
     let context = use_context::<ServerContext>().unwrap();
     if password != context.password {
         return Err(ServerFnError::new("wrong password"));
     };
     let to = context.root.join(to);
-    for base in from.into_iter().map(|x| context.root.join(x)) {
-        copy(&base, to.join(base.file_name().unwrap())).await?;
-        remove_file(base).await?;
+    let mut set = JoinSet::new();
+    for base in targets.into_iter().map(|x| context.root.join(x)) {
+        let name = base.file_name().unwrap().to_str().unwrap().to_string();
+        set.spawn(cut(base, to.join(name)));
     }
+
+    while let Some(x) = set.join_next().await {
+        let _ = x?;
+    }
+    Ok(())
+}
+
+#[cfg(feature = "ssr")]
+pub async fn cut(from: PathBuf, to: PathBuf) -> Result<(), ServerFnError> {
+    copy(&from, to).await?;
+    remove_file(from).await?;
     Ok(())
 }
 
@@ -50,7 +72,7 @@ pub fn Paste(password: String) -> impl IntoView {
         }
     });
     let cut = Action::new(move |password: &String| {
-        cp_cut(
+        mv(
             store.select().read_untracked().as_paths(),
             store.current_path().get_untracked(),
             password.clone(),
