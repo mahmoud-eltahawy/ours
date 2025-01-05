@@ -19,30 +19,41 @@ pub mod upload;
 pub fn NavBar(files: Signal<Vec<SendWrapper<web_sys::File>>>) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let more = RwSignal::new(true);
+    let hidden = move || {
+        if more.get() {
+            "display:none"
+        } else {
+            ""
+        }
+    };
+    let transparent = move || {
+        if more.get() {
+            "background:transparent;border:none"
+        } else {
+            ""
+        }
+    };
     view! {
-        <Show
-            when=move || more.get()
-            fallback=move || {
-                view! { <More more /> }
-            }
+        <nav
+            class="fixed top-0 right-0 z-10 h-screen w-24 bg-white flex flex-wrap place-content-center border-2 border-lime-500 rounded-lg"
+            style=transparent
         >
-            <nav class="fixed top-0 right-0 z-10 h-screen w-24 bg-white flex flex-wrap place-content-center border-2 border-lime-500 rounded-lg">
-                <More more />
+            <More more />
+            <div style=hidden>
                 <Home />
                 <Clear />
                 <Download />
-                <Upload files />
                 {move || {
                     either!(
                         store.password().get(),
                             Some(password) => view! {
-                                <AdminRequired password />
+                                <AdminRequired password files/>
                             },
                             None => view! {<Admin/>},
                     )
                 }}
-            </nav>
-        </Show>
+            </div>
+        </nav>
     }
 }
 #[component]
@@ -65,8 +76,12 @@ pub fn More(more: RwSignal<bool>) -> impl IntoView {
 }
 
 #[component]
-pub fn AdminRequired(password: String) -> impl IntoView {
+pub fn AdminRequired(
+    password: String,
+    files: Signal<Vec<SendWrapper<web_sys::File>>>,
+) -> impl IntoView {
     view! {
+        <Upload password=password.clone() files />
         <Remove password=password.clone() />
         <Mkdir password=password.clone() />
         <Paste password=password.clone() />

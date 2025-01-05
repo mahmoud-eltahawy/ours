@@ -1,6 +1,5 @@
 use crate::app::nav_bar::LoadableTool;
 use crate::app::{GlobalState, GlobalStateStoreFields};
-use leptos::logging::log;
 use leptos::tachys::dom::window;
 use leptos::{ev, prelude::*};
 use leptos_use::{use_event_listener, use_window};

@@ -50,7 +50,7 @@ async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
 }
 
 #[component]
-pub fn Upload(files: Signal<Vec<SendWrapper<web_sys::File>>>) -> impl IntoView {
+pub fn Upload(password: String, files: Signal<Vec<SendWrapper<web_sys::File>>>) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let upload_action = Action::new_local(|data: &FormData| upload(data.clone().into()));
     let upload_files = RwSignal::new(Vec::<SendWrapper<web_sys::File>>::new());
@@ -58,16 +58,14 @@ pub fn Upload(files: Signal<Vec<SendWrapper<web_sys::File>>>) -> impl IntoView {
     Effect::new(move || {
         let current_path = store.current_path().read_untracked();
         let new_files = upload_files.get();
-        if let Some(password) = store.password().get_untracked() {
-            for file in new_files {
-                let data = FormData::new().unwrap();
-                let path = current_path.join(file.name());
-                let path = path.join(password.clone());
-                data.append_with_blob(path.to_str().unwrap(), &Blob::from((*file).clone()))
-                    .unwrap();
-                upload_action.dispatch_local(data);
-            }
-        };
+        for file in new_files {
+            let data = FormData::new().unwrap();
+            let path = current_path.join(file.name());
+            let path = path.join(password.clone());
+            data.append_with_blob(path.to_str().unwrap(), &Blob::from((*file).clone()))
+                .unwrap();
+            upload_action.dispatch_local(data);
+        }
     });
 
     Effect::new(move || {
