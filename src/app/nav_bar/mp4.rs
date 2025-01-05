@@ -19,6 +19,12 @@ async fn mp4_remux(target: PathBuf, password: String) -> Result<(), ServerFnErro
         return Err(ServerFnError::new("wrong password"));
     };
     let from = context.root.join(target);
+    any_to_mp4(from).await?;
+    Ok(())
+}
+
+#[cfg(feature = "ssr")]
+pub async fn any_to_mp4(from: PathBuf) -> Result<(), ServerFnError> {
     let mut to = from.clone();
     to.set_extension("mp4");
     let _ = remove_file(to.clone()).await;

@@ -62,13 +62,13 @@ trait Retype {
     fn retype(&mut self);
 }
 
-const VIDEO_X: [&str; 39] = [
+pub const VIDEO_X: [&str; 39] = [
     "webm", "mkv", "ts", "flv", "vob", "ogv", "ogg", "rrc", "gifv", "mng", "mov", "avi", "qt",
     "wmv", "yuv", "rm", "asf", "amv", "mp4", "m4p", "m4v", "mpg", "mp2", "mpeg", "mpe", "mpv",
     "m4v", "svi", "3gp", "3g2", "mxf", "roq", "nsv", "flv", "f4v", "f4p", "f4a", "f4b", "mod",
 ];
 
-const AUDIO_X: [&str; 20] = [
+pub const AUDIO_X: [&str; 20] = [
     "wav", "mp3", "aiff", "raw", "flac", "alac", "ape", "wv", "tta", "aac", "m4a", "ogg", "opus",
     "wma", "au", "gsm", "amr", "ra", "mmf", "cda",
 ];

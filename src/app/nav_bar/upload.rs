@@ -8,7 +8,8 @@ use web_sys::{Blob, Event, FormData, HtmlInputElement};
 
 #[cfg(feature = "ssr")]
 use {
-    crate::ServerContext,
+    super::mp4::any_to_mp4,
+    crate::{ServerContext, VIDEO_X},
     std::{path::PathBuf, str::FromStr},
     tokio::{
         fs::File,
@@ -21,9 +22,7 @@ use {
  )]
 async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
     let context = use_context::<ServerContext>().unwrap();
-
     let mut data = multipart.into_inner().unwrap();
-
     while let Some(mut field) = data.next_field().await? {
         let name = field.name().unwrap();
         let mut path = PathBuf::from_str(name).unwrap();
@@ -33,11 +32,18 @@ async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
             continue;
         }
         let path = context.root.join(path);
-        let mut file = BufWriter::new(File::create(path).await?);
+        let mut file = BufWriter::new(File::create(&path).await?);
         while let Some(chunk) = field.chunk().await? {
             file.write(&chunk).await?;
             file.flush().await?;
         }
+        if path
+            .extension()
+            .and_then(|x| x.to_str())
+            .is_some_and(|x| VIDEO_X.contains(&x) && x != "mp4")
+        {
+            any_to_mp4(path).await?;
+        };
     }
 
     Ok(())
