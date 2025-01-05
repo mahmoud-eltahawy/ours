@@ -14,6 +14,7 @@ use {
     tokio::{
         fs::File,
         io::{AsyncWriteExt, BufWriter},
+        task::JoinSet,
     },
 };
 
@@ -23,6 +24,7 @@ use {
 async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
     let context = use_context::<ServerContext>().unwrap();
     let mut data = multipart.into_inner().unwrap();
+    let mut non_mp4_paths = Vec::new();
     while let Some(mut field) = data.next_field().await? {
         let name = field.name().unwrap();
         let mut path = PathBuf::from_str(name).unwrap();
@@ -42,8 +44,15 @@ async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
             .and_then(|x| x.to_str())
             .is_some_and(|x| VIDEO_X.contains(&x) && x != "mp4")
         {
-            any_to_mp4(path).await?;
+            non_mp4_paths.push(path);
         };
+    }
+    let mut set = JoinSet::new();
+    non_mp4_paths.into_iter().map(any_to_mp4).for_each(|x| {
+        set.spawn(x);
+    });
+    while let Some(x) = set.join_next().await {
+        let _ = x?;
     }
 
     Ok(())
@@ -57,38 +66,35 @@ pub fn Upload(password: String, files: Signal<Vec<SendWrapper<web_sys::File>>>) 
 
     Effect::new(move || {
         let current_path = store.current_path().read_untracked();
-        let new_files = upload_files.get();
-        for file in new_files {
-            let data = FormData::new().unwrap();
+        let data = FormData::new().unwrap();
+        for file in upload_files.get() {
             let path = current_path.join(file.name());
             let path = path.join(password.clone());
             data.append_with_blob(path.to_str().unwrap(), &Blob::from((*file).clone()))
                 .unwrap();
-            upload_action.dispatch_local(data);
         }
+        upload_action.dispatch_local(data);
     });
 
     Effect::new(move || {
         *upload_files.write() = files.get();
     });
 
-    let on_change = {
-        move |ev: Event| {
-            ev.prevent_default();
-            let target = ev
-                .target()
-                .unwrap()
-                .unchecked_into::<HtmlInputElement>()
-                .files()
-                .unwrap();
-            let mut i = 0;
-            let mut result = Vec::new();
-            while let Some(file) = target.item(i) {
-                result.push(SendWrapper::new(file));
-                i += 1;
-            }
-            *upload_files.write() = result;
+    let on_change = move |ev: Event| {
+        ev.prevent_default();
+        let target = ev
+            .target()
+            .unwrap()
+            .unchecked_into::<HtmlInputElement>()
+            .files()
+            .unwrap();
+        let mut i = 0;
+        let mut result = Vec::new();
+        while let Some(file) = target.item(i) {
+            result.push(SendWrapper::new(file));
+            i += 1;
         }
+        *upload_files.write() = result;
     };
     let input_ref: NodeRef<html::Input> = NodeRef::new();
 
@@ -102,7 +108,7 @@ pub fn Upload(password: String, files: Signal<Vec<SendWrapper<web_sys::File>>>) 
         }
     });
 
-    let active = move || store.select().read().is_clear() && store.password().get().is_some();
+    let active = move || store.select().read().is_clear();
     let finished = move || !upload_action.pending().get();
     view! {
         <LoadableTool name="upload" active onclick finished />
