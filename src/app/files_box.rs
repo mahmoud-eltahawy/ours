@@ -7,7 +7,7 @@ use crate::{
     },
     Unit, UnitKind,
 };
-use leptos::{either::Either, ev, html::Ol, logging::log, prelude::*};
+use leptos::{either::Either, ev, html::Ol, prelude::*};
 use leptos_router::hooks::{use_navigate, use_query_map};
 use leptos_use::{use_event_listener, use_window};
 use reactive_stores::Store;
@@ -56,21 +56,7 @@ pub fn FilesBox(drop_zone_el: NodeRef<Ol>, is_over_drop_zone: Signal<bool>) -> i
     });
 
     let _ = use_event_listener(use_window(), ev::keydown, move |ev| {
-        let key = ev.key();
-        let ctrl = ev.ctrl_key();
-        let alt = ev.alt_key();
-        let shift = ev.shift_key();
-        if ctrl {
-            log!("ctrl");
-        };
-        if shift {
-            log!("shift");
-        };
-        if alt {
-            log!("alt")
-        };
-        log!("keydown : {}", key);
-        match key.as_str() {
+        match ev.key().as_str() {
             "Backspace" => {
                 let mut path = store.current_path().get_untracked();
                 if path.pop() {
@@ -78,31 +64,14 @@ pub fn FilesBox(drop_zone_el: NodeRef<Ol>, is_over_drop_zone: Signal<bool>) -> i
                 }
             }
             "Enter" => {
-                match &store
-                    .select()
-                    .get_untracked()
-                    .units
-                    .iter()
-                    .collect::<Vec<_>>()[..]
+                if let Some(Unit {
+                    path,
+                    kind: UnitKind::Dirctory,
+                }) = store.select().get_untracked().units.first()
                 {
-                    [Unit {
-                        path,
-                        kind: UnitKind::Dirctory,
-                    }] => {
-                        navigate(&path_as_query(path.clone()), Default::default());
-                    }
-                    [] => (),
-                    list => {
-                        if let Some(Unit {
-                            path,
-                            kind: UnitKind::Dirctory,
-                        }) = list.first()
-                        {
-                            store.select().write().clear();
-                            navigate(&path_as_query(path.clone()), Default::default());
-                        }
-                    }
+                    navigate(&path_as_query(path.clone()), Default::default());
                 };
+                store.select().write().clear();
             }
             _ => (),
         };
