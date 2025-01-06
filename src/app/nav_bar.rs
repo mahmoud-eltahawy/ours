@@ -37,11 +37,11 @@ pub fn NavBar(files: Signal<Vec<SendWrapper<web_sys::File>>>) -> impl IntoView {
     };
     view! {
         <nav
-            class="fixed top-0 right-0 z-10 h-screen w-24 bg-white flex flex-wrap place-content-center border-2 border-lime-500 rounded-lg"
+            class="fixed right-0 z-10 h-fit w-fit bg-white grid grid-cols-1  place-content-center border-2 border-lime-500 rounded-lg overflow-scroll"
             style=transparent
         >
             <More more />
-            <div style=hidden>
+            <div class="grid grid-cols-2 place-content-center" style=hidden>
                 <Home />
                 <Clear />
                 <Download />
@@ -64,10 +64,10 @@ pub fn More(more: RwSignal<bool>) -> impl IntoView {
     let on_click = move |_| {
         more.update(|x| *x = !*x);
     };
-    let less = move || !more.get();
+    let less = move || more.get();
     view! {
         <button
-            class="border bg-white m-1 p-1 rounded-lg"
+            class="flex border bg-white m-1 p-1 rounded-lg place-content-center"
             class:fixed=less
             class:top-0=less
             class:right-0=less
