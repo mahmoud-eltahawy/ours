@@ -1,6 +1,7 @@
 use crate::app::{atoms::Icon, GlobalState, GlobalStateStoreFields, SelectedState};
 
 use super::atoms::ActiveIcon;
+use info::Info;
 use leptos::{either::either, prelude::*};
 use leptos_router::{hooks::use_navigate, NavigateOptions};
 use mp4::ToMp4;
@@ -10,6 +11,7 @@ use rm::Remove;
 use send_wrapper::SendWrapper;
 use upload::Upload;
 
+mod info;
 mod mp4;
 mod paste;
 mod rm;
@@ -52,6 +54,7 @@ pub fn NavBar(files: Signal<Vec<SendWrapper<web_sys::File>>>) -> impl IntoView {
                             None => view! {<Admin/>},
                     )
                 }}
+                <Info/>
             </div>
         </nav>
     }
