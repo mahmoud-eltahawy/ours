@@ -13,7 +13,11 @@ use {
     },
 };
 
-#[server]
+use server_fn::codec::Cbor;
+#[server(
+    input = Cbor,
+    output = Cbor
+)]
 async fn cp(targets: Vec<PathBuf>, to: PathBuf, password: String) -> Result<(), ServerFnError> {
     let context = use_context::<ServerContext>().unwrap();
     if password != context.password {
@@ -33,7 +37,10 @@ async fn cp(targets: Vec<PathBuf>, to: PathBuf, password: String) -> Result<(), 
     Ok(())
 }
 
-#[server]
+#[server(
+    input = Cbor,
+    output = Cbor
+)]
 async fn mv(targets: Vec<PathBuf>, to: PathBuf, password: String) -> Result<(), ServerFnError> {
     let context = use_context::<ServerContext>().unwrap();
     if password != context.password {

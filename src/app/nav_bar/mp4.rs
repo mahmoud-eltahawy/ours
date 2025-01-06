@@ -12,7 +12,11 @@ use {
     tokio::{fs::remove_file, process::Command, task::JoinSet},
 };
 
-#[server]
+use server_fn::codec::Cbor;
+#[server(
+    input = Cbor,
+    output = Cbor
+)]
 async fn mp4_remux(targets: Vec<PathBuf>, password: String) -> Result<(), ServerFnError> {
     let context = use_context::<ServerContext>().unwrap();
     if password != context.password {

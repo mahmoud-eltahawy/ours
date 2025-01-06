@@ -13,7 +13,12 @@ use {
     tokio::fs::{remove_dir_all, remove_file},
 };
 
-#[server]
+use server_fn::codec::Cbor;
+#[server(
+    input = Cbor,
+    output = Cbor
+)]
+
 async fn rm(bases: Vec<Unit>, password: String) -> Result<(), ServerFnError> {
     let context = use_context::<ServerContext>().unwrap();
     if password != context.password {

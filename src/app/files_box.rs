@@ -16,7 +16,11 @@ use web_sys::KeyboardEvent;
 #[cfg(feature = "ssr")]
 use {crate::ServerContext, tokio::fs};
 
-#[server]
+use server_fn::codec::Cbor;
+#[server(
+    input = Cbor,
+    output = Cbor
+)]
 pub async fn ls(base: PathBuf) -> Result<Vec<Unit>, ServerFnError> {
     let context: ServerContext = use_context().unwrap();
     let root = context.root.join(base);
@@ -93,7 +97,10 @@ pub fn FilesBox(drop_zone_el: NodeRef<Ol>, is_over_drop_zone: Signal<bool>) -> i
     }
 }
 
-#[server]
+#[server(
+    input = Cbor,
+    output = Cbor
+)]
 pub async fn mkdir(target: PathBuf, password: String) -> Result<(), ServerFnError> {
     let context = use_context::<ServerContext>().unwrap();
     if password != context.password {

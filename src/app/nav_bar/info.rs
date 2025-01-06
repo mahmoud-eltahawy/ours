@@ -1,5 +1,5 @@
 use crate::app::nav_bar::Tool;
-use leptos::{ev, html, prelude::*};
+use leptos::{ev, prelude::*};
 use leptos_use::{use_event_listener, use_window};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -91,7 +91,11 @@ pub fn Info() -> impl IntoView {
     }
 }
 
-#[server]
+use server_fn::codec::Cbor;
+#[server(
+    input = Cbor,
+    output = Cbor
+)]
 async fn get_disks() -> Result<MyDisks, ServerFnError> {
     let context = use_context::<ServerContext>().unwrap();
     let mut disks = MyDisks::new();

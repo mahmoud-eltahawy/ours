@@ -8,7 +8,11 @@ use web_sys::KeyboardEvent;
 #[cfg(feature = "ssr")]
 use crate::ServerContext;
 
-#[server]
+use server_fn::codec::Cbor;
+#[server(
+    input = Cbor,
+    output = Cbor
+)]
 async fn login(password: String) -> Result<bool, ServerFnError> {
     let context = use_context::<ServerContext>().unwrap();
     Ok(password == context.password)
