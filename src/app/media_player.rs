@@ -1,6 +1,6 @@
 use leptos::{html::Div, prelude::*};
 use leptos_use::{
-    core::Position, use_draggable_with_options, use_window, UseDraggableOptions, UseDraggableReturn,
+    core::Position, use_draggable_with_options, UseDraggableOptions, UseDraggableReturn,
 };
 use reactive_stores::Store;
 
@@ -14,25 +14,14 @@ pub fn MediaPlayer() -> impl IntoView {
     let media_play = store.media_play();
     let el = NodeRef::<Div>::new();
 
-    let (inner_width, inner_height) = use_window()
-        .as_ref()
-        .map(|w| {
-            (
-                w.inner_width().unwrap().as_f64().unwrap(),
-                w.inner_height().unwrap().as_f64().unwrap(),
-            )
-        })
-        .unwrap_or((0.0, 0.0));
-
     let UseDraggableReturn { style, .. } = use_draggable_with_options(
         el,
         UseDraggableOptions::default()
-            .initial_value(Position {
-                x: inner_width / 4.4,
-                y: inner_height / 4.4,
-            })
+            .initial_value(Position { x: 0.0, y: 40.0 })
             .prevent_default(true),
     );
+
+    let the_style = move || format!("touch-action: none;{}", style.get());
 
     move || {
         media_play.get().map(|unit| {
@@ -40,7 +29,7 @@ pub fn MediaPlayer() -> impl IntoView {
                 <div
                     node_ref=el
                     class="fixed bg-white rounded-lg text-2xl md:w-[50%] w-[95%] w-[90%] px-4 py-2 border border-gray-400/30 shadow hover:shadow-lg select-none cursor-move z-24"
-                    style=style
+                    style=the_style
                 >
                     <Bar name=unit.name() />
                     <Player unit />

@@ -28,8 +28,8 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
         <html lang="en">
             <head>
 
-                <link href="https://unpkg.com/video.js/dist/video-js.min.css" rel="stylesheet"/>
-                <script src="https://unpkg.com/video.js/dist/video.min.js"/>
+                <link href="video.css" rel="stylesheet"/>
+                <script src="video.js" defer/>
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
                 <AutoReload options=options.clone() />
