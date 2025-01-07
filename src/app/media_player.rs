@@ -21,15 +21,13 @@ pub fn MediaPlayer() -> impl IntoView {
             .prevent_default(true),
     );
 
-    let the_style = move || format!("touch-action: none;{}", style.get());
-
     move || {
         media_play.get().map(|unit| {
             view! {
                 <div
                     node_ref=el
-                    class="fixed bg-white rounded-lg text-2xl md:w-[50%] w-[95%] w-[90%] px-4 py-2 border border-gray-400/30 shadow hover:shadow-lg select-none cursor-move z-24"
-                    style=the_style
+                    class="fixed touch-none bg-white rounded-lg text-2xl md:w-[50%] w-[95%] w-[90%] px-4 py-2 border border-gray-400/30 shadow hover:shadow-lg select-none cursor-move z-24"
+                    style=style
                 >
                     <Bar name=unit.name() />
                     <Player unit />
