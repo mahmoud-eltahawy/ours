@@ -99,7 +99,7 @@ fn Player(unit: Unit) -> impl IntoView {
            autoplay
            controls
         >
-            <source src=src />
+            <source src=src type="video/mp4"/>
             "Your browser does not support the video tag."
         </video>
     }
