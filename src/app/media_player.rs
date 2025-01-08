@@ -14,12 +14,13 @@ pub fn MediaPlayer() -> impl IntoView {
     let media_play = store.media_play();
     let el = NodeRef::<Div>::new();
 
-    let UseDraggableReturn { style, .. } = use_draggable_with_options(
+    let UseDraggableReturn { y, x, .. } = use_draggable_with_options(
         el,
         UseDraggableOptions::default()
             .initial_value(Position { x: 0.0, y: 40.0 })
             .prevent_default(true),
     );
+    let style = move || format!("left: {}px; top: {}px", x.get(), y.get().abs());
 
     move || {
         media_play.get().map(|unit| {
