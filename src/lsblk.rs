@@ -1,18 +1,18 @@
-use std::{path::PathBuf, str::FromStr};
+use std::path::PathBuf;
 use tokio::io;
 use tokio::process::Command;
 
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
-struct Lsblk {
+pub struct Lsblk {
     blockdevices: Vec<BlockDevice>,
 }
 
 const MINIMUM_STORAGE_SIZE_IN_GIGABYTES: f32 = 7.;
 
 impl Lsblk {
-    async fn get() -> Self {
+    pub async fn get() -> Self {
         let bytes = Command::new("lsblk")
             .arg("--json")
             .output()
@@ -22,7 +22,7 @@ impl Lsblk {
         serde_json::from_slice::<Self>(&bytes).unwrap()
     }
 
-    fn partitions(self) -> Vec<Partition> {
+    pub fn partitions(self) -> Vec<Partition> {
         let Self { blockdevices } = self;
         blockdevices
             .into_iter()
@@ -39,7 +39,7 @@ struct BlockDevice {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct Partition {
+pub struct Partition {
     name: String,
     size: String,
     mountpoints: Vec<Option<String>>,
@@ -64,7 +64,7 @@ impl Partition {
         })
     }
 
-    async fn mount(&self, path: PathBuf) -> io::Result<()> {
+    pub async fn mount(&self, path: PathBuf) -> io::Result<()> {
         let mut dev_path = PathBuf::new();
         dev_path.push("/dev");
         dev_path.push(self.name.clone());
@@ -76,7 +76,7 @@ impl Partition {
         Ok(())
     }
 
-    async fn umount(&self) -> io::Result<()> {
+    pub async fn umount(&self) -> io::Result<()> {
         let mut dev_path = PathBuf::new();
         dev_path.push("/dev");
         dev_path.push(self.name.clone());

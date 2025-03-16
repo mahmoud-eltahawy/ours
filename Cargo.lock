@@ -2669,6 +2669,7 @@ dependencies = [
  "reactive_stores",
  "send_wrapper",
  "serde",
+ "serde_json",
  "server_fn",
  "sysinfo",
  "thiserror 1.0.69",
