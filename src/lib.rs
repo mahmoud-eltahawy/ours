@@ -4,6 +4,8 @@ use std::{fmt::Display, path::PathBuf};
 use wasm_bindgen::JsCast;
 
 pub mod app;
+#[cfg(feature = "ssr")]
+pub mod lsblk;
 
 #[cfg(feature = "ssr")]
 #[derive(Debug, Clone)]
