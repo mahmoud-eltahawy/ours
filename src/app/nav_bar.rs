@@ -1,9 +1,9 @@
-use crate::app::{atoms::Icon, GlobalState, GlobalStateStoreFields, SelectedState};
+use crate::app::{GlobalState, GlobalStateStoreFields, SelectedState, atoms::Icon};
 
 use super::atoms::ActiveIcon;
 use info::Info;
 use leptos::{either::either, prelude::*};
-use leptos_router::{hooks::use_navigate, NavigateOptions};
+use leptos_router::{NavigateOptions, hooks::use_navigate};
 use mp4::ToMp4;
 use paste::Paste;
 use reactive_stores::Store;
@@ -22,11 +22,7 @@ pub fn NavBar(files: Signal<Vec<SendWrapper<web_sys::File>>>) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let more = RwSignal::new(true);
     let hidden = move || {
-        if more.get() {
-            "display:none"
-        } else {
-            ""
-        }
+        if more.get() { "display:none" } else { "" }
     };
     let transparent = move || {
         if more.get() {
@@ -64,13 +60,12 @@ pub fn More(more: RwSignal<bool>) -> impl IntoView {
     let on_click = move |_| {
         more.update(|x| *x = !*x);
     };
-    let less = move || more.get();
     view! {
         <button
-            class="flex border bg-white m-1 p-1 rounded-lg place-content-center"
-            class:fixed=less
-            class:top-0=less
-            class:right-0=less
+            class="flex bg-white m-1 p-1 rounded-lg place-content-center"
+            class:fixed=more
+            class:top-0=more
+            class:right-0=more
             on:click=on_click
         >
             <Icon src="more" />

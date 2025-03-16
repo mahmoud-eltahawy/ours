@@ -1,6 +1,6 @@
 use leptos::{html::Div, prelude::*};
 use leptos_use::{
-    core::Position, use_draggable_with_options, UseDraggableOptions, UseDraggableReturn,
+    UseDraggableOptions, UseDraggableReturn, core::Position, use_draggable_with_options,
 };
 use reactive_stores::Store;
 
@@ -27,7 +27,7 @@ pub fn MediaPlayer() -> impl IntoView {
             view! {
                 <div
                     node_ref=el
-                    class="fixed touch-none bg-white rounded-lg text-2xl md:w-[50%] w-[95%] w-[90%] px-4 py-2 border border-gray-400/30 shadow-sm hover:shadow-lg select-none cursor-move z-24"
+                    class="fixed touch-none bg-white rounded-lg text-2xl px-4 py-2 border border-gray-400/30 shadow-xs hover:shadow-lg select-none cursor-move z-24"
                     style=style
                 >
                     <Bar name=unit.name() />
@@ -42,7 +42,7 @@ pub fn MediaPlayer() -> impl IntoView {
 fn Bar(name: String) -> impl IntoView {
     view! {
         <div class="flow-root">
-            <span class="w-[80%] float-left mr-10 truncate">{name}</span>
+            <span class="float-left mr-10 truncate">{name}</span>
             <CloseButton />
         </div>
     }
@@ -60,7 +60,7 @@ fn CloseButton() -> impl IntoView {
     view! {
         <button
             on:click=close
-            class="float-right bg-white rounded-md p-2 inline-flex items-center justify-center text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-hidden focus:ring-2 focus:ring-inset focus:ring-indigo-500"
+            class="bg-white rounded-md p-2 inline-flex items-center justify-center text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-hidden focus:ring-2 focus:ring-inset focus:ring-indigo-500"
         >
             <CloseIcon />
             <span class="sr-only">Close menu</span>
@@ -96,7 +96,7 @@ fn Player(unit: Unit) -> impl IntoView {
         <video
            id="my-player"
            preload="auto"
-           class="h-full w-full rounded-lg cursor-default video-js"
+           class="rounded-lg cursor-default video-js"
            autoplay
            controls
         >
