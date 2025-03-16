@@ -12,7 +12,7 @@ leptos_router = { version = "0.7.3" }
 leptos_meta = { version = "0.7.3" }
 leptos_axum = { version = "0.7.3", optional = true }
 console_error_panic_hook = "0.1"
-wasm-bindgen = "=0.2.99"
+wasm-bindgen = "=0.2.100"
 thiserror = "1"
 http = "1"
 tokio = { version = "1", features = ["rt-multi-thread","process"], optional = true }
