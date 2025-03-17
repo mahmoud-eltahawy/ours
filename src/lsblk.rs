@@ -17,6 +17,30 @@ pub async fn refresh_partitions(path: PathBuf) -> io::Result<()> {
     Ok(())
 }
 
+pub async fn mount_unmounted_partitions(path: PathBuf) -> io::Result<()> {
+    let lsblk = Lsblk::get().await?;
+    for p in lsblk.partitions().iter() {
+        let mut mount_point = path.clone();
+        mount_point.push(&p.name);
+        if !p.is_mounted(&path) {
+            p.mount(mount_point).await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn unmount_mounted_partitions(path: PathBuf) -> io::Result<()> {
+    let lsblk = Lsblk::get().await?;
+    for p in lsblk.partitions().iter() {
+        let mut mount_point = path.clone();
+        mount_point.push(&p.name);
+        if p.is_mounted(&path) {
+            p.umount(mount_point).await?;
+        }
+    }
+    Ok(())
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 struct Lsblk {
     blockdevices: Vec<BlockDevice>,
