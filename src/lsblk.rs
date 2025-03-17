@@ -4,25 +4,34 @@ use tokio::process::Command;
 
 use serde::{Deserialize, Serialize};
 
+pub async fn refresh_partitions(path: PathBuf) -> io::Result<()> {
+    let lsblk = Lsblk::get().await?;
+    for p in lsblk.partitions().iter() {
+        let mut mount_point = path.clone();
+        mount_point.push(&p.name);
+        if p.is_mounted(&path) {
+            p.umount(mount_point.clone()).await?;
+        }
+        p.mount(mount_point).await?;
+    }
+    Ok(())
+}
+
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Lsblk {
+struct Lsblk {
     blockdevices: Vec<BlockDevice>,
 }
 
 const MINIMUM_STORAGE_SIZE_IN_GIGABYTES: f32 = 7.;
 
 impl Lsblk {
-    pub async fn get() -> Self {
-        let bytes = Command::new("lsblk")
-            .arg("--json")
-            .output()
-            .await
-            .unwrap()
-            .stdout;
-        serde_json::from_slice::<Self>(&bytes).unwrap()
+    async fn get() -> io::Result<Self> {
+        let bytes = Command::new("lsblk").arg("--json").output().await?.stdout;
+        let result = serde_json::from_slice::<Self>(&bytes).unwrap();
+        Ok(result)
     }
 
-    pub fn partitions(self) -> Vec<Partition> {
+    fn partitions(self) -> Vec<Partition> {
         let Self { blockdevices } = self;
         blockdevices
             .into_iter()
@@ -38,11 +47,11 @@ struct BlockDevice {
     children: Vec<Partition>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Partition {
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct Partition {
     name: String,
     size: String,
-    mountpoints: Vec<Option<String>>,
+    mountpoints: Vec<Option<PathBuf>>,
 }
 
 impl Partition {
@@ -60,27 +69,41 @@ impl Partition {
     fn is_system_free(&self) -> bool {
         !self.mountpoints.iter().any(|x| {
             x.as_ref()
-                .is_some_and(|s| matches!(s.as_str(), "/" | "/home" | "/boot"))
+                .is_some_and(|s| matches!(s.to_str().unwrap(), "/" | "/home" | "/boot"))
         })
     }
 
-    pub async fn mount(&self, path: PathBuf) -> io::Result<()> {
+    fn dev_path(&self) -> PathBuf {
         let mut dev_path = PathBuf::new();
         dev_path.push("/dev");
         dev_path.push(self.name.clone());
+        dev_path
+    }
+
+    fn is_mounted(&self, path: &PathBuf) -> bool {
+        self.mountpoints
+            .iter()
+            .any(|x| x.as_ref().is_some_and(|y| y.starts_with(path)))
+    }
+
+    async fn mount(&self, path: PathBuf) -> io::Result<()> {
+        let _ = tokio::fs::create_dir(&path).await;
         let _ = Command::new("mount")
-            .args([dev_path, path])
+            .args([self.dev_path(), path])
             .spawn()?
             .wait()
             .await?;
         Ok(())
     }
 
-    pub async fn umount(&self) -> io::Result<()> {
-        let mut dev_path = PathBuf::new();
-        dev_path.push("/dev");
-        dev_path.push(self.name.clone());
-        let _ = Command::new("umount").arg(dev_path).spawn()?.wait().await?;
+    async fn umount(&self, mut path: PathBuf) -> io::Result<()> {
+        path.push(&self.name);
+        let _ = Command::new("umount")
+            .arg(self.dev_path())
+            .spawn()?
+            .wait()
+            .await?;
+        let _ = tokio::fs::remove_dir(path).await;
         Ok(())
     }
 }
