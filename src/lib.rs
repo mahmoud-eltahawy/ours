@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use std::{fmt::Display, path::PathBuf};
 use wasm_bindgen::JsCast;
 
+pub const EXTERNAL_NAME: &str = "external";
+
 pub mod app;
 #[cfg(feature = "ssr")]
 pub mod lsblk;

@@ -7,36 +7,12 @@ use serde::{Deserialize, Serialize};
 pub async fn refresh_partitions(path: PathBuf) -> io::Result<()> {
     let lsblk = Lsblk::get().await?;
     for p in lsblk.partitions().iter() {
-        let mut mount_point = path.clone();
-        mount_point.push(&p.name);
-        if p.is_mounted(&path) {
-            p.umount(mount_point.clone()).await?;
+        let mut path = path.clone();
+        path.push(&p.name);
+        if p.is_mounted() {
+            p.umount(path.clone()).await?;
         }
-        p.mount(mount_point).await?;
-    }
-    Ok(())
-}
-
-pub async fn mount_unmounted_partitions(path: PathBuf) -> io::Result<()> {
-    let lsblk = Lsblk::get().await?;
-    for p in lsblk.partitions().iter() {
-        let mut mount_point = path.clone();
-        mount_point.push(&p.name);
-        if !p.is_mounted(&path) {
-            p.mount(mount_point).await?;
-        }
-    }
-    Ok(())
-}
-
-pub async fn unmount_mounted_partitions(path: PathBuf) -> io::Result<()> {
-    let lsblk = Lsblk::get().await?;
-    for p in lsblk.partitions().iter() {
-        let mut mount_point = path.clone();
-        mount_point.push(&p.name);
-        if p.is_mounted(&path) {
-            p.umount(mount_point).await?;
-        }
+        p.mount(path).await?;
     }
     Ok(())
 }
@@ -104,10 +80,8 @@ impl Partition {
         dev_path
     }
 
-    fn is_mounted(&self, path: &PathBuf) -> bool {
-        self.mountpoints
-            .iter()
-            .any(|x| x.as_ref().is_some_and(|y| y.starts_with(path)))
+    fn is_mounted(&self) -> bool {
+        self.mountpoints.iter().any(|x| x.as_ref().is_some())
     }
 
     async fn mount(&self, path: PathBuf) -> io::Result<()> {

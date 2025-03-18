@@ -9,7 +9,7 @@ use {
         io::{AsyncWriteExt, ErrorKind},
     },
     tower_http::{services::ServeDir, timeout::TimeoutLayer},
-    webls::{ServerContext, app::*, lsblk},
+    webls::{EXTERNAL_NAME, ServerContext, app::*, lsblk},
 };
 
 #[cfg(feature = "ssr")]
@@ -39,8 +39,8 @@ async fn main() {
     };
     let root = canonicalize(&webls_root).unwrap();
     let mut external_partitions = PathBuf::from(webls_root);
-    external_partitions.push("external");
-    let _ = lsblk::refresh_partitions((&external_partitions).into()).await;
+    external_partitions.push(EXTERNAL_NAME);
+    let _ = lsblk::refresh_partitions(external_partitions).await;
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     let serve_dir = ServeDir::new(root.clone());
