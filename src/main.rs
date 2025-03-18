@@ -3,64 +3,36 @@ use {
     axum::Router,
     leptos::{logging::log, prelude::*},
     leptos_axum::{LeptosRoutes, generate_route_list},
-    std::{env::var, fs::canonicalize, net::SocketAddr, path::PathBuf, time::Duration},
-    tokio::{
-        fs,
-        io::{AsyncWriteExt, ErrorKind},
-    },
+    std::{net::SocketAddr, time::Duration},
     tower_http::{services::ServeDir, timeout::TimeoutLayer},
-    webls::{EXTERNAL_NAME, ServerContext, app::*, lsblk},
+    webls::{ServerContext, app::*, lsblk},
 };
 
 #[cfg(feature = "ssr")]
 #[tokio::main]
 async fn main() {
     let conf = get_configuration(None).unwrap();
-    // let addr = conf.leptos_options.site_addr;
-    let leptos_options = conf.leptos_options;
-    // Generate the list of routes in your Leptos App
-    let routes = generate_route_list(App);
-    let webls_root = var("WEBLS_ROOT").unwrap();
-    let port = var("WEBLS_PORT").unwrap().parse().unwrap();
-    let password_path: PathBuf = var("WEBLS_PASSWORD").unwrap().parse().unwrap();
-    let password = match fs::read_to_string(password_path.clone()).await {
-        Ok(pass) => pass.trim().to_string(),
-        Err(e) => match e.kind() {
-            ErrorKind::NotFound => {
-                let password = "0000";
-                let mut file = fs::File::create(password_path).await.unwrap();
-                file.write_all(password.as_bytes()).await.unwrap();
-                password.to_string()
-            }
-            e => {
-                panic!("Error : {:#?}", e);
-            }
-        },
-    };
-    let root = canonicalize(&webls_root).unwrap();
-    let mut external_partitions = PathBuf::from(webls_root);
-    external_partitions.push(EXTERNAL_NAME);
-    let _ = lsblk::refresh_partitions(external_partitions).await;
+    let context = ServerContext::get().await;
+    let _ = lsblk::refresh_partitions(context.external_path()).await;
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], port));
-    let serve_dir = ServeDir::new(root.clone());
+    let addr = SocketAddr::from(([0, 0, 0, 0], context.port));
+    let serve_dir = ServeDir::new(context.root.clone());
 
     let app = Router::new()
         .leptos_routes_with_context(
-            &leptos_options,
-            routes,
+            &conf.leptos_options,
+            generate_route_list(App),
             move || {
-                let context = ServerContext::new(root.clone(), password.clone());
-                provide_context(context);
+                provide_context(context.clone());
             },
             {
-                let leptos_options = leptos_options.clone();
+                let leptos_options = conf.leptos_options.clone();
                 move || shell(leptos_options.clone())
             },
         )
         .layer(TimeoutLayer::new(Duration::from_secs(24 * 60 * 60)))
         .fallback(leptos_axum::file_and_error_handler(shell))
-        .with_state(leptos_options)
+        .with_state(conf.leptos_options)
         .nest_service("/download", serve_dir);
 
     log!("listening on http://{}", &addr);

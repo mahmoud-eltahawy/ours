@@ -3,7 +3,16 @@ use serde::{Deserialize, Serialize};
 use std::{fmt::Display, path::PathBuf};
 use wasm_bindgen::JsCast;
 
-pub const EXTERNAL_NAME: &str = "external";
+#[cfg(feature = "ssr")]
+use {
+    std::{env::var, fs::canonicalize},
+    tokio::{
+        fs,
+        io::{AsyncWriteExt, ErrorKind},
+    },
+};
+
+// pub const EXTERNAL_NAME: &str = ;
 
 pub mod app;
 #[cfg(feature = "ssr")]
@@ -13,13 +22,45 @@ pub mod lsblk;
 #[derive(Debug, Clone)]
 pub struct ServerContext {
     pub root: PathBuf,
+    pub port: u16,
     pub password: String,
 }
 
 #[cfg(feature = "ssr")]
 impl ServerContext {
-    pub fn new(root: PathBuf, password: String) -> Self {
-        Self { root, password }
+    pub async fn get() -> Self {
+        let root = canonicalize(var("WEBLS_ROOT").unwrap()).unwrap();
+        let port = var("WEBLS_PORT").unwrap().parse().unwrap();
+        let password_path: PathBuf = var("WEBLS_PASSWORD").unwrap().parse().unwrap();
+        let password = Self::get_password(password_path.clone()).await;
+        Self {
+            root,
+            port,
+            password,
+        }
+    }
+
+    pub fn external_path(&self) -> PathBuf {
+        let mut result = self.root.clone();
+        result.push("external");
+        result
+    }
+
+    async fn get_password(password_path: PathBuf) -> String {
+        match fs::read_to_string(password_path.clone()).await {
+            Ok(pass) => pass.trim().to_string(),
+            Err(e) => match e.kind() {
+                ErrorKind::NotFound => {
+                    let password = "0000";
+                    let mut file = fs::File::create(password_path).await.unwrap();
+                    file.write_all(password.as_bytes()).await.unwrap();
+                    password.to_string()
+                }
+                e => {
+                    panic!("Error : {:#?}", e);
+                }
+            },
+        }
     }
 }
 
