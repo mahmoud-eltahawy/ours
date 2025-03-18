@@ -5,19 +5,19 @@ use {
     leptos_axum::{LeptosRoutes, generate_route_list},
     std::{net::SocketAddr, time::Duration},
     tower_http::{services::ServeDir, timeout::TimeoutLayer},
-    webls::{ServerContext, app::*, lsblk},
+    webls::{ServerContext, app::*},
 };
 
 #[cfg(feature = "ssr")]
 #[tokio::main]
 async fn main() {
-    let conf = get_configuration(None).unwrap();
     let context = ServerContext::get().await;
-    let _ = lsblk::refresh_partitions(context.external_path()).await;
+    context.refresh_partitions().await;
 
     let addr = SocketAddr::from(([0, 0, 0, 0], context.port));
     let serve_dir = ServeDir::new(context.root.clone());
 
+    let conf = get_configuration(None).unwrap();
     let app = Router::new()
         .leptos_routes_with_context(
             &conf.leptos_options,

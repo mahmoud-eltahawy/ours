@@ -40,12 +40,6 @@ impl ServerContext {
         }
     }
 
-    pub fn external_path(&self) -> PathBuf {
-        let mut result = self.root.clone();
-        result.push("external");
-        result
-    }
-
     async fn get_password(password_path: PathBuf) -> String {
         match fs::read_to_string(password_path.clone()).await {
             Ok(pass) => pass.trim().to_string(),
@@ -61,6 +55,12 @@ impl ServerContext {
                 }
             },
         }
+    }
+
+    pub async fn refresh_partitions(&self) {
+        let mut external = self.root.clone();
+        external.push("external");
+        let _ = lsblk::refresh_partitions(external).await;
     }
 }
 

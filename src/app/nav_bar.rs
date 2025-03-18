@@ -17,6 +17,8 @@ mod paste;
 mod rm;
 pub mod upload;
 
+//TODO : add button to navbar to refresh mounted disks
+
 #[component]
 pub fn NavBar(files: Signal<Vec<SendWrapper<web_sys::File>>>) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
