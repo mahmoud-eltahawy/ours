@@ -7,22 +7,22 @@ edition = "2024"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-leptos = { version = "0.7.3" }
-leptos_router = { version = "0.7.3" }
-leptos_meta = { version = "0.7.3" }
-leptos_axum = { version = "0.7.3", optional = true }
+leptos = { version = "0.8.0-rc2" }
+leptos_router = { version = "0.8.0-rc2" }
+leptos_meta = { version = "0.8.0-rc2" }
+leptos_axum = { version = "0.8.0-rc2", optional = true }
 console_error_panic_hook = "0.1"
 wasm-bindgen = "=0.2.100"
 thiserror = "1"
 http = "1"
 tokio = { version = "1", features = ["rt-multi-thread","process"], optional = true }
-axum = { version = "0.7", optional = true }
+axum = { version = "0.8", optional = true }
 tower = { version = "0.5", optional = true }
 tower-http = { version = "0.6", features = ["fs","timeout"], optional = true }
 tracing = { version = "0.1", optional = true }
-server_fn = { version = "0.7.0", features = ["multipart","cbor"] }
-reactive_stores = "0.1.1"
-leptos-use = "0.15.0"
+server_fn = { version = "0.8.0-rc2", features = ["multipart","cbor"] }
+reactive_stores = "0.2.0-rc2"
+leptos-use = "0.16.0-beta"
 send_wrapper = "0.6.0"
 sysinfo  = { version = "0.33.1", optional = true }
 serde_json = { version = "1.0", optional = true }
