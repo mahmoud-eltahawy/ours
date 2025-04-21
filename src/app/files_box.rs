@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{ffi::OsStr, path::PathBuf};
 
 use crate::{
     Unit, UnitKind,
@@ -148,19 +148,19 @@ fn Mkdir() -> impl IntoView {
 }
 
 fn path_as_query(path: PathBuf) -> String {
-    const PREFIX: &str = "/?";
-    let result = path
-        .iter()
-        .enumerate()
-        .map(|(i, x)| format!("{}={}", i, x.to_str().unwrap()))
-        .fold(String::from(PREFIX), |acc, x| {
-            if acc.len() == PREFIX.len() {
-                acc + &x
-            } else {
-                acc + "&&" + &x
-            }
-        });
-    result
+    let mut it = path.iter();
+    let kv = |(i, x): (_, &OsStr)| format!("{}={}", i, x.to_str().unwrap());
+
+    let prefix = String::from("/?");
+    let first = it
+        .next()
+        .map(|x| prefix.clone() + &kv((0, x)))
+        .unwrap_or(prefix.clone());
+
+    it.enumerate()
+        .map(|(i, x)| (i + 1, x))
+        .map(kv)
+        .fold(first, |acc, x| acc + "&&" + &x)
 }
 
 #[test]
