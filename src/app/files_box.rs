@@ -163,6 +163,14 @@ fn path_as_query(mut path: PathBuf) -> String {
     format!("/?{}", result)
 }
 
+#[test]
+fn path_as_query_test() {
+    use std::{path::PathBuf, str::FromStr};
+
+    let result = path_as_query(PathBuf::from_str(".config/helix/config.toml").unwrap());
+    assert_eq!(result, "/?0=.config&&1=helix&&2=config.toml")
+}
+
 #[component]
 fn UnitComp(unit: Unit, is_over_drop_zone: Signal<bool>) -> impl IntoView {
     let navigate = use_navigate();
