@@ -19,11 +19,8 @@ use server_fn::codec::Cbor;
     output = Cbor
 )]
 
-async fn rm(bases: Vec<Unit>, password: String) -> Result<(), ServerFnError> {
+async fn rm(bases: Vec<Unit>) -> Result<(), ServerFnError> {
     let context = use_context::<ServerContext>().unwrap();
-    if password != context.password {
-        return Err(ServerFnError::new("wrong password"));
-    };
     for base in bases.into_iter() {
         let path = context.root.join(base.path);
         match base.kind {
@@ -40,9 +37,9 @@ async fn rm(bases: Vec<Unit>, password: String) -> Result<(), ServerFnError> {
 }
 
 #[component]
-pub fn Remove(password: String) -> impl IntoView {
+pub fn Remove() -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
-    let remove = Action::new(move |input: &Vec<Unit>| rm(input.clone(), password.clone()));
+    let remove = Action::new(move |input: &Vec<Unit>| rm(input.clone()));
     let onclick = move || {
         let units = store.select().get_untracked().units;
         if let Ok(true) = window().confirm_with_message(&format!(

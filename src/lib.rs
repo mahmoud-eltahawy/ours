@@ -4,13 +4,7 @@ use std::{fmt::Display, path::PathBuf};
 use wasm_bindgen::JsCast;
 
 #[cfg(feature = "ssr")]
-use {
-    std::{env::var, fs::canonicalize},
-    tokio::{
-        fs,
-        io::{AsyncWriteExt, ErrorKind},
-    },
-};
+use std::{env::var, fs::canonicalize};
 
 // pub const EXTERNAL_NAME: &str = ;
 
@@ -23,7 +17,6 @@ pub mod lsblk;
 pub struct ServerContext {
     pub root: PathBuf,
     pub port: u16,
-    pub password: String,
 }
 
 #[cfg(feature = "ssr")]
@@ -31,30 +24,7 @@ impl ServerContext {
     pub async fn get() -> Self {
         let root = canonicalize(var("WEBLS_ROOT").unwrap()).unwrap();
         let port = var("WEBLS_PORT").unwrap().parse().unwrap();
-        let password_path: PathBuf = var("WEBLS_PASSWORD").unwrap().parse().unwrap();
-        let password = Self::get_password(password_path.clone()).await;
-        Self {
-            root,
-            port,
-            password,
-        }
-    }
-
-    async fn get_password(password_path: PathBuf) -> String {
-        match fs::read_to_string(password_path.clone()).await {
-            Ok(pass) => pass.trim().to_string(),
-            Err(e) => match e.kind() {
-                ErrorKind::NotFound => {
-                    let password = "0000";
-                    let mut file = fs::File::create(password_path).await.unwrap();
-                    file.write_all(password.as_bytes()).await.unwrap();
-                    password.to_string()
-                }
-                e => {
-                    panic!("Error : {:#?}", e);
-                }
-            },
-        }
+        Self { root, port }
     }
 
     pub async fn refresh_partitions(&self) {

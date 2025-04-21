@@ -1,16 +1,15 @@
 use crate::{Retype, Unit, UnitKind};
-use files_box::{ls, FilesBox};
-use leptos::{ev, html::Ol, logging::log, prelude::*};
-use leptos_meta::{provide_meta_context, MetaTags, Stylesheet, Title};
+use files_box::{FilesBox, ls};
+use leptos::{ev, html::Ol, prelude::*};
+use leptos_meta::{MetaTags, Stylesheet, Title, provide_meta_context};
 use leptos_router::{
-    components::{Route, Router, Routes},
     StaticSegment,
+    components::{Route, Router, Routes},
 };
 use leptos_use::{
-    use_drop_zone_with_options, use_event_listener, use_window, UseDropZoneOptions,
-    UseDropZoneReturn,
+    UseDropZoneOptions, UseDropZoneReturn, use_drop_zone_with_options, use_event_listener,
+    use_window,
 };
-use login::Login;
 use media_player::MediaPlayer;
 use nav_bar::NavBar;
 use reactive_stores::Store;
@@ -18,7 +17,6 @@ use std::path::PathBuf;
 
 mod atoms;
 mod files_box;
-mod login;
 mod media_player;
 mod nav_bar;
 
@@ -44,8 +42,8 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
 }
 #[derive(Default, Clone, Debug)]
 enum SelectedState {
-    Copy(String),
-    Cut(String),
+    Copy,
+    Cut,
     #[default]
     None,
 }
@@ -76,12 +74,12 @@ impl Selected {
         self.units.is_empty()
     }
 
-    fn copy(&mut self, password: String) {
-        self.state = SelectedState::Copy(password);
+    fn copy(&mut self) {
+        self.state = SelectedState::Copy;
     }
 
-    fn cut(&mut self, password: String) {
-        self.state = SelectedState::Cut(password);
+    fn cut(&mut self) {
+        self.state = SelectedState::Cut;
     }
 
     fn none(&mut self) {
@@ -133,8 +131,7 @@ struct GlobalState {
     units: Vec<Unit>,
     units_refetch_tick: bool,
     mkdir_state: Option<String>,
-    password: Option<String>,
-    login: bool,
+    password: bool,
 }
 
 #[component]
@@ -170,40 +167,6 @@ pub fn App() -> impl IntoView {
         files,
     } = use_drop_zone_with_options(drop_zone_el, UseDropZoneOptions::default());
 
-    Effect::new(move || {
-        if is_over_drop_zone.get() && store.password().get().is_none() {
-            *store.login().write() = true;
-        }
-    });
-
-    let _ = use_event_listener(use_window(), ev::keydown, move |ev| {
-        log!("{:#?}", ev.key());
-        let login_first = move || {
-            if store.password().read_untracked().is_none() {
-                *store.login().write() = true;
-            }
-        };
-        match ev.key().as_str() {
-            "Delete" => {
-                login_first();
-            }
-            "c" => {
-                if ev.ctrl_key() {
-                    login_first();
-                }
-            }
-            "x" => {
-                if ev.ctrl_key() {
-                    login_first();
-                }
-            }
-            "Escape" => {
-                store.select().write().clear();
-            }
-            _ => {}
-        }
-    });
-
     view! {
         <Stylesheet id="leptos" href="/pkg/webls.css" />
         <Title text="eltahawy's locker" />
@@ -218,7 +181,6 @@ pub fn App() -> impl IntoView {
                 </Routes>
             </main>
             <MediaPlayer />
-            <Login />
         </Router>
     }
 }

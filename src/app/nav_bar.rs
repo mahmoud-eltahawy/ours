@@ -46,10 +46,10 @@ pub fn NavBar(files: Signal<Vec<SendWrapper<web_sys::File>>>) -> impl IntoView {
                 {move || {
                     either!(
                         store.password().get(),
-                            Some(password) => view! {
-                                <AdminRequired password files/>
+                            true => view! {
+                                <AdminRequired files/>
                             },
-                            None => view! {<Admin/>},
+                            false => view! {<Admin/>},
                     )
                 }}
                 <Info/>
@@ -76,16 +76,13 @@ pub fn More(more: RwSignal<bool>) -> impl IntoView {
 }
 
 #[component]
-pub fn AdminRequired(
-    password: String,
-    files: Signal<Vec<SendWrapper<web_sys::File>>>,
-) -> impl IntoView {
+pub fn AdminRequired(files: Signal<Vec<SendWrapper<web_sys::File>>>) -> impl IntoView {
     view! {
-        <Upload password=password.clone() files />
-        <Remove password=password.clone() />
-        <Mkdir password=password.clone() />
-        <Paste password=password.clone() />
-        <ToMp4 password />
+        <Upload files />
+        <Remove />
+        <Mkdir />
+        <Paste />
+        <ToMp4  />
     }
 }
 
@@ -175,18 +172,18 @@ fn Download() -> impl IntoView {
 fn Admin() -> impl IntoView {
     let store = use_context::<Store<GlobalState>>().unwrap();
     let onclick = move || {
-        *store.login().write() = true;
+        *store.password().write() = true;
     };
 
     view! { <Tool name="admin" active=|| true onclick /> }
 }
 
 #[component]
-fn Mkdir(password: String) -> impl IntoView {
+fn Mkdir() -> impl IntoView {
     let store = use_context::<Store<GlobalState>>().unwrap();
 
     let onclick = move || {
-        *store.mkdir_state().write() = Some(password.clone());
+        *store.mkdir_state().write() = Some(String::new());
     };
 
     let active = move || store.select().read().is_clear();

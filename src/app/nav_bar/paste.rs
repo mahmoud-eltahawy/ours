@@ -1,4 +1,4 @@
-use crate::app::{nav_bar::LoadableTool, GlobalState, GlobalStateStoreFields, SelectedState};
+use crate::app::{GlobalState, GlobalStateStoreFields, SelectedState, nav_bar::LoadableTool};
 use leptos::{ev, prelude::*};
 use leptos_use::{use_event_listener, use_window};
 use reactive_stores::Store;
@@ -18,11 +18,8 @@ use server_fn::codec::Cbor;
     input = Cbor,
     output = Cbor
 )]
-async fn cp(targets: Vec<PathBuf>, to: PathBuf, password: String) -> Result<(), ServerFnError> {
+async fn cp(targets: Vec<PathBuf>, to: PathBuf) -> Result<(), ServerFnError> {
     let context = use_context::<ServerContext>().unwrap();
-    if password != context.password {
-        return Err(ServerFnError::new("wrong password"));
-    };
     let to = context.root.join(to);
     let mut set = JoinSet::new();
     for base in targets.into_iter().map(|x| context.root.join(x)) {
@@ -41,11 +38,8 @@ async fn cp(targets: Vec<PathBuf>, to: PathBuf, password: String) -> Result<(), 
     input = Cbor,
     output = Cbor
 )]
-async fn mv(targets: Vec<PathBuf>, to: PathBuf, password: String) -> Result<(), ServerFnError> {
+async fn mv(targets: Vec<PathBuf>, to: PathBuf) -> Result<(), ServerFnError> {
     let context = use_context::<ServerContext>().unwrap();
-    if password != context.password {
-        return Err(ServerFnError::new("wrong password"));
-    };
     let to = context.root.join(to);
     let mut set = JoinSet::new();
     for base in targets.into_iter().map(|x| context.root.join(x)) {
@@ -67,22 +61,20 @@ pub async fn cut(from: PathBuf, to: PathBuf) -> Result<(), ServerFnError> {
 }
 
 #[component]
-pub fn Paste(password: String) -> impl IntoView {
+pub fn Paste() -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let copy = Action::new({
-        move |password: &String| {
+        move |_: &()| {
             cp(
                 store.select().read_untracked().as_paths(),
                 store.current_path().get_untracked(),
-                password.clone(),
             )
         }
     });
-    let cut = Action::new(move |password: &String| {
+    let cut = Action::new(move |_: &()| {
         mv(
             store.select().read_untracked().as_paths(),
             store.current_path().get_untracked(),
-            password.clone(),
         )
     });
 
@@ -98,11 +90,11 @@ pub fn Paste(password: String) -> impl IntoView {
     });
 
     let onclick = move || match store.select().get().state {
-        SelectedState::Copy(password) => {
-            copy.dispatch(password);
+        SelectedState::Copy => {
+            copy.dispatch(());
         }
-        SelectedState::Cut(password) => {
-            cut.dispatch(password);
+        SelectedState::Cut => {
+            cut.dispatch(());
         }
         SelectedState::None => (),
     };
@@ -119,14 +111,14 @@ pub fn Paste(password: String) -> impl IntoView {
     });
 
     view! {
-        <Copy password=password.clone() finished=copy_finished />
-        <Cut password=password.clone() finished=cut_finished />
+        <Copy finished=copy_finished />
+        <Cut finished=cut_finished />
         <LoadableTool active name="paste" onclick finished />
     }
 }
 
 #[component]
-fn Copy<Finished>(password: String, finished: Finished) -> impl IntoView
+fn Copy<Finished>(finished: Finished) -> impl IntoView
 where
     Finished: Fn() -> bool + Send + Sync + 'static,
 {
@@ -138,11 +130,10 @@ where
     };
 
     let onclick = move || {
-        store.select().write().copy(password.clone());
+        store.select().write().copy();
     };
 
     let _ = use_event_listener(use_window(), ev::keydown, {
-        let onclick = onclick.clone();
         move |ev| {
             if ev.key().as_str() == "c" && ev.ctrl_key() && active() {
                 onclick();
@@ -154,7 +145,7 @@ where
 }
 
 #[component]
-fn Cut<Finished>(password: String, finished: Finished) -> impl IntoView
+fn Cut<Finished>(finished: Finished) -> impl IntoView
 where
     Finished: Fn() -> bool + Send + Sync + 'static,
 {
@@ -166,14 +157,12 @@ where
     };
 
     let onclick = {
-        let password = password.clone();
         move || {
-            store.select().write().cut(password.clone());
+            store.select().write().cut();
         }
     };
 
     let _ = use_event_listener(use_window(), ev::keydown, {
-        let onclick = onclick.clone();
         move |ev| {
             if ev.key().as_str() == "x" && ev.ctrl_key() && active() {
                 onclick();

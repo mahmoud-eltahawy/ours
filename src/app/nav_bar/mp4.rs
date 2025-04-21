@@ -1,6 +1,6 @@
 use crate::{
-    app::{nav_bar::LoadableTool, GlobalState, GlobalStateStoreFields},
     UnitKind,
+    app::{GlobalState, GlobalStateStoreFields, nav_bar::LoadableTool},
 };
 use leptos::prelude::*;
 use reactive_stores::Store;
@@ -17,11 +17,8 @@ use server_fn::codec::Cbor;
     input = Cbor,
     output = Cbor
 )]
-async fn mp4_remux(targets: Vec<PathBuf>, password: String) -> Result<(), ServerFnError> {
+async fn mp4_remux(targets: Vec<PathBuf>) -> Result<(), ServerFnError> {
     let context = use_context::<ServerContext>().unwrap();
-    if password != context.password {
-        return Err(ServerFnError::new("wrong password"));
-    };
 
     par_mp4_remux(
         targets
@@ -64,10 +61,10 @@ async fn any_to_mp4(from: PathBuf) -> Result<(), ServerFnError> {
 }
 
 #[component]
-pub fn ToMp4(password: String) -> impl IntoView {
+pub fn ToMp4() -> impl IntoView {
     let store = use_context::<Store<GlobalState>>().unwrap();
 
-    let remux = Action::new(move |input: &Vec<PathBuf>| mp4_remux(input.clone(), password.clone()));
+    let remux = Action::new(move |input: &Vec<PathBuf>| mp4_remux(input.clone()));
     let onclick = move || {
         let targets = store
             .select()

@@ -1,4 +1,4 @@
-use crate::app::{nav_bar::LoadableTool, GlobalState, GlobalStateStoreFields};
+use crate::app::{GlobalState, GlobalStateStoreFields, nav_bar::LoadableTool};
 use leptos::{html, prelude::*};
 use reactive_stores::Store;
 use send_wrapper::SendWrapper;
@@ -26,12 +26,7 @@ async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
     let mut non_mp4_paths = Vec::new();
     while let Some(mut field) = data.next_field().await? {
         let name = field.name().unwrap();
-        let mut path = PathBuf::from_str(name).unwrap();
-        let password = path.file_name().unwrap().to_str().unwrap().to_string();
-        path.pop();
-        if password != context.password {
-            continue;
-        }
+        let path = PathBuf::from_str(name).unwrap();
         let path = context.root.join(path);
         let mut file = BufWriter::new(File::create(&path).await?);
         while let Some(chunk) = field.chunk().await? {
@@ -52,7 +47,7 @@ async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
 }
 
 #[component]
-pub fn Upload(password: String, files: Signal<Vec<SendWrapper<web_sys::File>>>) -> impl IntoView {
+pub fn Upload(files: Signal<Vec<SendWrapper<web_sys::File>>>) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let upload_action = Action::new_local(|data: &FormData| upload(data.clone().into()));
     let upload_files = RwSignal::new(Vec::<SendWrapper<web_sys::File>>::new());
@@ -62,7 +57,6 @@ pub fn Upload(password: String, files: Signal<Vec<SendWrapper<web_sys::File>>>) 
         let data = FormData::new().unwrap();
         for file in upload_files.get() {
             let path = current_path.join(file.name());
-            let path = path.join(password.clone());
             data.append_with_blob(path.to_str().unwrap(), &Blob::from((*file).clone()))
                 .unwrap();
         }

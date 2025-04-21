@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 
 use crate::{
-    app::{
-        atoms::{BaseIcon, Icon, IconSize},
-        GlobalState, GlobalStateStoreFields, SelectedState,
-    },
     Unit, UnitKind,
+    app::{
+        GlobalState, GlobalStateStoreFields, SelectedState,
+        atoms::{BaseIcon, Icon, IconSize},
+    },
 };
 use leptos::{either::Either, ev, html::Ol, prelude::*};
 use leptos_router::hooks::{use_navigate, use_query_map};
@@ -101,11 +101,8 @@ pub fn FilesBox(drop_zone_el: NodeRef<Ol>, is_over_drop_zone: Signal<bool>) -> i
     input = Cbor,
     output = Cbor
 )]
-pub async fn mkdir(target: PathBuf, password: String) -> Result<(), ServerFnError> {
+pub async fn mkdir(target: PathBuf) -> Result<(), ServerFnError> {
     let context = use_context::<ServerContext>().unwrap();
-    if password != context.password {
-        return Err(ServerFnError::new("wrong password"));
-    };
     let target = context.root.join(target);
     fs::create_dir(target).await?;
     Ok(())
@@ -117,17 +114,14 @@ fn Mkdir() -> impl IntoView {
     let mkdir_state = store.mkdir_state();
     let value = RwSignal::new(String::new());
 
-    let mkdir =
-        Action::new(move |input: &(PathBuf, String)| mkdir(input.0.clone(), input.1.clone()));
+    let mkdir = Action::new(move |input: &PathBuf| mkdir(input.clone()));
     let enter = move |ev: KeyboardEvent| {
-        if ev.key() == "Enter" {
-            if let Some(password) = mkdir_state.get() {
-                let path = store.current_path().get_untracked();
-                let new_path = path.join(value.get_untracked());
-                mkdir.dispatch((new_path, password));
-                *mkdir_state.write() = None;
-                value.write().clear();
-            }
+        if ev.key() == "Enter" && mkdir_state.get().is_some() {
+            let path = store.current_path().get_untracked();
+            let new_path = path.join(value.get_untracked());
+            mkdir.dispatch(new_path);
+            *mkdir_state.write() = None;
+            value.write().clear();
         }
     };
 
@@ -207,10 +201,10 @@ fn UnitComp(unit: Unit, is_over_drop_zone: Signal<bool>) -> impl IntoView {
             let select = store.select().read();
             let is_selected = select.is_selected(&unit);
             match &select.state {
-                SelectedState::Cut(_) if is_selected => {
+                SelectedState::Cut if is_selected => {
                     Either::Right(Either::Left(view! { <Icon src="cut" /> }))
                 }
-                SelectedState::Copy(_) if is_selected => {
+                SelectedState::Copy if is_selected => {
                     Either::Right(Either::Right(view! { <Icon src="copy" /> }))
                 }
                 _ => Either::Left(view! { <UnitIcon unit=unit.clone() is_over_drop_zone /> }),
@@ -245,9 +239,8 @@ fn UnitIcon(unit: Unit, is_over_drop_zone: Signal<bool>) -> impl IntoView {
         ></a>
     });
 
-    let is_dropable = move || is_over_drop_zone.get() && store.password().get().is_some();
     let size = move || {
-        if is_dropable() {
+        if is_over_drop_zone.get() {
             IconSize::Small
         } else {
             IconSize::default()
