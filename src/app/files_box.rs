@@ -155,7 +155,7 @@ fn path_as_query(path: PathBuf) -> String {
     let first = it
         .next()
         .map(|x| prefix.clone() + &kv((0, x)))
-        .unwrap_or(prefix.clone());
+        .unwrap_or(prefix);
 
     it.enumerate()
         .map(|(i, x)| (i + 1, x))
