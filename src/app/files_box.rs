@@ -1,4 +1,7 @@
-use std::{ffi::OsStr, path::PathBuf};
+use std::{
+    ffi::OsStr,
+    path::{Path, PathBuf},
+};
 
 use crate::{
     Unit, UnitKind,
@@ -64,7 +67,7 @@ pub fn FilesBox(drop_zone_el: NodeRef<Ol>, is_over_drop_zone: Signal<bool>) -> i
             "Backspace" => {
                 let mut path = store.current_path().get_untracked();
                 if path.pop() {
-                    navigate(&path_as_query(path), Default::default());
+                    navigate(&path_as_query(&path), Default::default());
                     store.select().write().clear();
                 }
             }
@@ -74,7 +77,7 @@ pub fn FilesBox(drop_zone_el: NodeRef<Ol>, is_over_drop_zone: Signal<bool>) -> i
                     kind: UnitKind::Dirctory,
                 }) = store.select().get_untracked().units.first()
                 {
-                    navigate(&path_as_query(path.clone()), Default::default());
+                    navigate(&path_as_query(path), Default::default());
                     store.select().write().clear();
                 };
             }
@@ -147,7 +150,7 @@ fn Mkdir() -> impl IntoView {
     }
 }
 
-fn path_as_query(path: PathBuf) -> String {
+fn path_as_query(path: &Path) -> String {
     let mut it = path.iter();
     let kv = |(i, x): (_, &OsStr)| format!("{}={}", i, x.to_str().unwrap());
 
@@ -167,7 +170,7 @@ fn path_as_query(path: PathBuf) -> String {
 fn path_as_query_test() {
     use std::{path::PathBuf, str::FromStr};
 
-    let result = path_as_query(PathBuf::from_str(".config/helix/config.toml").unwrap());
+    let result = path_as_query(&PathBuf::from_str(".config/helix/config.toml").unwrap());
     assert_eq!(result, "/?0=.config&&1=helix&&2=config.toml")
 }
 
@@ -183,7 +186,7 @@ fn UnitComp(unit: Unit, is_over_drop_zone: Signal<bool>) -> impl IntoView {
                 if matches!(store.select().read().state, SelectedState::None) {
                     store.select().write().clear();
                 }
-                navigate(&path_as_query(unit.path.clone()), Default::default());
+                navigate(&path_as_query(&unit.path), Default::default());
             }
             UnitKind::Video | UnitKind::Audio => {
                 *store.media_play().write() = Some(unit.clone());
