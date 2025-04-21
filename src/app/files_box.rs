@@ -147,20 +147,20 @@ fn Mkdir() -> impl IntoView {
     }
 }
 
-fn path_as_query(mut path: PathBuf) -> String {
-    let mut list = Vec::new();
-    while let Some(x) = path.file_name() {
-        list.push(x.to_str().unwrap().to_string());
-        path.pop();
-    }
-    let result = list
-        .into_iter()
-        .rev()
+fn path_as_query(path: PathBuf) -> String {
+    const PREFIX: &str = "/?";
+    let result = path
+        .iter()
         .enumerate()
-        .map(|(i, x)| format!("{i}={x}"))
-        .collect::<Vec<_>>()
-        .join("&&");
-    format!("/?{}", result)
+        .map(|(i, x)| format!("{}={}", i, x.to_str().unwrap()))
+        .fold(String::from(PREFIX), |acc, x| {
+            if acc.len() == PREFIX.len() {
+                acc + &x
+            } else {
+                acc + "&&" + &x
+            }
+        });
+    result
 }
 
 #[test]
