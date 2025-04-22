@@ -1,6 +1,6 @@
 use crate::app::{GlobalState, GlobalStateStoreFields, nav_bar::LoadableTool};
+use common::Store;
 use leptos::{html, prelude::*};
-use reactive_stores::Store;
 use send_wrapper::SendWrapper;
 use server_fn::codec::{MultipartData, MultipartFormData};
 use wasm_bindgen::JsCast;
@@ -9,7 +9,8 @@ use web_sys::{Blob, Event, FormData, HtmlInputElement};
 #[cfg(feature = "ssr")]
 use {
     super::mp4::par_mp4_remux,
-    crate::{ServerContext, VIDEO_X},
+    crate::ServerContext,
+    common::VIDEO_X,
     std::{path::PathBuf, str::FromStr},
     tokio::{
         fs::File,

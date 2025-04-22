@@ -1,9 +1,6 @@
-use crate::{
-    UnitKind,
-    app::{GlobalState, GlobalStateStoreFields, nav_bar::LoadableTool},
-};
+use crate::app::{GlobalState, GlobalStateStoreFields, nav_bar::LoadableTool};
+use common::{Store, UnitKind};
 use leptos::prelude::*;
-use reactive_stores::Store;
 use std::path::PathBuf;
 
 #[cfg(feature = "ssr")]

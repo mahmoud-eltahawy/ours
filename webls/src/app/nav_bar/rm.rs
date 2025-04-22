@@ -1,15 +1,16 @@
 use crate::app::nav_bar::LoadableTool;
 use crate::app::{GlobalState, GlobalStateStoreFields};
+use common::Store;
 use leptos::tachys::dom::window;
 use leptos::{ev, prelude::*};
 use leptos_use::{use_event_listener, use_window};
-use reactive_stores::Store;
 
 use crate::Unit;
 
 #[cfg(feature = "ssr")]
 use {
-    crate::{ServerContext, UnitKind},
+    crate::ServerContext,
+    common::UnitKind,
     tokio::fs::{remove_dir_all, remove_file},
 };
 

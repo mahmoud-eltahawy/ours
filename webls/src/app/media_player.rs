@@ -1,8 +1,8 @@
+use common::Store;
 use leptos::{html::Div, prelude::*};
 use leptos_use::{
     UseDraggableOptions, UseDraggableReturn, core::Position, use_draggable_with_options,
 };
-use reactive_stores::Store;
 
 use crate::Unit;
 

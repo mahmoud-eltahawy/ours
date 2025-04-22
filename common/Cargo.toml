@@ -1,0 +1,10 @@
+[package]
+name = "common"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+reactive_stores = "0.2.0-rc2"
+serde.workspace = true
+web-sys = { workspace = true,features = ["File","FileList"]}
+leptos.workspace = true

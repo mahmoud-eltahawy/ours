@@ -1,7 +1,7 @@
 use crate::app::{GlobalState, GlobalStateStoreFields, SelectedState, nav_bar::LoadableTool};
+use common::Store;
 use leptos::{ev, prelude::*};
 use leptos_use::{use_event_listener, use_window};
-use reactive_stores::Store;
 use std::path::PathBuf;
 
 #[cfg(feature = "ssr")]

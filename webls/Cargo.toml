@@ -7,7 +7,7 @@ edition.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-leptos = { version = "0.8.0-rc2" }
+leptos = { workspace = true }
 leptos_router = { version = "0.8.0-rc2" }
 leptos_meta = { version = "0.8.0-rc2" }
 leptos_axum = { version = "0.8.0-rc2", optional = true }
@@ -20,7 +20,6 @@ tower = { version = "0.5", optional = true }
 tower-http = { version = "0.6", features = ["fs","timeout"], optional = true }
 tracing = { version = "0.1", optional = true }
 server_fn = { version = "0.8.0-rc2", features = ["multipart","cbor"] }
-reactive_stores = "0.2.0-rc2"
 leptos-use = "0.16.0-beta"
 send_wrapper = "0.6.0"
 sysinfo  = { version = "0.33.1", optional = true }
@@ -28,10 +27,9 @@ tokio = { workspace = true, features = ["rt-multi-thread","process"], optional =
 serde_json = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"] }
 partitions = { workspace = true, optional = true }
+common.workspace = true
+web-sys = { workspace = true,features = ["File","FileList"]}
 
-[dependencies.web-sys]
-version ="0.3"
-features = ["File","FileList"]
 
 [features]
 hydrate = ["leptos/hydrate"]

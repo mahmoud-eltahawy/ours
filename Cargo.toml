@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "common",
     "partitions",
     "webls",
 ]
@@ -12,9 +13,13 @@ edition = "2024"
 
 [workspace.dependencies]
 partitions = {path = "./partitions"}
+common = {path = "./common"}
 tokio ="1"
 serde ="1"
 serde_json ="1.0"
+web-sys = "0.3" 
+leptos = "0.8.0-rc2"
+
 
 [profile.wasm-release]
 inherits = "release"
