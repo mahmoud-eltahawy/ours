@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "partitions",
     "webls",
 ]
 
@@ -10,6 +11,7 @@ edition = "2024"
 
 
 [workspace.dependencies]
+partitions = {path = "./partitions"}
 tokio ="1"
 serde ="1"
 serde_json ="1.0"

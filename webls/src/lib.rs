@@ -6,11 +6,7 @@ use wasm_bindgen::JsCast;
 #[cfg(feature = "ssr")]
 use std::{env::var, fs::canonicalize};
 
-// pub const EXTERNAL_NAME: &str = ;
-
 pub mod app;
-#[cfg(feature = "ssr")]
-pub mod lsblk;
 
 #[cfg(feature = "ssr")]
 #[derive(Debug, Clone)]
@@ -30,7 +26,7 @@ impl ServerContext {
     pub async fn refresh_partitions(&self) {
         let mut external = self.root.clone();
         external.push("external");
-        let _ = lsblk::refresh_partitions(external).await;
+        let _ = partitions::refresh_partitions(external).await;
     }
 }
 

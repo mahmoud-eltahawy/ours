@@ -27,11 +27,11 @@ sysinfo  = { version = "0.33.1", optional = true }
 tokio = { workspace = true, features = ["rt-multi-thread","process"], optional = true }
 serde_json = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"] }
+partitions = { workspace = true, optional = true }
 
 [dependencies.web-sys]
 version ="0.3"
 features = ["File","FileList"]
-
 
 [features]
 hydrate = ["leptos/hydrate"]
@@ -44,6 +44,7 @@ ssr = [
     "dep:tracing",
     "dep:sysinfo",
     "dep:serde_json",
+    "dep:partitions",
     "leptos/ssr",
     "leptos_meta/ssr",
     "leptos_router/ssr",

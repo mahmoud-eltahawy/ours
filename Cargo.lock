@@ -1656,6 +1656,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "partitions"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "paste"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2905,6 +2914,7 @@ dependencies = [
  "leptos_axum",
  "leptos_meta",
  "leptos_router",
+ "partitions",
  "reactive_stores",
  "send_wrapper",
  "serde",
