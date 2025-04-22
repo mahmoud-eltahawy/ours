@@ -3,7 +3,7 @@ use {
     axum::Router,
     leptos::{logging::log, prelude::*},
     leptos_axum::{LeptosRoutes, generate_route_list},
-    std::{net::SocketAddr, time::Duration},
+    std::{net::SocketAddr, path::PathBuf, time::Duration},
     tower_http::{services::ServeDir, timeout::TimeoutLayer},
     webls::{ServerContext, app::*},
 };
@@ -11,8 +11,17 @@ use {
 #[cfg(feature = "ssr")]
 #[tokio::main]
 async fn main() {
-    let context = ServerContext::get().await;
-    context.refresh_partitions().await;
+    let mut args = std::env::args();
+    args.next();
+
+    let root = args.next().map(|x| x.parse::<PathBuf>().unwrap());
+    let port = args.next().map(|x| x.parse::<u16>().unwrap());
+
+    let context = ServerContext::get(root.clone(), port).await;
+
+    if let (None, None) = (root, port) {
+        context.refresh_partitions().await;
+    }
 
     let addr = SocketAddr::from(([0, 0, 0, 0], context.port));
     let serve_dir = ServeDir::new(context.root.clone());

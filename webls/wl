@@ -3,11 +3,18 @@
 const webls_root = '/home/eltahawy';
 const webls_port = 3000;
 
-def "main dev" [] {
+def "main dev" [root? : path,port? : number] {
   load-env {
   	"WEBLS_ROOT":$webls_root,
   	"WEBLS_PORT":$webls_port,
-  }; cargo leptos watch
+  };
+  if $root == null {
+    cargo leptos watch
+  } else if $root != null and $port == null {
+    cargo leptos watch -- $root
+  } else {
+    cargo leptos watch -- $root $port
+  }
 }
 
 def main [] {}
