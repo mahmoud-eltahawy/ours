@@ -1,9 +1,14 @@
 [workspace]
 resolver = "2"
-members = [ "atoms",
+members = [
+    "atoms",
     "common",
     "partitions",
     "webls",
+    "src-tauri",
+]
+ignore = [
+    "src"
 ]
 
 [workspace.package]

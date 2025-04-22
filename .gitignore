@@ -1,6 +1,9 @@
 debug/
 target/
 
+node_modules
+dist
+
 **/*.rs.bk
 
 # MSVC Windows builds of rustc generate these, which store debugging information
