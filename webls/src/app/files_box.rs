@@ -5,11 +5,9 @@ use std::{
 
 use crate::{
     Unit,
-    app::{
-        GlobalState, GlobalStateStoreFields, SelectedState,
-        atoms::{BaseIcon, Icon, IconSize},
-    },
+    app::{GlobalState, GlobalStateStoreFields, SelectedState},
 };
+use atoms::{BaseIcon, Icon, IconSize};
 use common::{Store, UnitKind};
 use leptos::{either::Either, ev, html::Ol, prelude::*};
 use leptos_router::hooks::{use_navigate, use_query_map};

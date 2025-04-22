@@ -8,7 +8,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 leptos = { workspace = true }
-leptos_router = { version = "0.8.0-rc2" }
+leptos_router = { workspace = true }
 leptos_meta = { version = "0.8.0-rc2" }
 leptos_axum = { version = "0.8.0-rc2", optional = true }
 console_error_panic_hook = "0.1"
@@ -27,8 +27,9 @@ tokio = { workspace = true, features = ["rt-multi-thread","process"], optional =
 serde_json = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"] }
 partitions = { workspace = true, optional = true }
-common.workspace = true
 web-sys = { workspace = true,features = ["File","FileList"]}
+common.workspace = true
+atoms.workspace = true
 
 
 [features]

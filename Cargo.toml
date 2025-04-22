@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = [
+members = [ "atoms",
     "common",
     "partitions",
     "webls",
@@ -14,11 +14,13 @@ edition = "2024"
 [workspace.dependencies]
 partitions = {path = "./partitions"}
 common = {path = "./common"}
+atoms = {path = "./atoms"}
 tokio ="1"
 serde ="1"
 serde_json ="1.0"
 web-sys = "0.3" 
 leptos = "0.8.0-rc2"
+leptos_router = "0.8.0-rc2"
 
 
 [profile.wasm-release]

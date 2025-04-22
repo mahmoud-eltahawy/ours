@@ -82,6 +82,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "atoms"
+version = "0.1.0"
+dependencies = [
+ "leptos",
+]
+
+[[package]]
 name = "attribute-derive"
 version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2916,6 +2923,7 @@ dependencies = [
 name = "webls"
 version = "0.1.0"
 dependencies = [
+ "atoms",
  "axum",
  "common",
  "console_error_panic_hook",

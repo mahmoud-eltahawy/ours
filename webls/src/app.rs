@@ -13,7 +13,6 @@ use leptos_use::{
 use media_player::MediaPlayer;
 use nav_bar::NavBar;
 
-mod atoms;
 mod files_box;
 mod media_player;
 mod nav_bar;

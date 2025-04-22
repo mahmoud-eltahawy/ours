@@ -1,5 +1,5 @@
-use crate::app::{GlobalState, GlobalStateStoreFields, nav_bar::LoadableTool};
-use common::Store;
+use crate::app::nav_bar::LoadableTool;
+use common::{GlobalState, GlobalStateStoreFields, Store};
 use leptos::{html, prelude::*};
 use send_wrapper::SendWrapper;
 use server_fn::codec::{MultipartData, MultipartFormData};

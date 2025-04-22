@@ -1,7 +1,5 @@
-use crate::app::{GlobalState, GlobalStateStoreFields, SelectedState, atoms::Icon};
-
-use super::atoms::ActiveIcon;
-use common::Store;
+use atoms::{ActiveIcon, Icon};
+use common::{GlobalState, GlobalStateStoreFields, SelectedState, Store};
 use info::Info;
 use leptos::{either::either, prelude::*};
 use leptos_router::{NavigateOptions, hooks::use_navigate};
