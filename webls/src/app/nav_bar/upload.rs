@@ -6,22 +6,20 @@ use server_fn::codec::{MultipartData, MultipartFormData};
 use wasm_bindgen::JsCast;
 use web_sys::{Blob, Event, FormData, HtmlInputElement};
 
-#[cfg(feature = "ssr")]
-use {
-    super::mp4::par_mp4_remux,
-    crate::ServerContext,
-    common::VIDEO_X,
-    std::{path::PathBuf, str::FromStr},
-    tokio::{
-        fs::File,
-        io::{AsyncWriteExt, BufWriter},
-    },
-};
-
 #[server(
      input = MultipartFormData,
  )]
 async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
+    use {
+        super::mp4::par_mp4_remux,
+        crate::ServerContext,
+        common::VIDEO_X,
+        std::{path::PathBuf, str::FromStr},
+        tokio::{
+            fs::File,
+            io::{AsyncWriteExt, BufWriter},
+        },
+    };
     let context = use_context::<ServerContext>().unwrap();
     let mut data = multipart.into_inner().unwrap();
     let mut non_mp4_paths = Vec::new();

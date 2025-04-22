@@ -3,18 +3,14 @@ use common::{Store, UnitKind};
 use leptos::prelude::*;
 use std::path::PathBuf;
 
-#[cfg(feature = "ssr")]
-use {
-    crate::ServerContext,
-    tokio::{fs::remove_file, process::Command, task::JoinSet},
-};
-
 use server_fn::codec::Cbor;
 #[server(
     input = Cbor,
     output = Cbor
 )]
 async fn mp4_remux(targets: Vec<PathBuf>) -> Result<(), ServerFnError> {
+    use crate::ServerContext;
+
     let context = use_context::<ServerContext>().unwrap();
 
     par_mp4_remux(
@@ -28,8 +24,9 @@ async fn mp4_remux(targets: Vec<PathBuf>) -> Result<(), ServerFnError> {
     Ok(())
 }
 
-#[cfg(feature = "ssr")]
+#[server]
 pub async fn par_mp4_remux(targets: Vec<PathBuf>) -> Result<(), ServerFnError> {
+    use tokio::task::JoinSet;
     let mut set = JoinSet::new();
     targets.into_iter().map(any_to_mp4).for_each(|x| {
         set.spawn(x);
@@ -41,8 +38,9 @@ pub async fn par_mp4_remux(targets: Vec<PathBuf>) -> Result<(), ServerFnError> {
     Ok(())
 }
 
-#[cfg(feature = "ssr")]
+#[server]
 async fn any_to_mp4(from: PathBuf) -> Result<(), ServerFnError> {
+    use tokio::{fs::remove_file, process::Command};
     let mut to = from.clone();
     to.set_extension("mp4");
     let _ = remove_file(to.clone()).await;

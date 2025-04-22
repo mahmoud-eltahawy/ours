@@ -4,21 +4,16 @@ use leptos::{ev, prelude::*};
 use leptos_use::{use_event_listener, use_window};
 use std::path::PathBuf;
 
-#[cfg(feature = "ssr")]
-use {
-    crate::ServerContext,
-    tokio::{
-        fs::{copy, remove_file},
-        task::JoinSet,
-    },
-};
-
 use server_fn::codec::Cbor;
 #[server(
     input = Cbor,
     output = Cbor
 )]
 async fn cp(targets: Vec<PathBuf>, to: PathBuf) -> Result<(), ServerFnError> {
+    use {
+        crate::ServerContext,
+        tokio::{fs::copy, task::JoinSet},
+    };
     let context = use_context::<ServerContext>().unwrap();
     let to = context.root.join(to);
     let mut set = JoinSet::new();
@@ -39,6 +34,7 @@ async fn cp(targets: Vec<PathBuf>, to: PathBuf) -> Result<(), ServerFnError> {
     output = Cbor
 )]
 async fn mv(targets: Vec<PathBuf>, to: PathBuf) -> Result<(), ServerFnError> {
+    use {crate::ServerContext, tokio::task::JoinSet};
     let context = use_context::<ServerContext>().unwrap();
     let to = context.root.join(to);
     let mut set = JoinSet::new();
@@ -53,8 +49,9 @@ async fn mv(targets: Vec<PathBuf>, to: PathBuf) -> Result<(), ServerFnError> {
     Ok(())
 }
 
-#[cfg(feature = "ssr")]
+#[server]
 pub async fn cut(from: PathBuf, to: PathBuf) -> Result<(), ServerFnError> {
+    use tokio::fs::{copy, remove_file};
     copy(&from, to).await?;
     remove_file(from).await?;
     Ok(())
