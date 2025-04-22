@@ -40,7 +40,7 @@ pub fn Info() -> impl IntoView {
     view! {
        <Tool name="info" active onclick />
        <Show when=move || display.get()>
-           <InfoCard dis=display/>
+           <InfoCard display/>
        </Show>
     }
 }
@@ -62,51 +62,26 @@ async fn get_disks() -> Result<Vec<Disk>, ServerFnError> {
 }
 
 #[component]
-fn InfoCard(dis: RwSignal<bool>) -> impl IntoView {
+fn InfoCard(display: RwSignal<bool>) -> impl IntoView {
     let disks = Resource::new(|| (), move |_| get_disks());
 
     Effect::new(move || {
-        if dis.get() {
+        if display.get() {
             disks.refetch();
         }
     });
 
     let _ = use_event_listener(use_window(), ev::keydown, move |ev| {
         if ev.key() == "Escape" {
-            dis.set(false);
+            display.set(false);
         }
     });
 
-    let ps = move || {
-        disks
-            .get()
-            .transpose()
-            .ok()
-            .flatten()
-            .map(|xs| xs.into_iter().map(|disk| {
-                let used_space = disk.total_space - disk.available_space;
-                let free = format!("FREE : {:.2}G",disk.available_space as f64 / 1024.0f64.powi(3));
-                let used = format!("USED : {:.2}G",used_space as f64 / 1024.0f64.powi(3));
-                let usage = format!("{:.2}%",(used_space as f64 / disk.total_space as f64)* 100.);
-                view! {
-                    <li> 
-                        <h3 class="text-3xl m-5">{disk.name}</h3>
-                        <div class="grid grid-cols-2 gap-5">
-                            <progress value={used_space.to_string()} max={disk.total_space.to_string()}/>
-                            <span>{usage}</span>
-                            <div class="grid grid-cols-2 gap-5">
-                                <span>{used}</span>
-                                <span>{free}</span>
-                            </div>
-                        </div>
-                    </li> 
-                }
-            }).collect_view())
-    };
-
     let target = NodeRef::<Ul>::new();
 
-    let _ = on_click_outside(target, move |_| { dis.set(false); });
+    let _ = on_click_outside(target, move |_| {
+        display.set(false);
+    });
 
     view! {
         <Suspense>
@@ -114,8 +89,41 @@ fn InfoCard(dis: RwSignal<bool>) -> impl IntoView {
                 class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
                 node_ref={target}
             >
-                {ps}
+                <For
+                    each=move ||disks.get().transpose().ok().flatten().unwrap_or(Vec::new())
+                    key=|x| x.name.clone()
+                    let:disk
+                >
+                    <DiskInfo disk/>
+                </For>
             </ul>
         </Suspense>
+    }
+}
+
+#[component]
+fn DiskInfo(disk: Disk) -> impl IntoView {
+    let used_space = disk.total_space - disk.available_space;
+    let free = format!(
+        "FREE : {:.2}G",
+        disk.available_space as f64 / 1024.0f64.powi(3)
+    );
+    let used = format!("USED : {:.2}G", used_space as f64 / 1024.0f64.powi(3));
+    let usage = format!(
+        "{:.2}%",
+        (used_space as f64 / disk.total_space as f64) * 100.
+    );
+    view! {
+        <li>
+            <h3 class="text-3xl m-5">{disk.name}</h3>
+            <div class="grid grid-cols-2 gap-5">
+                <progress value={used_space.to_string()} max={disk.total_space.to_string()}/>
+                <span>{usage}</span>
+                <div class="grid grid-cols-2 gap-5">
+                    <span>{used}</span>
+                    <span>{free}</span>
+                </div>
+            </div>
+        </li>
     }
 }
