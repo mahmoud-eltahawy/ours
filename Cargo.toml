@@ -1,14 +1,10 @@
 [workspace]
 resolver = "2"
-members = [
+members = [ 
     "atoms",
     "common",
     "partitions",
-    "webls",
-    "src-tauri",
-]
-ignore = [
-    "src"
+    "webls", "webls_app",
 ]
 
 [workspace.package]
@@ -20,7 +16,7 @@ edition = "2024"
 partitions = {path = "./partitions"}
 common = {path = "./common"}
 atoms = {path = "./atoms"}
-webls = {path = "./webls",default-features = false}
+webls = {path = "./webls"}
 tokio ="1"
 serde ="1"
 serde_json ="1.0"

@@ -1,0 +1,8 @@
+[package]
+name = "webls_app"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+iced = "0.13.1"
+webls = {workspace = true,features = ["ssr"]}
