@@ -10,6 +10,7 @@ use iced::widget::{Button, Column, button, column, text};
 use iced::{Background, Border, Shadow, Vector};
 use iced::{Center, Color, Task};
 use local_ip_address::local_ip;
+use rfd::AsyncFileDialog;
 use tokio::spawn;
 use tokio::task::JoinHandle;
 
@@ -51,6 +52,8 @@ impl State {
 enum Message {
     Launch,
     Stop(Arc<JoinHandle<()>>),
+    PickTarget,
+    TargetPicked(Option<PathBuf>),
 }
 
 async fn serve(root: PathBuf, port: u16) {
@@ -62,17 +65,31 @@ async fn serve(root: PathBuf, port: u16) {
         .unwrap();
 }
 
+async fn which_target() -> Option<PathBuf> {
+    AsyncFileDialog::new()
+        .pick_folder()
+        .await
+        .map(|x| x.path().to_path_buf())
+}
+
 impl State {
-    fn update(&mut self, message: Message) {
+    fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::Launch => {
                 let f = serve(self.target_path.clone().unwrap(), self.port);
                 let handle: JoinHandle<()> = spawn(f);
                 self.working = ServerState::Working(handle.into());
+                Task::none()
             }
             Message::Stop(jh) => {
                 jh.abort();
                 self.working = ServerState::Paused;
+                Task::none()
+            }
+            Message::PickTarget => Task::perform(which_target(), Message::TargetPicked),
+            Message::TargetPicked(path_buf) => {
+                self.target_path = path_buf;
+                Task::none()
             }
         }
     }
@@ -89,7 +106,8 @@ impl State {
         .align_x(Center)
         .center();
         let launch = self.serve_button();
-        column![url, launch].padding(20).align_x(Center)
+        let pick = button("pick other target").on_press(Message::PickTarget);
+        column![url, launch, pick].padding(20).align_x(Center)
     }
 
     fn is_working(&self) -> bool {
