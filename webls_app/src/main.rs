@@ -1,4 +1,6 @@
 use std::net::IpAddr;
+use std::path::PathBuf;
+use std::sync::Arc;
 
 use get_port::Ops;
 use iced::Background;
@@ -6,6 +8,8 @@ use iced::widget::button::Style;
 use iced::widget::{Column, button, column, text};
 use iced::{Center, Color, Task};
 use local_ip_address::local_ip;
+use tokio::spawn;
+use tokio::task::JoinHandle;
 
 pub fn main() -> iced::Result {
     iced::application("webls", State::update, State::view).run_with(|| {
@@ -18,7 +22,12 @@ pub fn main() -> iced::Result {
 struct State {
     ip: IpAddr,
     port: u16,
-    working: bool,
+    working: ServerState,
+}
+
+enum ServerState {
+    Working(Arc<JoinHandle<()>>),
+    Paused,
 }
 
 impl State {
@@ -26,7 +35,7 @@ impl State {
         Self {
             ip,
             port,
-            working: false,
+            working: ServerState::Paused,
         }
     }
     fn url(&self) -> String {
@@ -34,36 +43,40 @@ impl State {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 enum Message {
     Launch,
-    Stop,
+    Stop(Arc<JoinHandle<()>>),
 }
 
 impl State {
     fn update(&mut self, message: Message) {
         match message {
             Message::Launch => {
-                self.working = true;
+                let f = webls::serve(Some(PathBuf::from("/home/eltahawy/magit")), Some(self.port));
+                let handle: JoinHandle<()> = spawn(f);
+                self.working = ServerState::Working(handle.into());
             }
-            Message::Stop => {
-                self.working = false;
+            Message::Stop(jh) => {
+                jh.abort();
+                self.working = ServerState::Paused;
             }
         }
     }
 
     fn view(&self) -> Column<Message> {
+        let working = !matches!(self.working, ServerState::Paused);
         let url = text(format!(
             "{} at url {}",
-            if self.working { "serving" } else { "launch" },
+            if working { "serving" } else { "launch" },
             self.url()
         ))
         .size(60)
         .align_x(Center)
         .center();
-        let launch = button(if self.working { "stop" } else { "Launch" })
-            .style(|_, _| {
-                let bg = if self.working {
+        let launch = button(if working { "stop" } else { "Launch" })
+            .style(move |_, _| {
+                let bg = if working {
                     Color::from_rgb(255., 0., 0.)
                 } else {
                     Color::from_rgb(0., 255., 0.)
@@ -73,10 +86,9 @@ impl State {
                     ..Default::default()
                 }
             })
-            .on_press(if self.working {
-                Message::Stop
-            } else {
-                Message::Launch
+            .on_press(match &self.working {
+                ServerState::Working(join_handle) => Message::Stop(join_handle.clone()),
+                ServerState::Paused => Message::Launch,
             });
         column![url, launch].padding(20).align_x(Center)
     }
