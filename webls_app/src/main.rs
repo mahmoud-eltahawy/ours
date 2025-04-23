@@ -1,11 +1,13 @@
+use std::env::home_dir;
 use std::net::IpAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use get_port::Ops;
-use iced::Background;
+use iced::border::Radius;
 use iced::widget::button::Style;
 use iced::widget::{Column, button, column, text};
+use iced::{Background, Border, Shadow, Vector};
 use iced::{Center, Color, Task};
 use local_ip_address::local_ip;
 use tokio::spawn;
@@ -22,6 +24,7 @@ pub fn main() -> iced::Result {
 struct State {
     ip: IpAddr,
     port: u16,
+    target_path: Option<PathBuf>,
     working: ServerState,
 }
 
@@ -35,6 +38,7 @@ impl State {
         Self {
             ip,
             port,
+            target_path: home_dir(),
             working: ServerState::Paused,
         }
     }
@@ -62,7 +66,7 @@ impl State {
     fn update(&mut self, message: Message) {
         match message {
             Message::Launch => {
-                let f = serve(PathBuf::from("/home/eltahawy/magit"), self.port);
+                let f = serve(self.target_path.clone().unwrap(), self.port);
                 let handle: JoinHandle<()> = spawn(f);
                 self.working = ServerState::Working(handle.into());
             }
@@ -76,22 +80,42 @@ impl State {
     fn view(&self) -> Column<Message> {
         let working = !matches!(self.working, ServerState::Paused);
         let url = text(format!(
-            "{} at url {}",
-            if working { "serving" } else { "launch" },
+            "{} {:#?} at url {}",
+            if working { "serving" } else { "serve" },
+            self.target_path.clone().unwrap(),
             self.url()
         ))
         .size(60)
         .align_x(Center)
         .center();
-        let launch = button(if working { "stop" } else { "Launch" })
+        let h = 80.;
+        let launch_text = if working { "stop" } else { "serve" };
+        let launch_text = text(launch_text)
+            .align_x(Center)
+            .align_y(Center)
+            .size(25.)
+            .color(Color::WHITE);
+        let launch = button(launch_text)
+            .height(h)
+            .width(h * 1.6)
             .style(move |_, _| {
                 let bg = if working {
-                    Color::from_rgb(255., 0., 0.)
+                    Color::from_rgb(1., 0., 0.)
                 } else {
-                    Color::from_rgb(0., 255., 0.)
+                    Color::from_rgb(0., 1., 0.)
                 };
                 Style {
                     background: Some(Background::Color(bg)),
+                    border: Border {
+                        width: 3.,
+                        radius: Radius::new(h),
+                        color: Color::from_rgb(0., 0., 0.),
+                    },
+                    shadow: Shadow {
+                        color: Color::from_rgb(0.5, 0.7, 0.),
+                        offset: Vector::new(0., 0.),
+                        blur_radius: h,
+                    },
                     ..Default::default()
                 }
             })
