@@ -5488,7 +5488,6 @@ dependencies = [
  "iced",
  "local-ip-address",
  "tokio",
- "webls",
 ]
 
 [[package]]

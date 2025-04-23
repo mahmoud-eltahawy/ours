@@ -27,7 +27,6 @@ impl ServerContext {
             None => canonicalize(var("WEBLS_ROOT")
             .expect("if do not specify root in program arguments then need to specify it in environment varibale")).unwrap(),
         };
-        println!("\n\n\n{:#?}\n\n\n", root);
         let port = match port {
             Some(port) => port,
             None => var("WEBLS_PORT")
@@ -35,7 +34,6 @@ impl ServerContext {
             .parse()
             .expect("port must be a number"),
         };
-        println!("ROOT = {:#?} \nPORT = {}", root, port);
         Self { root, port }
     }
 
