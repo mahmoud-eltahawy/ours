@@ -6,7 +6,7 @@ use std::sync::Arc;
 use get_port::Ops;
 use iced::border::Radius;
 use iced::widget::button::Style;
-use iced::widget::{Column, button, column, text};
+use iced::widget::{Button, Column, button, column, text};
 use iced::{Background, Border, Shadow, Vector};
 use iced::{Center, Color, Task};
 use local_ip_address::local_ip;
@@ -78,16 +78,26 @@ impl State {
     }
 
     fn view(&self) -> Column<Message> {
-        let working = !matches!(self.working, ServerState::Paused);
+        let working = self.is_working();
         let url = text(format!(
-            "{} {:#?} at url {}",
+            "{} {} at url {}",
             if working { "serving" } else { "serve" },
-            self.target_path.clone().unwrap(),
+            self.target_path.clone().unwrap().to_str().unwrap(),
             self.url()
         ))
         .size(60)
         .align_x(Center)
         .center();
+        let launch = self.serve_button();
+        column![url, launch].padding(20).align_x(Center)
+    }
+
+    fn is_working(&self) -> bool {
+        !matches!(self.working, ServerState::Paused)
+    }
+
+    fn serve_button(&self) -> Button<Message> {
+        let working = self.is_working();
         let h = 80.;
         let launch_text = if working { "stop" } else { "serve" };
         let launch_text = text(launch_text)
@@ -123,6 +133,6 @@ impl State {
                 ServerState::Working(join_handle) => Message::Stop(join_handle.clone()),
                 ServerState::Paused => Message::Launch,
             });
-        column![url, launch].padding(20).align_x(Center)
+        launch
     }
 }

@@ -1,5 +1,6 @@
 #!/usr/bin/env nu
 
+rm ../target/app/ -rf
 cd ../webls
 ./wl build
 cd ../webls_app
