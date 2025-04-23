@@ -20,4 +20,12 @@ def "main dev" [root? : path,port? : number] {
   }
 }
 
+def "main build" [] {
+    cargo leptos build
+}
+
+def "main release" [] {
+    cargo leptos build --release
+}
+
 def main [] {}

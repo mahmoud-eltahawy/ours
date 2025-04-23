@@ -1,7 +1,6 @@
 use std::net::IpAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::Duration;
 
 use get_port::Ops;
 use iced::Background;
@@ -50,9 +49,13 @@ enum Message {
     Stop(Arc<JoinHandle<()>>),
 }
 
-async fn serve(_root: PathBuf, _port: u16) {
-    println!("starting server");
-    tokio::time::sleep(Duration::from_secs(60 * 60)).await;
+async fn serve(root: PathBuf, port: u16) {
+    let _ = tokio::process::Command::new("./webls")
+        .arg(root)
+        .arg(port.to_string())
+        .output()
+        .await
+        .unwrap();
 }
 
 impl State {
