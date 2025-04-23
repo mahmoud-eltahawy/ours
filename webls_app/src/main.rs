@@ -93,7 +93,9 @@ impl State {
             }
             Message::PickTarget => Task::perform(which_target(), Message::TargetPicked),
             Message::TargetPicked(path_buf) => {
-                self.target_path = path_buf;
+                if path_buf.is_some() {
+                    self.target_path = path_buf;
+                }
                 Task::none()
             }
         }
@@ -101,35 +103,77 @@ impl State {
 
     fn view(&self) -> Column<Message> {
         let working = self.is_working();
-        let url = text(format!(
-            "{} {} at url {}",
-            if working { "serving" } else { "serve" },
-            self.target_path.clone().unwrap().to_str().unwrap(),
-            self.url()
-        ))
-        .size(60)
-        .align_x(Center)
-        .center();
+        let my_text = |x: String| text(x).size(60).align_x(Center).center();
+        let serve_state = my_text(if working { "serving" } else { "serve" }.to_string());
+        let target = my_text(
+            self.target_path
+                .clone()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_string(),
+        );
+        let url = my_text(format!("at url {}", self.url()));
         let launch = self.serve_button();
-        let pick = button("pick other target").on_press(Message::PickTarget);
-        let qr = qr_code(&self.url);
-        column![url, launch, pick, qr].padding(20).align_x(Center)
+        let pick = self.pick_button();
+        let qr = qr_code(&self.url).cell_size(13);
+        column![serve_state, target, url, qr, launch, pick]
+            .spacing(30)
+            .padding(20)
+            .align_x(Center)
     }
 
     fn is_working(&self) -> bool {
         !matches!(self.working, ServerState::Paused)
     }
 
-    fn serve_button(&self) -> Button<Message> {
+    fn pick_button(&self) -> Button<Message> {
         let working = self.is_working();
-        let h = 80.;
-        let launch_text = if working { "stop" } else { "serve" };
-        let launch_text = text(launch_text)
+        let pt = text("pick other target")
             .align_x(Center)
             .align_y(Center)
             .size(25.)
             .color(Color::WHITE);
-        let launch = button(launch_text)
+        button(pt)
+            .style(move |_, _| {
+                let bg = if working {
+                    Color::from_rgb(0.1, 0.1, 0.1)
+                } else {
+                    Color::from_rgb(0.1, 0.1, 1.0)
+                };
+                let h = 70.;
+                Style {
+                    background: Some(Background::Color(bg)),
+                    border: Border {
+                        width: 3.,
+                        radius: Radius::new(h),
+                        color: Color::from_rgb(0., 0., 0.),
+                    },
+                    shadow: Shadow {
+                        color: Color::from_rgb(0.5, 0.5, 0.8),
+                        offset: Vector::new(0., 0.),
+                        blur_radius: h * 3.,
+                    },
+                    ..Default::default()
+                }
+            })
+            .on_press_maybe(if working {
+                None
+            } else {
+                Some(Message::PickTarget)
+            })
+    }
+
+    fn serve_button(&self) -> Button<Message> {
+        let working = self.is_working();
+        let h = 80.;
+        let lt = if working { "stop" } else { "serve" };
+        let lt = text(lt)
+            .align_x(Center)
+            .align_y(Center)
+            .size(25.)
+            .color(Color::WHITE);
+        let launch = button(lt)
             .height(h)
             .width(h * 1.6)
             .style(move |_, _| {
@@ -146,9 +190,13 @@ impl State {
                         color: Color::from_rgb(0., 0., 0.),
                     },
                     shadow: Shadow {
-                        color: Color::from_rgb(0.5, 0.7, 0.),
+                        color: if working {
+                            Color::from_rgb(0.8, 0.5, 0.5)
+                        } else {
+                            Color::from_rgb(0.5, 0.8, 0.5)
+                        },
                         offset: Vector::new(0., 0.),
-                        blur_radius: h,
+                        blur_radius: h * 3.,
                     },
                     ..Default::default()
                 }
