@@ -1,15 +1,35 @@
 #!/usr/bin/env nu
 
-rm ../target/app/ -rf
-cd ../webls
-./wl build
-cd ../webls_app
-cargo build
-cd ../target
-mkdir app
-cd app
-cp ../debug/webls ./
-cp ../debug/webls_app ./
-mkdir target
-cp -r ../site ./target
-./webls_app
+
+def "main dev" [] {
+  rm ../target/app/ -rf
+  cd ../webls
+  ./wl build
+  cd ../webls_app
+  cargo build
+  cd ../target
+  mkdir app
+  cd app
+  cp ../debug/webls ./
+  cp ../debug/webls_app ./
+  mkdir target
+  cp -r ../site ./target
+  ./webls_app
+}
+
+def "main release" [] {
+  rm ../target/app/ -rf
+  cd ../webls
+  ./wl release
+  cd ../webls_app
+  cargo build --release
+  cd ../target
+  mkdir app
+  cd app
+  cp ../release/webls ./
+  cp ../release/webls_app ./
+  mkdir target
+  cp -r ../site ./target
+}
+
+def main [] {}
