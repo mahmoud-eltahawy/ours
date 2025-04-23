@@ -6,6 +6,8 @@ use std::sync::Arc;
 use get_port::Ops;
 use iced::border::Radius;
 use iced::widget::button::Style;
+use iced::widget::qr_code;
+use iced::widget::qr_code::Data;
 use iced::widget::{Button, Column, button, column, text};
 use iced::{Background, Border, Shadow, Vector};
 use iced::{Center, Color, Task};
@@ -27,6 +29,7 @@ struct State {
     port: u16,
     target_path: Option<PathBuf>,
     working: ServerState,
+    url: Data,
 }
 
 enum ServerState {
@@ -36,11 +39,13 @@ enum ServerState {
 
 impl State {
     fn new(ip: IpAddr, port: u16) -> Self {
+        let target_path = home_dir();
         Self {
             ip,
             port,
-            target_path: home_dir(),
+            target_path: target_path.clone(),
             working: ServerState::Paused,
+            url: Data::new(format!("{ip}:{port}").into_bytes()).unwrap(),
         }
     }
     fn url(&self) -> String {
@@ -107,7 +112,8 @@ impl State {
         .center();
         let launch = self.serve_button();
         let pick = button("pick other target").on_press(Message::PickTarget);
-        column![url, launch, pick].padding(20).align_x(Center)
+        let qr = qr_code(&self.url);
+        column![url, launch, pick, qr].padding(20).align_x(Center)
     }
 
     fn is_working(&self) -> bool {
