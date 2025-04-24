@@ -2,7 +2,6 @@ use std::env::{home_dir, var};
 use std::fs::canonicalize;
 use std::net::IpAddr;
 use std::path::PathBuf;
-use std::sync::Arc;
 
 use get_port::Ops;
 use iced::border::Radius;
@@ -15,8 +14,7 @@ use iced::{Background, Border, Shadow, Vector};
 use iced::{Center, Color, Task};
 use local_ip_address::local_ip;
 use rfd::AsyncFileDialog;
-use tokio::spawn;
-use tokio::task::JoinHandle;
+use tokio::process::Child;
 
 pub fn main() -> iced::Result {
     iced::application("webls", State::update, State::view)
@@ -35,13 +33,8 @@ struct State {
     ip: IpAddr,
     port: u16,
     target_path: Option<PathBuf>,
-    working: ServerState,
     url: Data,
-}
-
-enum ServerState {
-    Working(Arc<JoinHandle<()>>),
-    Paused,
+    working_process: Option<Child>,
 }
 
 impl State {
@@ -51,8 +44,8 @@ impl State {
             ip,
             port,
             target_path: target_path.clone(),
-            working: ServerState::Paused,
             url: Data::new(format!("http://{ip}:{port}").into_bytes()).unwrap(),
+            working_process: None,
         }
     }
     fn url(&self) -> String {
@@ -63,12 +56,12 @@ impl State {
 #[derive(Debug, Clone)]
 enum Message {
     Launch,
-    Stop(Arc<JoinHandle<()>>),
+    Stop,
     PickTarget,
     TargetPicked(Option<PathBuf>),
 }
 
-async fn serve(root: PathBuf, port: u16) {
+fn serve(root: PathBuf, port: u16) -> Child {
     let key = "LEPTOS_SITE_ROOT";
     let lsr = var(key).unwrap_or_else(|_| panic!("expect variable {key} to exist",));
     let lsr = lsr
@@ -81,13 +74,13 @@ async fn serve(root: PathBuf, port: u16) {
     wlsr.pop();
     wlsr.push("webls");
 
-    let _ = tokio::process::Command::new(wlsr)
+    tokio::process::Command::new(wlsr)
+        .kill_on_drop(true)
         .arg(root)
         .arg(port.to_string())
         .env(key, lsr)
-        .output()
-        .await
-        .unwrap();
+        .spawn()
+        .unwrap()
 }
 
 async fn which_target() -> Option<PathBuf> {
@@ -101,14 +94,12 @@ impl State {
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::Launch => {
-                let f = serve(self.target_path.clone().unwrap(), self.port);
-                let handle: JoinHandle<()> = spawn(f);
-                self.working = ServerState::Working(handle.into());
+                let child = serve(self.target_path.clone().unwrap(), self.port);
+                self.working_process = Some(child);
                 Task::none()
             }
-            Message::Stop(jh) => {
-                jh.abort();
-                self.working = ServerState::Paused;
+            Message::Stop => {
+                self.working_process = None;
                 Task::none()
             }
             Message::PickTarget => Task::perform(which_target(), Message::TargetPicked),
@@ -132,7 +123,7 @@ impl State {
     }
 
     fn is_working(&self) -> bool {
-        !matches!(self.working, ServerState::Paused)
+        self.working_process.is_some()
     }
 
     fn target_pick(&self) -> Row<Message> {
@@ -227,9 +218,9 @@ impl State {
                     ..Default::default()
                 }
             })
-            .on_press(match &self.working {
-                ServerState::Working(join_handle) => Message::Stop(join_handle.clone()),
-                ServerState::Paused => Message::Launch,
+            .on_press(match &self.working_process {
+                Some(_) => Message::Stop,
+                None => Message::Launch,
             });
         launch
     }
