@@ -52,11 +52,11 @@ impl State {
             port,
             target_path: target_path.clone(),
             working: ServerState::Paused,
-            url: Data::new(format!("{ip}:{port}").into_bytes()).unwrap(),
+            url: Data::new(format!("http://{ip}:{port}").into_bytes()).unwrap(),
         }
     }
     fn url(&self) -> String {
-        format!("{}:{}", self.ip, self.port)
+        format!("http://{}:{}", self.ip, self.port)
     }
 }
 
