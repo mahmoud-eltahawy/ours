@@ -5,10 +5,11 @@ use std::sync::Arc;
 
 use get_port::Ops;
 use iced::border::Radius;
+use iced::daemon::Appearance;
 use iced::widget::button::Style;
-use iced::widget::qr_code;
 use iced::widget::qr_code::Data;
-use iced::widget::{Button, Column, button, column, text};
+use iced::widget::{Button, Column, button, column, row, text};
+use iced::widget::{Row, qr_code};
 use iced::{Background, Border, Shadow, Vector};
 use iced::{Center, Color, Task};
 use local_ip_address::local_ip;
@@ -17,11 +18,16 @@ use tokio::spawn;
 use tokio::task::JoinHandle;
 
 pub fn main() -> iced::Result {
-    iced::application("webls", State::update, State::view).run_with(|| {
-        let ip: IpAddr = local_ip().unwrap();
-        let port = get_port::tcp::TcpPort::any("127.0.0.1").unwrap();
-        (State::new(ip, port), Task::none())
-    })
+    iced::application("webls", State::update, State::view)
+        .style(|_, _| Appearance {
+            background_color: Color::BLACK,
+            text_color: Color::WHITE,
+        })
+        .run_with(|| {
+            let ip: IpAddr = local_ip().unwrap();
+            let port = get_port::tcp::TcpPort::any("127.0.0.1").unwrap();
+            (State::new(ip, port), Task::none())
+        })
 }
 
 struct State {
@@ -102,22 +108,10 @@ impl State {
     }
 
     fn view(&self) -> Column<Message> {
-        let working = self.is_working();
-        let my_text = |x: String| text(x).size(60).align_x(Center).center();
-        let serve_state = my_text(if working { "serving" } else { "serve" }.to_string());
-        let target = my_text(
-            self.target_path
-                .clone()
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .to_string(),
-        );
-        let url = my_text(format!("at url {}", self.url()));
-        let launch = self.serve_button();
-        let pick = self.pick_button();
-        let qr = qr_code(&self.url).cell_size(13);
-        column![serve_state, target, url, qr, launch, pick]
+        let serve = self.serve_button();
+        let tp = self.target_pick();
+        let us = self.url_section();
+        column![serve, tp, us,]
             .spacing(30)
             .padding(20)
             .align_x(Center)
@@ -127,13 +121,35 @@ impl State {
         !matches!(self.working, ServerState::Paused)
     }
 
+    fn target_pick(&self) -> Row<Message> {
+        let my_text = |x: String| text(x).size(60).align_x(Center).center();
+        let target = my_text(
+            self.target_path
+                .clone()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_string(),
+        );
+        let or = my_text(String::from("or"));
+        let pick = self.pick_button();
+        row![target, or, pick].align_y(Center).spacing(20.)
+    }
+
+    fn url_section(&self) -> Column<Message> {
+        let my_text = |x: String| text(x).size(60).align_x(Center).center();
+        let at = my_text(String::from("at"));
+        let url = my_text(self.url());
+        let qr = qr_code(&self.url).cell_size(13);
+        column![at, url, qr]
+    }
+
     fn pick_button(&self) -> Button<Message> {
         let working = self.is_working();
         let pt = text("pick other target")
             .align_x(Center)
             .align_y(Center)
-            .size(25.)
-            .color(Color::WHITE);
+            .size(25.);
         button(pt)
             .style(move |_, _| {
                 let bg = if working {
@@ -168,11 +184,7 @@ impl State {
         let working = self.is_working();
         let h = 80.;
         let lt = if working { "stop" } else { "serve" };
-        let lt = text(lt)
-            .align_x(Center)
-            .align_y(Center)
-            .size(25.)
-            .color(Color::WHITE);
+        let lt = text(lt).align_x(Center).align_y(Center).size(25.);
         let launch = button(lt)
             .height(h)
             .width(h * 1.6)
