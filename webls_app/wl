@@ -12,8 +12,8 @@ def "main dev" [] {
   cd app
   cp ../debug/webls ./
   cp ../debug/webls_app ./
-  mkdir target
-  cp -r ../site ./target
+  cp -r ../site ./
+  {LEPTOS_SITE_ROOT : "../../target/app/site"} | load-env 
   ./webls_app
 }
 
@@ -28,8 +28,7 @@ def "main release" [] {
   cd app
   cp ../release/webls ./
   cp ../release/webls_app ./
-  mkdir target
-  cp -r ../site ./target
+  cp -r ../site ./
 }
 
 def main [] {}

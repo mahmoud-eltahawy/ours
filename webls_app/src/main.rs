@@ -1,4 +1,5 @@
-use std::env::home_dir;
+use std::env::{home_dir, var};
+use std::fs::canonicalize;
 use std::net::IpAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -68,9 +69,22 @@ enum Message {
 }
 
 async fn serve(root: PathBuf, port: u16) {
-    let _ = tokio::process::Command::new("./webls")
+    let key = "LEPTOS_SITE_ROOT";
+    let lsr = var(key).unwrap_or_else(|_| panic!("expect variable {key} to exist",));
+    let lsr = lsr
+        .parse::<PathBuf>()
+        .unwrap_or_else(|_| panic!("expected varible {key}={lsr} to be a valid path"));
+    let lsr = canonicalize(&lsr)
+        .unwrap_or_else(|_| panic!("expected varible {key}={lsr:#?} to be a canonicalable path"));
+
+    let mut wlsr = lsr.clone();
+    wlsr.pop();
+    wlsr.push("webls");
+
+    let _ = tokio::process::Command::new(wlsr)
         .arg(root)
         .arg(port.to_string())
+        .env(key, lsr)
         .output()
         .await
         .unwrap();
