@@ -9,8 +9,10 @@ use leptos_use::{
     use_drop_zone_with_options, use_event_listener, use_window, UseDropZoneOptions,
     UseDropZoneReturn,
 };
+use nav_bar::NavBar;
 
 mod files_box;
+mod nav_bar;
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -47,7 +49,7 @@ pub fn App() -> impl IntoView {
 
     view! {
         <Router>
-            // <NavBar files/>
+            <NavBar files/>
             <main>
                 <Routes fallback=|| "Page not found.">
                     <Route

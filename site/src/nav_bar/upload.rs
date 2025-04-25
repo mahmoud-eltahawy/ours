@@ -1,54 +1,18 @@
-use crate::app::nav_bar::LoadableTool;
+use crate::nav_bar::LoadableTool;
 use common::{GlobalState, GlobalStateStoreFields, Store};
+use leptos::wasm_bindgen::JsCast;
 use leptos::{html, prelude::*};
 use send_wrapper::SendWrapper;
-use server_fn::codec::{MultipartData, MultipartFormData};
-use wasm_bindgen::JsCast;
 use web_sys::{Blob, Event, FormData, HtmlInputElement};
 
-#[server(
-     input = MultipartFormData,
- )]
-async fn upload(multipart: MultipartData) -> Result<(), ServerFnError> {
-    use {
-        super::mp4::par_mp4_remux,
-        crate::ServerContext,
-        common::VIDEO_X,
-        std::{path::PathBuf, str::FromStr},
-        tokio::{
-            fs::File,
-            io::{AsyncWriteExt, BufWriter},
-        },
-    };
-    let context = use_context::<ServerContext>().unwrap();
-    let mut data = multipart.into_inner().unwrap();
-    let mut non_mp4_paths = Vec::new();
-    while let Some(mut field) = data.next_field().await? {
-        let name = field.name().unwrap();
-        let path = PathBuf::from_str(name).unwrap();
-        let path = context.root.join(path);
-        let mut file = BufWriter::new(File::create(&path).await?);
-        while let Some(chunk) = field.chunk().await? {
-            file.write(&chunk).await?;
-            file.flush().await?;
-        }
-        if path
-            .extension()
-            .and_then(|x| x.to_str())
-            .is_some_and(|x| VIDEO_X.contains(&x) && x != "mp4")
-        {
-            non_mp4_paths.push(path);
-        };
-    }
-    par_mp4_remux(non_mp4_paths).await?;
-
+async fn upload(multipart: FormData) -> Result<(), String> {
     Ok(())
 }
 
 #[component]
 pub fn Upload(files: Signal<Vec<SendWrapper<web_sys::File>>>) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
-    let upload_action = Action::new_local(|data: &FormData| upload(data.clone().into()));
+    let upload_action = Action::new_local(|data: &FormData| upload(data.clone()));
     let upload_files = RwSignal::new(Vec::<SendWrapper<web_sys::File>>::new());
 
     Effect::new(move || {

@@ -1,59 +1,15 @@
-use crate::app::{GlobalState, GlobalStateStoreFields, SelectedState, nav_bar::LoadableTool};
+use crate::nav_bar::LoadableTool;
 use common::Store;
+use common::{GlobalState, GlobalStateStoreFields, SelectedState};
 use leptos::{ev, prelude::*};
 use leptos_use::{use_event_listener, use_window};
 use std::path::PathBuf;
 
-use server_fn::codec::Cbor;
-#[server(
-    input = Cbor,
-    output = Cbor
-)]
-async fn cp(targets: Vec<PathBuf>, to: PathBuf) -> Result<(), ServerFnError> {
-    use {
-        crate::ServerContext,
-        tokio::{fs::copy, task::JoinSet},
-    };
-    let context = use_context::<ServerContext>().unwrap();
-    let to = context.root.join(to);
-    let mut set = JoinSet::new();
-    for base in targets.into_iter().map(|x| context.root.join(x)) {
-        let name = base.file_name().unwrap().to_str().unwrap().to_string();
-        set.spawn(copy(base, to.join(name)));
-    }
-
-    while let Some(x) = set.join_next().await {
-        let _ = x?;
-    }
-
+async fn cp(targets: Vec<PathBuf>, to: PathBuf) -> Result<(), String> {
     Ok(())
 }
 
-#[server(
-    input = Cbor,
-    output = Cbor
-)]
-async fn mv(targets: Vec<PathBuf>, to: PathBuf) -> Result<(), ServerFnError> {
-    use {crate::ServerContext, tokio::task::JoinSet};
-    let context = use_context::<ServerContext>().unwrap();
-    let to = context.root.join(to);
-    let mut set = JoinSet::new();
-    for base in targets.into_iter().map(|x| context.root.join(x)) {
-        let name = base.file_name().unwrap().to_str().unwrap().to_string();
-        set.spawn(cut(base, to.join(name)));
-    }
-
-    while let Some(x) = set.join_next().await {
-        let _ = x?;
-    }
-    Ok(())
-}
-
-#[server]
-pub async fn cut(from: PathBuf, to: PathBuf) -> Result<(), ServerFnError> {
-    use tokio::fs::{copy, remove_file};
-    copy(&from, to).await?;
-    remove_file(from).await?;
+async fn mv(targets: Vec<PathBuf>, to: PathBuf) -> Result<(), String> {
     Ok(())
 }
 

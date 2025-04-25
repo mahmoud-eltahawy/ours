@@ -1,4 +1,4 @@
-use crate::app::nav_bar::Tool;
+use crate::nav_bar::Tool;
 use leptos::{ev, html::Ul, prelude::*};
 use leptos_use::{on_click_outside, use_event_listener, use_window};
 use serde::{Deserialize, Serialize};
@@ -27,32 +27,8 @@ pub fn Info() -> impl IntoView {
     }
 }
 
-use server_fn::codec::Cbor;
-#[server(
-    input = Cbor,
-    output = Cbor
-)]
-async fn get_disks() -> Result<Vec<Disk>, ServerFnError> {
-    use std::path::Path;
-    fn from(value: &sysinfo::Disk) -> Disk {
-        Disk {
-            total_space: value.total_space(),
-            available_space: value.available_space(),
-            name: value
-                .mount_point()
-                .file_name()
-                .map(|x| x.to_str().unwrap().to_string())
-                .unwrap_or(String::from("root")),
-        }
-    }
-    let boot = Path::new("/boot");
-    let disks = sysinfo::Disks::new_with_refreshed_list()
-        .list()
-        .into_iter()
-        .filter(|x| x.mount_point() != boot)
-        .map(from)
-        .collect();
-    Ok(disks)
+async fn get_disks() -> Result<Vec<Disk>, String> {
+    Ok(Vec::new())
 }
 
 #[component]

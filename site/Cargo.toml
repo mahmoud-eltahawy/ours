@@ -20,6 +20,8 @@ leptos-use = "0.16.0-beta"
 web-sys = { version = "0.3", features = ["Document", "Window","File","FileList"] }
 reqwasm = { version = "0.5", features = ["json"] }
 serde_json.workspace = true
+send_wrapper = "0.6.0"
+serde.workspace = true
 
 
 [dev-dependencies]

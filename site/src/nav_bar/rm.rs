@@ -1,36 +1,13 @@
-use crate::app::nav_bar::LoadableTool;
-use crate::app::{GlobalState, GlobalStateStoreFields};
+use crate::nav_bar::LoadableTool;
 use common::Store;
+use common::{GlobalState, GlobalStateStoreFields};
 use leptos::tachys::dom::window;
 use leptos::{ev, prelude::*};
 use leptos_use::{use_event_listener, use_window};
 
 use crate::Unit;
 
-use server_fn::codec::Cbor;
-#[server(
-    input = Cbor,
-    output = Cbor
-)]
-async fn rm(bases: Vec<Unit>) -> Result<(), ServerFnError> {
-    use {
-        crate::ServerContext,
-        common::UnitKind,
-        tokio::fs::{remove_dir_all, remove_file},
-    };
-    let context = use_context::<ServerContext>().unwrap();
-    for base in bases.into_iter() {
-        let path = context.root.join(base.path);
-        match base.kind {
-            UnitKind::Dirctory => {
-                remove_dir_all(path).await?;
-            }
-            _ => {
-                remove_file(path).await?;
-            }
-        };
-    }
-
+async fn rm(bases: Vec<Unit>) -> Result<(), String> {
     Ok(())
 }
 

@@ -4661,6 +4661,8 @@ dependencies = [
  "leptos_router",
  "log",
  "reqwasm",
+ "send_wrapper",
+ "serde",
  "serde_json",
  "wasm-bindgen",
  "wasm-bindgen-test",

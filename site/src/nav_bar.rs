@@ -2,7 +2,7 @@ use atoms::{ActiveIcon, Icon};
 use common::{GlobalState, GlobalStateStoreFields, SelectedState, Store};
 use info::Info;
 use leptos::{either::either, prelude::*};
-use leptos_router::{NavigateOptions, hooks::use_navigate};
+use leptos_router::{hooks::use_navigate, NavigateOptions};
 use mp4::ToMp4;
 use paste::Paste;
 use rm::Remove;
@@ -22,7 +22,11 @@ pub fn NavBar(files: Signal<Vec<SendWrapper<web_sys::File>>>) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let more = RwSignal::new(true);
     let hidden = move || {
-        if more.get() { "display:none" } else { "" }
+        if more.get() {
+            "display:none"
+        } else {
+            ""
+        }
     };
     let transparent = move || {
         if more.get() {

@@ -1,57 +1,10 @@
-use crate::app::{GlobalState, GlobalStateStoreFields, nav_bar::LoadableTool};
+use crate::nav_bar::LoadableTool;
+use common::{GlobalState, GlobalStateStoreFields};
 use common::{Store, UnitKind};
 use leptos::prelude::*;
 use std::path::PathBuf;
 
-use server_fn::codec::Cbor;
-#[server(
-    input = Cbor,
-    output = Cbor
-)]
-async fn mp4_remux(targets: Vec<PathBuf>) -> Result<(), ServerFnError> {
-    use crate::ServerContext;
-
-    let context = use_context::<ServerContext>().unwrap();
-
-    par_mp4_remux(
-        targets
-            .into_iter()
-            .map(|target| context.root.join(target))
-            .collect(),
-    )
-    .await?;
-
-    Ok(())
-}
-
-#[server]
-pub async fn par_mp4_remux(targets: Vec<PathBuf>) -> Result<(), ServerFnError> {
-    use tokio::task::JoinSet;
-    let mut set = JoinSet::new();
-    targets.into_iter().map(any_to_mp4).for_each(|x| {
-        set.spawn(x);
-    });
-
-    while let Some(x) = set.join_next().await {
-        let _ = x?;
-    }
-    Ok(())
-}
-
-#[server]
-async fn any_to_mp4(from: PathBuf) -> Result<(), ServerFnError> {
-    use tokio::{fs::remove_file, process::Command};
-    let mut to = from.clone();
-    to.set_extension("mp4");
-    let _ = remove_file(to.clone()).await;
-    Command::new("ffmpeg")
-        .arg("-i")
-        .arg(from.clone())
-        .arg(to)
-        .spawn()?
-        .wait()
-        .await?;
-    let _ = remove_file(from).await;
+async fn mp4_remux(targets: Vec<PathBuf>) -> Result<(), String> {
     Ok(())
 }
 
