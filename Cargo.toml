@@ -15,7 +15,6 @@ edition = "2024"
 
 [workspace.dependencies]
 leptos = "0.8.0-rc2"
-leptos_router = "0.8.0-rc2"
 serde = "1"
 serde_json = "1.0"
 tokio = "1"
