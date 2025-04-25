@@ -1,10 +1,17 @@
+use crate::files_box::origin_with;
 use crate::nav_bar::LoadableTool;
-use common::{GlobalState, GlobalStateStoreFields};
+use common::{GlobalState, GlobalStateStoreFields, MP4_PATH};
 use common::{Store, UnitKind};
 use leptos::prelude::*;
 use std::path::PathBuf;
 
 async fn mp4_remux(targets: Vec<PathBuf>) -> Result<(), String> {
+    reqwest::Client::new()
+        .post(origin_with(MP4_PATH))
+        .json(&targets)
+        .send()
+        .await
+        .map_err(|x| x.to_string())?;
     Ok(())
 }
 
@@ -12,7 +19,7 @@ async fn mp4_remux(targets: Vec<PathBuf>) -> Result<(), String> {
 pub fn ToMp4() -> impl IntoView {
     let store = use_context::<Store<GlobalState>>().unwrap();
 
-    let remux = Action::new(move |input: &Vec<PathBuf>| mp4_remux(input.clone()));
+    let remux = Action::new_local(move |input: &Vec<PathBuf>| mp4_remux(input.clone()));
     let onclick = move || {
         let targets = store
             .select()
