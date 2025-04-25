@@ -13,9 +13,9 @@ use leptos_use::{use_event_listener, use_window};
 use web_sys::KeyboardEvent;
 
 pub async fn ls(base: PathBuf) -> Result<Vec<Unit>, String> {
-    let res = reqwasm::http::Request::post(LS_PATH)
-        .header("Content-Type", "application/json")
-        .body(serde_json::json!(base).to_string())
+    let res = reqwest::Client::new()
+        .post(LS_PATH)
+        .json(&base)
         .send()
         .await
         .map_err(|x| x.to_string())?
@@ -81,8 +81,9 @@ pub fn FilesBox(drop_zone_el: NodeRef<Ol>, is_over_drop_zone: Signal<bool>) -> i
 }
 
 pub async fn mkdir(target: PathBuf) -> Result<(), String> {
-    reqwasm::http::Request::post(MKDIR_PATH)
-        .body(serde_json::json!(target).to_string())
+    let _ = reqwest::Client::new()
+        .post(MKDIR_PATH)
+        .json(&target)
         .send()
         .await
         .map_err(|x| x.to_string())?;
