@@ -12,12 +12,16 @@ use leptos_router::hooks::{use_navigate, use_query_map};
 use leptos_use::{use_event_listener, use_window};
 use web_sys::KeyboardEvent;
 
-pub async fn ls(base: PathBuf) -> Result<Vec<Unit>, String> {
-    let url = window()
+pub fn origin_with(rel: &str) -> String {
+    window()
         .location()
         .origin()
-        .map(|x| format!("{x}{LS_PATH}"))
-        .unwrap();
+        .map(|x| format!("{x}{rel}"))
+        .unwrap()
+}
+
+pub async fn ls(base: PathBuf) -> Result<Vec<Unit>, String> {
+    let url = origin_with(LS_PATH);
     let res = reqwest::Client::new()
         .post(url)
         .json(&base)
@@ -235,11 +239,15 @@ fn UnitComp(unit: Unit, is_over_drop_zone: Signal<bool>) -> impl IntoView {
 fn UnitIcon(unit: Unit, is_over_drop_zone: Signal<bool>) -> impl IntoView {
     let store = use_context::<Store<GlobalState>>().unwrap();
 
+    let href = origin_with(&format!(
+        "/download/{}",
+        unit.path.to_str().unwrap_or_default()
+    ));
     let download_link = (unit.kind != UnitKind::Dirctory).then_some(view! {
         <a
             id=unit.name()
             download=unit.name()
-            href=format!("/download/{}", unit.path.to_str().unwrap_or_default())
+            href={href}
             hidden
         ></a>
     });

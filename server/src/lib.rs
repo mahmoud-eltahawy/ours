@@ -62,8 +62,6 @@ impl Server {
         let target_dir = ServeDir::new(&target);
 
         let app = Router::new()
-            .fallback_service(site_dir)
-            .route_service("/download", target_dir)
             .route(MP4_PATH, post(mp4::mp4_remux))
             .route(UPLOAD_PATH, post(cd::upload))
             .route(CP_PATH, post(cd::cp))
@@ -72,6 +70,8 @@ impl Server {
             .route(LS_PATH, post(cd::ls))
             .route(MKDIR_PATH, post(cd::mkdir))
             .route(DISKS_PATH, get(info::get_disks))
+            .nest_service("/download", target_dir)
+            .fallback_service(site_dir)
             .with_state(Context { target_dir: target })
             .layer(TimeoutLayer::new(timeout))
             .layer(CorsLayer::permissive())
