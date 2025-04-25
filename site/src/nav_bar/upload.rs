@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use crate::nav_bar::LoadableTool;
-use common::{GlobalState, GlobalStateStoreFields, Store, UPLOAD_PATH};
+use common::{GlobalState, GlobalStateStoreFields, Store};
 use leptos::wasm_bindgen::JsCast;
 use leptos::{html, prelude::*};
 use send_wrapper::SendWrapper;
