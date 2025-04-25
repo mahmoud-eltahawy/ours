@@ -101,7 +101,7 @@ pub fn FilesBox(
 
 pub async fn mkdir(target: PathBuf) -> Result<(), String> {
     let _ = reqwest::Client::new()
-        .post(MKDIR_PATH)
+        .post(origin_with(MKDIR_PATH))
         .json(&target)
         .send()
         .await
