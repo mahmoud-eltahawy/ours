@@ -40,11 +40,12 @@ where
 {
     let src = move || {
         let name = format!("{}.png", src().to_string());
-        if active() {
+        let name = if active() {
             name
         } else {
             format!("dark/{name}")
-        }
+        };
+        format!("public/{name}")
     };
     let width = move || match size() {
         IconSize::Small => 30,
