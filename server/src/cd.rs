@@ -7,11 +7,12 @@ use axum::{
     Json,
     extract::{Multipart, State},
 };
-use common::{Unit, VIDEO_X};
+use common::{Unit, UnitKind, VIDEO_X};
 use std::{
     path::{Path, PathBuf},
     str::FromStr,
 };
+use tokio::fs;
 use tokio::{
     fs::File,
     io::{AsyncWriteExt, BufWriter},
@@ -119,5 +120,37 @@ pub async fn upload(
     }
     par_mp4_remux(non_mp4_paths).await?;
 
+    Ok(())
+}
+
+pub async fn ls(
+    State(Context { target_dir }): State<Context>,
+    Json(base): Json<PathBuf>,
+) -> ServerResult<Json<Vec<Unit>>> {
+    let root = target_dir.join(base);
+    let mut dir = fs::read_dir(&root).await?;
+    let mut paths = Vec::new();
+    while let Some(x) = dir.next_entry().await? {
+        let kind = if x.file_type().await?.is_dir() {
+            UnitKind::Dirctory
+        } else {
+            UnitKind::File
+        };
+        let unit = Unit {
+            path: x.path().strip_prefix(&target_dir)?.to_path_buf(),
+            kind,
+        };
+        paths.push(unit);
+    }
+
+    Ok(Json(paths))
+}
+
+pub async fn mkdir(
+    State(Context { target_dir }): State<Context>,
+    Json(target): Json<PathBuf>,
+) -> ServerResult<()> {
+    let target = target_dir.join(target);
+    fs::create_dir(target).await?;
     Ok(())
 }

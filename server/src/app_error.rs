@@ -4,7 +4,10 @@ use axum::{
     response::{self, IntoResponse},
 };
 use serde::Serialize;
-use std::{fmt::Display, path::PathBuf};
+use std::{
+    fmt::Display,
+    path::{PathBuf, StripPrefixError},
+};
 use tokio::{io, task::JoinError};
 
 pub type ServerResult<T> = std::result::Result<T, ServerError>;
@@ -19,6 +22,7 @@ pub enum ServerError {
     NonePort,
     NonePathFilename,
     MultiPart(String),
+    StripPrefixError,
 }
 
 impl From<JoinError> for ServerError {
@@ -36,6 +40,12 @@ impl From<io::Error> for ServerError {
 impl From<MultipartError> for ServerError {
     fn from(value: MultipartError) -> Self {
         Self::MultiPart(value.to_string())
+    }
+}
+
+impl From<StripPrefixError> for ServerError {
+    fn from(_value: StripPrefixError) -> Self {
+        Self::StripPrefixError
     }
 }
 

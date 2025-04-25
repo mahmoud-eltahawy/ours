@@ -10,9 +10,9 @@ use get_port::Ops;
 use tower_http::{services::ServeDir, timeout::TimeoutLayer};
 
 pub mod app_error;
+mod cd;
 mod info;
 mod mp4;
-mod paste;
 
 #[derive(Clone)]
 struct Context {
@@ -63,10 +63,12 @@ impl Server {
             .nest_service("/", site_dir)
             .nest_service("/download", target_dir)
             .route("/to/mp4", post(mp4::mp4_remux))
-            .route("/upload", post(paste::upload))
-            .route("/cp", post(paste::cp))
-            .route("/mv", post(paste::mv))
-            .route("/rm", post(paste::rm))
+            .route("/upload", post(cd::upload))
+            .route("/cp", post(cd::cp))
+            .route("/mv", post(cd::mv))
+            .route("/rm", post(cd::rm))
+            .route("/rm", post(cd::ls))
+            .route("/mkdir", post(cd::mkdir))
             .route("/disks", get(info::get_disks))
             .with_state(Context { target_dir: target })
             .layer(TimeoutLayer::new(timeout))
