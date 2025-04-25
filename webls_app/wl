@@ -1,6 +1,5 @@
 #!/usr/bin/env nu
 
-
 def "main dev" [] {
   rm ../target/app/ -rf
   cd ../site
@@ -11,22 +10,19 @@ def "main dev" [] {
   mkdir app
   cd app
   cp ../debug/webls_app ./
-  {LEPTOS_SITE_ROOT : "../../target/app/site"} | load-env 
   ./webls_app
 }
 
 def "main release" [] {
   rm ../target/app/ -rf
-  cd ../webls
-  ./wl release
+  cd ../site
+  trunk build --release
   cd ../webls_app
   cargo build --release
   cd ../target
   mkdir app
   cd app
-  cp ../release/webls ./
-  cp ../release/webls_app ./
-  cp -r ../site ./
+  cp ../debug/webls_app ./
 }
 
 def main [] {}
