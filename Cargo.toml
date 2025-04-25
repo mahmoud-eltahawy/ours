@@ -3,7 +3,7 @@ resolver = "2"
 members = [ 
     "atoms",
     "common",
-    "partitions",
+    "partitions", "server",
     "webls", "webls_app",
 ]
 

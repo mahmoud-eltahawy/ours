@@ -1,0 +1,12 @@
+[package]
+name = "server"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+axum= "0.8"
+tokio= {workspace = true, features = ["fs","process"]}
+serde_json.workspace = true
+serde = { workspace = true, features = ["derive"]}
+tower-http = { version = "0.6", features = ["fs","timeout"] }
+tower = "0.5"
