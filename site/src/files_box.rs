@@ -14,6 +14,7 @@ use web_sys::KeyboardEvent;
 
 pub async fn ls(base: PathBuf) -> Result<Vec<Unit>, String> {
     let res = reqwasm::http::Request::post(LS_PATH)
+        .header("Content-Type", "application/json")
         .body(serde_json::json!(base).to_string())
         .send()
         .await

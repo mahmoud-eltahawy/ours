@@ -1,4 +1,4 @@
-use std::env::{args, home_dir, var};
+use std::env::{args, home_dir};
 use std::fs::canonicalize;
 use std::net::IpAddr;
 use std::path::PathBuf;
