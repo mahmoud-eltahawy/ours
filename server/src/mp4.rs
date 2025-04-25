@@ -1,16 +1,16 @@
 use super::Context;
-use crate::app_error;
+use crate::app_error::ServerResult;
 use axum::{Json, extract::State};
 use std::path::PathBuf;
 
 pub async fn mp4_remux(
-    State(Context { root }): State<Context>,
+    State(Context { target_dir }): State<Context>,
     Json(targets): Json<Vec<PathBuf>>,
-) -> Result<(), app_error::AppError> {
+) -> ServerResult<()> {
     par_mp4_remux(
         targets
             .into_iter()
-            .map(|target| root.join(target))
+            .map(|target| target_dir.join(target))
             .collect(),
     )
     .await?;
@@ -18,7 +18,7 @@ pub async fn mp4_remux(
     Ok(())
 }
 
-pub async fn par_mp4_remux(targets: Vec<PathBuf>) -> Result<(), app_error::AppError> {
+pub async fn par_mp4_remux(targets: Vec<PathBuf>) -> ServerResult<()> {
     use tokio::task::JoinSet;
     let mut set = JoinSet::new();
     targets.into_iter().map(any_to_mp4).for_each(|x| {
@@ -26,30 +26,23 @@ pub async fn par_mp4_remux(targets: Vec<PathBuf>) -> Result<(), app_error::AppEr
     });
 
     while let Some(x) = set.join_next().await {
-        let Ok(x) = x else {
-            return Err(app_error::AppError::FfmpagJoin);
-        };
-        x?;
+        x??;
     }
     Ok(())
 }
 
-pub async fn any_to_mp4(from: PathBuf) -> Result<(), app_error::AppError> {
+pub async fn any_to_mp4(from: PathBuf) -> ServerResult<()> {
     use tokio::{fs::remove_file, process::Command};
     let mut to = from.clone();
     to.set_extension("mp4");
     let _ = remove_file(to.clone()).await;
-    let Ok(mut child) = Command::new("ffmpeg")
+    Command::new("ffmpeg")
         .arg("-i")
         .arg(from.clone())
         .arg(to)
-        .spawn()
-    else {
-        return Err(app_error::AppError::FfmpagSpawn(from));
-    };
-    let Ok(_) = child.wait().await else {
-        return Err(app_error::AppError::FfmpagWait(from));
-    };
+        .spawn()?
+        .wait()
+        .await?;
 
     let _ = remove_file(from).await;
     Ok(())

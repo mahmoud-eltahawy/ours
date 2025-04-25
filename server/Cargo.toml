@@ -10,3 +10,4 @@ serde_json.workspace = true
 serde = { workspace = true, features = ["derive"]}
 tower-http = { version = "0.6", features = ["fs","timeout"] }
 tower = "0.5"
+get-port = "4.0.0"
