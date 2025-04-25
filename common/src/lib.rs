@@ -4,6 +4,15 @@ use serde::{Deserialize, Serialize};
 use std::{fmt::Display, path::PathBuf};
 use web_sys::wasm_bindgen::JsCast;
 
+pub const LS_PATH: &str = "/rm";
+pub const MKDIR_PATH: &str = "/mkdir";
+pub const MP4_PATH: &str = "/to/mp4";
+pub const UPLOAD_PATH: &str = "/upload";
+pub const CP_PATH: &str = "/cp";
+pub const MV_PATH: &str = "/mv";
+pub const RM_PATH: &str = "/rm";
+pub const DISKS_PATH: &str = "/disks";
+
 #[derive(Default, Clone, Debug)]
 pub enum SelectedState {
     Copy,

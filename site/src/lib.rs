@@ -1,34 +1,64 @@
-use leptos::prelude::*;
+use std::path::PathBuf;
+
+use common::{GlobalState, GlobalStateStoreFields, SelectedState, SortUnits};
+use common::{Retype, Unit};
+use files_box::{ls, FilesBox};
+use leptos::html::Ol;
+use leptos::{ev, prelude::*};
 use leptos_meta::*;
-use leptos_router::{components::*, path};
+use leptos_router::{components::*, StaticSegment};
+use leptos_use::{
+    use_drop_zone_with_options, use_event_listener, use_window, UseDropZoneOptions,
+    UseDropZoneReturn,
+};
 
-// Modules
-mod components;
-mod pages;
+mod files_box;
 
-// Top-Level pages
-use crate::pages::home::Home;
-
-/// An app router which renders the homepage and handles 404's
 #[component]
 pub fn App() -> impl IntoView {
-    // Provides context that manages stylesheets, titles, meta tags, etc.
+    let store = GlobalState::new_store();
+    let ls_result = Resource::new(move || store.current_path().get(), ls);
+
     provide_meta_context();
+    provide_context(store);
+
+    Effect::new(move || {
+        if let Some(mut xs) = ls_result.get().transpose().ok().flatten() {
+            xs.retype();
+            xs.sort_units();
+            *store.units().write() = xs;
+        };
+    });
+
+    Effect::new(move || {
+        let _ = store.units_refetch_tick().read();
+        ls_result.refetch();
+    });
+
+    let _ = use_event_listener(use_window(), ev::popstate, move |_| {
+        if let SelectedState::None = store.select().get().state {
+            store.select().write().clear();
+        }
+    });
+    let drop_zone_el = NodeRef::<Ol>::new();
+
+    let UseDropZoneReturn {
+        is_over_drop_zone,
+        files,
+    } = use_drop_zone_with_options(drop_zone_el, UseDropZoneOptions::default());
 
     view! {
-        <Html attr:lang="en" attr:dir="ltr" attr:data-theme="light" />
-
-        // sets the document title
-        <Title text="Welcome to Leptos CSR" />
-
-        // injects metadata in the <head> of the page
-        <Meta charset="UTF-8" />
-        <Meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
         <Router>
-            <Routes fallback=|| view! { NotFound }>
-                <Route path=path!("/") view=Home />
-            </Routes>
+            // <NavBar files/>
+            <main>
+                <Routes fallback=|| "Page not found.">
+                    <Route
+                        path=StaticSegment("")
+                        view=move || view! { <FilesBox drop_zone_el is_over_drop_zone /> }
+                    />
+                </Routes>
+            </main>
+            // <MediaPlayer />
         </Router>
     }
 }

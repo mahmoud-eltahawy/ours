@@ -6,6 +6,7 @@ use axum::{
     extract::DefaultBodyLimit,
     routing::{get, post},
 };
+use common::{CP_PATH, DISKS_PATH, LS_PATH, MKDIR_PATH, MP4_PATH, MV_PATH, RM_PATH, UPLOAD_PATH};
 use get_port::Ops;
 use tower_http::{services::ServeDir, timeout::TimeoutLayer};
 
@@ -62,14 +63,14 @@ impl Server {
         let app = Router::new()
             .nest_service("/", site_dir)
             .nest_service("/download", target_dir)
-            .route("/to/mp4", post(mp4::mp4_remux))
-            .route("/upload", post(cd::upload))
-            .route("/cp", post(cd::cp))
-            .route("/mv", post(cd::mv))
-            .route("/rm", post(cd::rm))
-            .route("/rm", post(cd::ls))
-            .route("/mkdir", post(cd::mkdir))
-            .route("/disks", get(info::get_disks))
+            .route(MP4_PATH, post(mp4::mp4_remux))
+            .route(UPLOAD_PATH, post(cd::upload))
+            .route(CP_PATH, post(cd::cp))
+            .route(MV_PATH, post(cd::mv))
+            .route(RM_PATH, post(cd::rm))
+            .route(LS_PATH, post(cd::ls))
+            .route(MKDIR_PATH, post(cd::mkdir))
+            .route(DISKS_PATH, get(info::get_disks))
             .with_state(Context { target_dir: target })
             .layer(TimeoutLayer::new(timeout))
             .layer(DefaultBodyLimit::disable());
