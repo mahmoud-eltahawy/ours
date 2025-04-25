@@ -1,4 +1,5 @@
-use crate::nav_bar::Tool;
+use crate::{files_box::origin_with, nav_bar::Tool};
+use common::DISKS_PATH;
 use leptos::{ev, html::Ul, prelude::*};
 use leptos_use::{on_click_outside, use_event_listener, use_window};
 use serde::{Deserialize, Serialize};
@@ -28,12 +29,20 @@ pub fn Info() -> impl IntoView {
 }
 
 async fn get_disks() -> Result<Vec<Disk>, String> {
-    Ok(Vec::new())
+    let res = reqwest::Client::new()
+        .get(origin_with(DISKS_PATH))
+        .send()
+        .await
+        .map_err(|x| x.to_string())?
+        .json::<Vec<Disk>>()
+        .await
+        .map_err(|x| x.to_string())?;
+    Ok(res)
 }
 
 #[component]
 fn InfoCard(display: RwSignal<bool>) -> impl IntoView {
-    let disks = Resource::new(|| (), move |_| get_disks());
+    let disks = LocalResource::new(get_disks);
 
     Effect::new(move || {
         if display.get() {
