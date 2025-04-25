@@ -8,6 +8,6 @@ Exec=env LEPTOS_SITE_ROOT=path_to_generated_site webls_app
 Terminal=true
 Type=Application
 Keywords=Server;storage;
-Icon=scanner
+Icon=our.png
 Categories=Servers;Storage;
 StartupNotify=false

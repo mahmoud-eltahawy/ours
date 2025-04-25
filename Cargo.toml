@@ -5,7 +5,7 @@ members = [
     "partitions",
     "server",
     "site",
-    "webls_app",
+    "ours",
 ]
 resolver = "2"
 

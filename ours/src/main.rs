@@ -18,7 +18,7 @@ use rfd::AsyncFileDialog;
 use tokio::task::JoinHandle;
 
 pub fn main() -> iced::Result {
-    iced::application("webls", State::update, State::view)
+    iced::application("ours", State::update, State::view)
         .style(|_, _| Appearance {
             background_color: Color::BLACK,
             text_color: Color::WHITE,

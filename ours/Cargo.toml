@@ -1,5 +1,5 @@
 [package]
-name = "webls_app"
+name = "ours"
 version.workspace = true
 edition.workspace = true
 

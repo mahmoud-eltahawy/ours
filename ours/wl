@@ -4,25 +4,25 @@ def "main dev" [] {
   rm ../target/app/ -rf
   cd ../site
   trunk build
-  cd ../webls_app
+  cd ../ours
   cargo build
   cd ../target
   mkdir app
   cd app
-  cp ../debug/webls_app ./
-  ./webls_app
+  cp ../debug/ours ./
+  ./ours
 }
 
 def "main release" [] {
   rm ../target/app/ -rf
   cd ../site
   trunk build --release
-  cd ../webls_app
+  cd ../ours
   cargo build --release
   cd ../target
   mkdir app
   cd app
-  cp ../debug/webls_app ./
+  cp ../release/ours ./
 }
 
 def main [] {}
