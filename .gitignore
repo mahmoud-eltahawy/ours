@@ -1,6 +1,5 @@
 debug/
 target/
-site/dist
 
 node_modules
 dist
