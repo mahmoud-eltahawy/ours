@@ -128,6 +128,7 @@ pub async fn ls(
     Json(base): Json<PathBuf>,
 ) -> ServerResult<Json<Vec<Unit>>> {
     let root = target_dir.join(base);
+    println!("ls called with : {:#?}", root);
     let mut dir = fs::read_dir(&root).await?;
     let mut paths = Vec::new();
     while let Some(x) = dir.next_entry().await? {

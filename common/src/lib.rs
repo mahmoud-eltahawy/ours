@@ -170,9 +170,7 @@ impl Selected {
 #[derive(Clone, Debug, Default, Store)]
 pub struct GlobalState {
     select: Selected,
-    current_path: PathBuf,
     media_play: Option<Unit>,
-    units: Vec<Unit>,
     units_refetch_tick: bool,
     mkdir_state: Option<String>,
     password: bool,

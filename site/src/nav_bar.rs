@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use atoms::{ActiveIcon, Icon};
 use common::{GlobalState, GlobalStateStoreFields, SelectedState, Store};
 use info::Info;
@@ -18,7 +20,10 @@ pub mod upload;
 //TODO : add button to navbar to refresh mounted disks
 
 #[component]
-pub fn NavBar(files: Signal<Vec<SendWrapper<web_sys::File>>>) -> impl IntoView {
+pub fn NavBar(
+    files: Signal<Vec<SendWrapper<web_sys::File>>>,
+    current_path: RwSignal<PathBuf>,
+) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let more = RwSignal::new(true);
     let hidden = move || {
@@ -42,14 +47,14 @@ pub fn NavBar(files: Signal<Vec<SendWrapper<web_sys::File>>>) -> impl IntoView {
         >
             <More more />
             <div class="grid grid-cols-2 place-content-center" style=hidden>
-                <Home />
+                <Home current_path/>
                 <Clear />
                 <Download />
                 {move || {
                     either!(
                         store.password().get(),
                             true => view! {
-                                <AdminRequired files/>
+                                <AdminRequired files current_path/>
                             },
                             false => view! {<Admin/>},
                     )
@@ -78,12 +83,15 @@ pub fn More(more: RwSignal<bool>) -> impl IntoView {
 }
 
 #[component]
-pub fn AdminRequired(files: Signal<Vec<SendWrapper<web_sys::File>>>) -> impl IntoView {
+pub fn AdminRequired(
+    files: Signal<Vec<SendWrapper<web_sys::File>>>,
+    current_path: RwSignal<PathBuf>,
+) -> impl IntoView {
     view! {
-        <Upload files />
+        <Upload files current_path/>
         <Remove />
         <Mkdir />
-        <Paste />
+        <Paste current_path/>
         <ToMp4  />
     }
 }
@@ -127,10 +135,10 @@ where
 }
 
 #[component]
-fn Home() -> impl IntoView {
+fn Home(current_path: RwSignal<PathBuf>) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let navigate = use_navigate();
-    let active = move || store.current_path().read().file_name().is_some();
+    let active = move || current_path.read().file_name().is_some();
 
     let onclick = move || {
         if let SelectedState::None = store.select().get().state {

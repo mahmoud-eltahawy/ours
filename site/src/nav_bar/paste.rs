@@ -14,20 +14,20 @@ async fn mv(targets: Vec<PathBuf>, to: PathBuf) -> Result<(), String> {
 }
 
 #[component]
-pub fn Paste() -> impl IntoView {
+pub fn Paste(current_path: RwSignal<PathBuf>) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let copy = Action::new({
         move |_: &()| {
             cp(
                 store.select().read_untracked().as_paths(),
-                store.current_path().get_untracked(),
+                current_path.get_untracked(),
             )
         }
     });
     let cut = Action::new(move |_: &()| {
         mv(
             store.select().read_untracked().as_paths(),
-            store.current_path().get_untracked(),
+            current_path.get_untracked(),
         )
     });
 

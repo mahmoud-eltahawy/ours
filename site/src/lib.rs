@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use common::{GlobalState, GlobalStateStoreFields, SelectedState, SortUnits};
 use common::{Retype, Unit};
 use files_box::{ls, FilesBox};
@@ -17,18 +19,35 @@ mod nav_bar;
 #[component]
 pub fn App() -> impl IntoView {
     let store = GlobalState::new_store();
-    let ls_result = LocalResource::new(move || ls(store.current_path().get()));
+    let current_path = RwSignal::new(PathBuf::new());
+    let ls_result = LocalResource::new(move || ls(current_path.get()));
+
+    let units = Memo::new(move |other| {
+        let ls = match ls_result.get().transpose() {
+            Ok(v) => v,
+            Err(err) => {
+                leptos::logging::error!("ls Error : {err}");
+                return None;
+            }
+        };
+        let result = ls
+            .map(|mut xs| {
+                xs.retype();
+                xs
+            })
+            .map(|mut xs| {
+                xs.sort_units();
+                xs
+            });
+        if result.is_some() {
+            result
+        } else {
+            other.cloned().flatten()
+        }
+    });
 
     provide_meta_context();
     provide_context(store);
-
-    Effect::new(move || {
-        if let Some(mut xs) = ls_result.get().transpose().ok().flatten() {
-            xs.retype();
-            xs.sort_units();
-            *store.units().write() = xs;
-        };
-    });
 
     Effect::new(move || {
         let _ = store.units_refetch_tick().read();
@@ -49,12 +68,12 @@ pub fn App() -> impl IntoView {
 
     view! {
         <Router>
-            <NavBar files/>
+            <NavBar files current_path/>
             <main>
                 <Routes fallback=|| "Page not found.">
                     <Route
                         path=StaticSegment("")
-                        view=move || view! { <FilesBox drop_zone_el is_over_drop_zone /> }
+                        view=move || view! { <FilesBox drop_zone_el is_over_drop_zone current_path units/> }
                     />
                 </Routes>
             </main>

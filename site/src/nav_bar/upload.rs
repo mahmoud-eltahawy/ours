@@ -1,22 +1,28 @@
+use std::path::PathBuf;
+
 use crate::nav_bar::LoadableTool;
-use common::{GlobalState, GlobalStateStoreFields, Store};
+use common::{GlobalState, GlobalStateStoreFields, Store, UPLOAD_PATH};
+use leptos::logging::log;
 use leptos::wasm_bindgen::JsCast;
 use leptos::{html, prelude::*};
 use send_wrapper::SendWrapper;
 use web_sys::{Blob, Event, FormData, HtmlInputElement};
 
-async fn upload(multipart: FormData) -> Result<(), String> {
+async fn upload(form_data: FormData) -> Result<(), String> {
     Ok(())
 }
 
 #[component]
-pub fn Upload(files: Signal<Vec<SendWrapper<web_sys::File>>>) -> impl IntoView {
+pub fn Upload(
+    files: Signal<Vec<SendWrapper<web_sys::File>>>,
+    current_path: RwSignal<PathBuf>,
+) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let upload_action = Action::new_local(|data: &FormData| upload(data.clone()));
     let upload_files = RwSignal::new(Vec::<SendWrapper<web_sys::File>>::new());
 
     Effect::new(move || {
-        let current_path = store.current_path().read_untracked();
+        let current_path = current_path.read_untracked();
         let data = FormData::new().unwrap();
         for file in upload_files.get() {
             let path = current_path.join(file.name());

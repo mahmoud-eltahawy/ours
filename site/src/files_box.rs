@@ -13,8 +13,13 @@ use leptos_use::{use_event_listener, use_window};
 use web_sys::KeyboardEvent;
 
 pub async fn ls(base: PathBuf) -> Result<Vec<Unit>, String> {
+    let url = window()
+        .location()
+        .origin()
+        .map(|x| format!("{x}{LS_PATH}"))
+        .unwrap();
     let res = reqwest::Client::new()
-        .post(LS_PATH)
+        .post(url)
         .json(&base)
         .send()
         .await
@@ -26,7 +31,12 @@ pub async fn ls(base: PathBuf) -> Result<Vec<Unit>, String> {
 }
 
 #[component]
-pub fn FilesBox(drop_zone_el: NodeRef<Ol>, is_over_drop_zone: Signal<bool>) -> impl IntoView {
+pub fn FilesBox(
+    drop_zone_el: NodeRef<Ol>,
+    is_over_drop_zone: Signal<bool>,
+    current_path: RwSignal<PathBuf>,
+    units: Memo<Option<Vec<Unit>>>,
+) -> impl IntoView {
     let query = use_query_map();
     let store: Store<GlobalState> = use_context().unwrap();
     let navigate = use_navigate();
@@ -39,13 +49,14 @@ pub fn FilesBox(drop_zone_el: NodeRef<Ol>, is_over_drop_zone: Signal<bool>) -> i
             result.push(x);
             i += 1;
         }
-        store.current_path().set(result);
+
+        current_path.set(result);
     });
 
     let _ = use_event_listener(use_window(), ev::keydown, move |ev| {
         match ev.key().as_str() {
             "Backspace" => {
-                let mut path = store.current_path().get_untracked();
+                let mut path = current_path.get_untracked();
                 if path.pop() {
                     navigate(&path_as_query(&path), Default::default());
                     store.select().write().clear();
@@ -71,11 +82,15 @@ pub fn FilesBox(drop_zone_el: NodeRef<Ol>, is_over_drop_zone: Signal<bool>) -> i
             node_ref=drop_zone_el
         >
             <li>
-                <Mkdir />
+                <Mkdir current_path/>
             </li>
-            <For each=move || store.units().get() key=|x| x.path.clone() let:unit>
-                <UnitComp unit=unit is_over_drop_zone />
-            </For>
+            {
+                move || units.get().map(|xs| {
+                    xs.into_iter().map(|x| {view! {
+                        <UnitComp unit=x is_over_drop_zone />
+                    }}).collect_view()
+                })
+            }
         </ol>
     }
 }
@@ -91,7 +106,7 @@ pub async fn mkdir(target: PathBuf) -> Result<(), String> {
 }
 
 #[component]
-fn Mkdir() -> impl IntoView {
+fn Mkdir(current_path: RwSignal<PathBuf>) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let mkdir_state = store.mkdir_state();
     let value = RwSignal::new(String::new());
@@ -99,7 +114,7 @@ fn Mkdir() -> impl IntoView {
     let mkdir = Action::new_local(move |input: &PathBuf| mkdir(input.clone()));
     let enter = move |ev: KeyboardEvent| {
         if ev.key() == "Enter" && mkdir_state.get().is_some() {
-            let path = store.current_path().get_untracked();
+            let path = current_path.get_untracked();
             let new_path = path.join(value.get_untracked());
             mkdir.dispatch(new_path);
             *mkdir_state.write() = None;
