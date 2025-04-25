@@ -10,7 +10,7 @@ dist = "../target/app/site"
 # The public URL from which assets are to be served.
 public_url = "/"
 # Whether to include hash values in the output file names.
-filehash = true
+filehash = false
 # Whether to inject scripts (and module preloads) into the finalized output.
 inject_scripts = true
 # Run without network access
@@ -22,7 +22,7 @@ inject_scripts = true
 # Control minification
 minify = "on_release" # can be one of: never, on_release, always
 # Allow disabling sub-resource integrity (SRI)
-# no_sri = false
+no_sri = true
 # An optional cargo profile to use
 # cargo_profile = "release-trunk"
 

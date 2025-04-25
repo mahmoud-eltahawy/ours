@@ -5,15 +5,23 @@ use std::{
 
 use crate::Unit;
 use atoms::{BaseIcon, Icon, IconSize};
-use common::{GlobalState, GlobalStateStoreFields, SelectedState};
+use common::{GlobalState, GlobalStateStoreFields, SelectedState, LS_PATH, MKDIR_PATH};
 use common::{Store, UnitKind};
 use leptos::{either::Either, ev, html::Ol, prelude::*};
 use leptos_router::hooks::{use_navigate, use_query_map};
 use leptos_use::{use_event_listener, use_window};
 use web_sys::KeyboardEvent;
 
-pub async fn ls(base: PathBuf) -> Result<Vec<Unit>, ()> {
-    todo!()
+pub async fn ls(base: PathBuf) -> Result<Vec<Unit>, String> {
+    let res = reqwasm::http::Request::post(LS_PATH)
+        .body(serde_json::json!(base).to_string())
+        .send()
+        .await
+        .map_err(|x| x.to_string())?
+        .json::<Vec<Unit>>()
+        .await
+        .map_err(|x| x.to_string())?;
+    Ok(res)
 }
 
 #[component]
@@ -71,8 +79,13 @@ pub fn FilesBox(drop_zone_el: NodeRef<Ol>, is_over_drop_zone: Signal<bool>) -> i
     }
 }
 
-pub async fn mkdir(target: PathBuf) -> Result<(), ()> {
-    todo!()
+pub async fn mkdir(target: PathBuf) -> Result<(), String> {
+    reqwasm::http::Request::post(MKDIR_PATH)
+        .body(serde_json::json!(target).to_string())
+        .send()
+        .await
+        .map_err(|x| x.to_string())?;
+    Ok(())
 }
 
 #[component]
@@ -81,7 +94,7 @@ fn Mkdir() -> impl IntoView {
     let mkdir_state = store.mkdir_state();
     let value = RwSignal::new(String::new());
 
-    let mkdir = Action::new(move |input: &PathBuf| mkdir(input.clone()));
+    let mkdir = Action::new_local(move |input: &PathBuf| mkdir(input.clone()));
     let enter = move |ev: KeyboardEvent| {
         if ev.key() == "Enter" && mkdir_state.get().is_some() {
             let path = store.current_path().get_untracked();

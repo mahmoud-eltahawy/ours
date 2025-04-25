@@ -1,7 +1,8 @@
-use std::env::{home_dir, var};
+use std::env::{args, home_dir, var};
 use std::fs::canonicalize;
 use std::net::IpAddr;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use get_port::Ops;
 use iced::border::Radius;
@@ -14,7 +15,7 @@ use iced::{Background, Border, Shadow, Vector};
 use iced::{Center, Color, Task};
 use local_ip_address::local_ip;
 use rfd::AsyncFileDialog;
-use tokio::process::Child;
+use tokio::task::JoinHandle;
 
 pub fn main() -> iced::Result {
     iced::application("webls", State::update, State::view)
@@ -34,7 +35,7 @@ struct State {
     port: u16,
     target_path: Option<PathBuf>,
     url: Data,
-    working_process: Option<Child>,
+    working_process: Option<Arc<JoinHandle<()>>>,
 }
 
 impl State {
@@ -56,31 +57,25 @@ impl State {
 #[derive(Debug, Clone)]
 enum Message {
     Launch,
-    Stop,
+    Stop(Arc<JoinHandle<()>>),
     PickTarget,
     TargetPicked(Option<PathBuf>),
 }
 
-fn serve(root: PathBuf, port: u16) -> Child {
-    let key = "LEPTOS_SITE_ROOT";
-    let lsr = var(key).unwrap_or_else(|_| panic!("expect variable {key} to exist",));
-    let lsr = lsr
-        .parse::<PathBuf>()
-        .unwrap_or_else(|_| panic!("expected varible {key}={lsr} to be a valid path"));
-    let lsr = canonicalize(&lsr)
-        .unwrap_or_else(|_| panic!("expected varible {key}={lsr:#?} to be a canonicalable path"));
+async fn serve(root: PathBuf, port: u16) {
+    let mut site = args()
+        .next()
+        .and_then(|x| x.parse::<PathBuf>().ok())
+        .and_then(|x| canonicalize(x).ok())
+        .unwrap();
+    site.pop();
+    site.push("site");
 
-    let mut wlsr = lsr.clone();
-    wlsr.pop();
-    wlsr.push("webls");
-
-    tokio::process::Command::new(wlsr)
-        .kill_on_drop(true)
-        .arg(root)
-        .arg(port.to_string())
-        .env(key, lsr)
-        .spawn()
-        .unwrap()
+    server::Server::new(site, root)
+        .port(port)
+        .serve()
+        .await
+        .unwrap();
 }
 
 async fn which_target() -> Option<PathBuf> {
@@ -94,11 +89,12 @@ impl State {
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::Launch => {
-                let child = serve(self.target_path.clone().unwrap(), self.port);
-                self.working_process = Some(child);
+                let i = tokio::spawn(serve(self.target_path.clone().unwrap(), self.port));
+                self.working_process = Some(i.into());
                 Task::none()
             }
-            Message::Stop => {
+            Message::Stop(jh) => {
+                jh.abort();
                 self.working_process = None;
                 Task::none()
             }
@@ -219,7 +215,7 @@ impl State {
                 }
             })
             .on_press(match &self.working_process {
-                Some(_) => Message::Stop,
+                Some(jh) => Message::Stop(jh.clone()),
                 None => Message::Launch,
             });
         launch

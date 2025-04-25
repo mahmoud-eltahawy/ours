@@ -25,6 +25,9 @@ web-sys = "0.3"
 [workspace.dependencies.atoms]
 path = "./atoms"
 
+[workspace.dependencies.server]
+path = "./server"
+
 [workspace.dependencies.common]
 path = "./common"
 

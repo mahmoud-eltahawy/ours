@@ -9,3 +9,4 @@ tokio = {workspace = true, features = ["process"]}
 iced = {version ="0.13.1", features = ["tokio","qr_code"] }
 local-ip-address = "0.6.3"
 rfd = "0.15.3"
+server.workspace = true

@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use common::{GlobalState, GlobalStateStoreFields, SelectedState, SortUnits};
 use common::{Retype, Unit};
 use files_box::{ls, FilesBox};
@@ -17,7 +15,7 @@ mod files_box;
 #[component]
 pub fn App() -> impl IntoView {
     let store = GlobalState::new_store();
-    let ls_result = Resource::new(move || store.current_path().get(), ls);
+    let ls_result = LocalResource::new(move || ls(store.current_path().get()));
 
     provide_meta_context();
     provide_context(store);

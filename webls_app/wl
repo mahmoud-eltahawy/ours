@@ -3,16 +3,14 @@
 
 def "main dev" [] {
   rm ../target/app/ -rf
-  cd ../webls
-  ./wl build
+  cd ../site
+  trunk build
   cd ../webls_app
   cargo build
   cd ../target
   mkdir app
   cd app
-  cp ../debug/webls ./
   cp ../debug/webls_app ./
-  cp -r ../site ./
   {LEPTOS_SITE_ROOT : "../../target/app/site"} | load-env 
   ./webls_app
 }
