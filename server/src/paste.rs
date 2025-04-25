@@ -3,6 +3,7 @@ use crate::{
     app_error::{ServerError, ServerResult},
 };
 use axum::{Json, extract::State};
+use common::Unit;
 use std::path::{Path, PathBuf};
 
 pub async fn cp(
@@ -56,5 +57,28 @@ pub async fn cut(from: PathBuf, to: PathBuf) -> ServerResult<()> {
     use tokio::fs::{copy, remove_file};
     copy(&from, to).await?;
     remove_file(from).await?;
+    Ok(())
+}
+
+pub async fn rm(
+    State(Context { target_dir }): State<Context>,
+    Json(bases): Json<Vec<Unit>>,
+) -> ServerResult<()> {
+    use {
+        common::UnitKind,
+        tokio::fs::{remove_dir_all, remove_file},
+    };
+    for base in bases.into_iter() {
+        let path = target_dir.join(base.path);
+        match base.kind {
+            UnitKind::Dirctory => {
+                remove_dir_all(path).await?;
+            }
+            _ => {
+                remove_file(path).await?;
+            }
+        };
+    }
+
     Ok(())
 }

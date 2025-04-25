@@ -64,6 +64,7 @@ impl Server {
             .route("/to/mp4", post(mp4::mp4_remux))
             .route("/cp", post(paste::cp))
             .route("/mv", post(paste::mv))
+            .route("/rm", post(paste::rm))
             .route("/disks", get(info::get_disks))
             .with_state(Context { target_dir: target })
             .layer(TimeoutLayer::new(timeout));
