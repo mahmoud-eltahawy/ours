@@ -1,22 +1,35 @@
+use crate::files_box::origin_with;
 use crate::nav_bar::LoadableTool;
-use common::Store;
-use common::{GlobalState, GlobalStateStoreFields, SelectedState};
+use common::{GlobalState, GlobalStateStoreFields, SelectedState, MV_PATH};
+use common::{Store, CP_PATH};
 use leptos::{ev, prelude::*};
 use leptos_use::{use_event_listener, use_window};
 use std::path::PathBuf;
 
 async fn cp(targets: Vec<PathBuf>, to: PathBuf) -> Result<(), String> {
+    reqwest::Client::new()
+        .post(origin_with(CP_PATH))
+        .json(&(targets, to))
+        .send()
+        .await
+        .map_err(|x| x.to_string())?;
     Ok(())
 }
 
 async fn mv(targets: Vec<PathBuf>, to: PathBuf) -> Result<(), String> {
+    reqwest::Client::new()
+        .post(origin_with(MV_PATH))
+        .json(&(targets, to))
+        .send()
+        .await
+        .map_err(|x| x.to_string())?;
     Ok(())
 }
 
 #[component]
 pub fn Paste(current_path: RwSignal<PathBuf>) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
-    let copy = Action::new({
+    let copy = Action::new_local({
         move |_: &()| {
             cp(
                 store.select().read_untracked().as_paths(),
@@ -24,7 +37,7 @@ pub fn Paste(current_path: RwSignal<PathBuf>) -> impl IntoView {
             )
         }
     });
-    let cut = Action::new(move |_: &()| {
+    let cut = Action::new_local(move |_: &()| {
         mv(
             store.select().read_untracked().as_paths(),
             current_path.get_untracked(),
