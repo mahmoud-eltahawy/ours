@@ -3,6 +3,7 @@ use std::{net::SocketAddr, path::PathBuf, time::Duration};
 use app_error::{ServerError, ServerResult};
 use axum::{
     Router,
+    extract::DefaultBodyLimit,
     routing::{get, post},
 };
 use get_port::Ops;
@@ -62,12 +63,14 @@ impl Server {
             .nest_service("/", site_dir)
             .nest_service("/download", target_dir)
             .route("/to/mp4", post(mp4::mp4_remux))
+            .route("/upload", post(paste::upload))
             .route("/cp", post(paste::cp))
             .route("/mv", post(paste::mv))
             .route("/rm", post(paste::rm))
             .route("/disks", get(info::get_disks))
             .with_state(Context { target_dir: target })
-            .layer(TimeoutLayer::new(timeout));
+            .layer(TimeoutLayer::new(timeout))
+            .layer(DefaultBodyLimit::disable());
 
         let listener = tokio::net::TcpListener::bind(&addr).await?;
         axum::serve(listener, app).await?;

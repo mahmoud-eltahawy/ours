@@ -1,5 +1,6 @@
 use axum::{
     Json,
+    extract::multipart::MultipartError,
     response::{self, IntoResponse},
 };
 use serde::Serialize;
@@ -17,6 +18,7 @@ pub enum ServerError {
     Copy,
     NonePort,
     NonePathFilename,
+    MultiPart(String),
 }
 
 impl From<JoinError> for ServerError {
@@ -28,6 +30,12 @@ impl From<JoinError> for ServerError {
 impl From<io::Error> for ServerError {
     fn from(value: io::Error) -> Self {
         Self::Io(value.to_string())
+    }
+}
+
+impl From<MultipartError> for ServerError {
+    fn from(value: MultipartError) -> Self {
+        Self::MultiPart(value.to_string())
     }
 }
 

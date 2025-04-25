@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-axum= "0.8"
+axum= {version = "0.8",features = ["multipart"]} 
 tokio= {workspace = true, features = ["fs","process"]}
 serde_json.workspace = true
 common.workspace = true
