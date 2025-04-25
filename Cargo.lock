@@ -4473,6 +4473,7 @@ dependencies = [
  "get-port",
  "serde",
  "serde_json",
+ "sysinfo",
  "tokio",
  "tower",
  "tower-http",

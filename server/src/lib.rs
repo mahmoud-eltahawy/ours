@@ -1,11 +1,15 @@
 use std::{net::SocketAddr, path::PathBuf, time::Duration};
 
 use app_error::{ServerError, ServerResult};
-use axum::{Router, routing::post};
+use axum::{
+    Router,
+    routing::{get, post},
+};
 use get_port::Ops;
 use tower_http::{services::ServeDir, timeout::TimeoutLayer};
 
 pub mod app_error;
+mod info;
 mod mp4;
 mod paste;
 
@@ -60,6 +64,7 @@ impl Server {
             .route("/to/mp4", post(mp4::mp4_remux))
             .route("/cp", post(paste::cp))
             .route("/mv", post(paste::mv))
+            .route("/disks", get(info::get_disks))
             .with_state(Context { target_dir: target })
             .layer(TimeoutLayer::new(timeout));
 
