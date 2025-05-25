@@ -11,9 +11,11 @@ use leptos_use::{
     use_drop_zone_with_options, use_event_listener, use_window, UseDropZoneOptions,
     UseDropZoneReturn,
 };
+use media_player::MediaPlayer;
 use nav_bar::NavBar;
 
 mod files_box;
+mod media_player;
 mod nav_bar;
 
 #[component]
@@ -77,7 +79,7 @@ pub fn App() -> impl IntoView {
                     />
                 </Routes>
             </main>
-            // <MediaPlayer />
+            <MediaPlayer />
         </Router>
     }
 }

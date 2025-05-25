@@ -186,7 +186,7 @@ impl State {
         let h = 80.;
         let lt = if working { "stop" } else { "serve" };
         let lt = text(lt).align_x(Center).align_y(Center).size(25.);
-        let launch = button(lt)
+        button(lt)
             .height(h)
             .width(h * 1.6)
             .style(move |_, _| {
@@ -217,7 +217,6 @@ impl State {
             .on_press(match &self.working_process {
                 Some(jh) => Message::Stop(jh.clone()),
                 None => Message::Launch,
-            });
-        launch
+            })
     }
 }
