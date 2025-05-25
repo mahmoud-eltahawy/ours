@@ -2,7 +2,6 @@ use std::env::{args, home_dir};
 use std::fs::canonicalize;
 use std::net::IpAddr;
 use std::path::PathBuf;
-use std::sync::Arc;
 
 use get_port::Ops;
 use iced::border::Radius;
@@ -35,7 +34,7 @@ struct State {
     port: u16,
     target_path: Option<PathBuf>,
     url: Data,
-    working_process: Option<Arc<JoinHandle<()>>>,
+    working_process: Option<JoinHandle<()>>,
 }
 
 impl State {
@@ -57,7 +56,7 @@ impl State {
 #[derive(Debug, Clone)]
 enum Message {
     Launch,
-    Stop(Arc<JoinHandle<()>>),
+    Stop,
     PickTarget,
     TargetPicked(Option<PathBuf>),
 }
@@ -89,13 +88,17 @@ impl State {
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::Launch => {
-                let i = tokio::spawn(serve(self.target_path.clone().unwrap(), self.port));
-                self.working_process = Some(i.into());
+                self.working_process = Some(tokio::spawn(serve(
+                    self.target_path.clone().unwrap(),
+                    self.port,
+                )));
                 Task::none()
             }
-            Message::Stop(jh) => {
-                jh.abort();
-                self.working_process = None;
+            Message::Stop => {
+                if let Some(x) = &self.working_process {
+                    x.abort();
+                    self.working_process = None;
+                }
                 Task::none()
             }
             Message::PickTarget => Task::perform(which_target(), Message::TargetPicked),
@@ -215,7 +218,7 @@ impl State {
                 }
             })
             .on_press(match &self.working_process {
-                Some(jh) => Message::Stop(jh.clone()),
+                Some(_) => Message::Stop,
                 None => Message::Launch,
             })
     }
