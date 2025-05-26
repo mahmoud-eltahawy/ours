@@ -1,3 +1,4 @@
+use get_port::Ops;
 use iced::widget::qr_code::Data;
 use iced::{
     Background, Border, Center, Color, Shadow, Task, Vector,
@@ -17,23 +18,25 @@ pub enum ServeMessage {
     Launch,
     Stop,
     PickTarget,
-    TargetPicked(Option<PathBuf>),
+    TargetPicked(PathBuf),
 }
 
 pub struct ServeState {
     pub ip: IpAddr,
     pub port: u16,
-    pub target_path: Option<PathBuf>,
+    pub target_path: PathBuf,
     pub url: Data,
     pub working_process: Option<JoinHandle<()>>,
 }
 
 impl Default for ServeState {
     fn default() -> Self {
+        let ip = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
+        let port = get_port::tcp::TcpPort::any(&ip.to_string()).unwrap();
         Self {
-            ip: IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
-            port: 8080,
-            target_path: None,
+            ip,
+            port,
+            target_path: home_dir().unwrap_or_default(),
             url: Data::new([]).unwrap(),
             working_process: None,
         }
@@ -42,13 +45,11 @@ impl Default for ServeState {
 
 impl ServeState {
     pub fn new(ip: IpAddr, port: u16) -> Self {
-        let target_path = home_dir();
         Self {
             ip,
             port,
-            target_path: target_path.clone(),
             url: Data::new(format!("http://{ip}:{port}").into_bytes()).unwrap(),
-            working_process: None,
+            ..Default::default()
         }
     }
 
@@ -84,10 +85,8 @@ impl ServeMessage {
     pub fn handle(self, state: &mut ServeState) -> Task<Message> {
         match self {
             ServeMessage::Launch => {
-                state.working_process = Some(tokio::spawn(serve(
-                    state.target_path.clone().unwrap(),
-                    state.port,
-                )));
+                state.working_process =
+                    Some(tokio::spawn(serve(state.target_path.clone(), state.port)));
                 Task::none()
             }
             ServeMessage::Stop => {
@@ -98,12 +97,14 @@ impl ServeMessage {
                 Task::none()
             }
             ServeMessage::PickTarget => Task::perform(which_target(), |x| {
-                Message::Serve(ServeMessage::TargetPicked(x))
+                if let Some(x) = x {
+                    Message::Serve(ServeMessage::TargetPicked(x))
+                } else {
+                    Message::None
+                }
             }),
             ServeMessage::TargetPicked(path_buf) => {
-                if path_buf.is_some() {
-                    state.target_path = path_buf;
-                }
+                state.target_path = path_buf;
                 Task::none()
             }
         }
@@ -131,7 +132,8 @@ impl ServeState {
         let target = my_text(
             self.target_path
                 .clone()
-                .and_then(|x| x.to_str().map(|x| x.to_string()))
+                .to_str()
+                .map(|x| x.to_string())
                 .unwrap_or_default(),
         );
         let or = my_text(String::from("or"));

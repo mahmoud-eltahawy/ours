@@ -37,9 +37,10 @@ enum Message {
     Serve(ServeMessage),
     Client(ClientMessage),
     Mode(ModeMessage),
-    ToServe { ip: IpAddr, port: u16 },
+    ToServe,
     ToClient(ClientState),
     ToMode(ModeState),
+    None,
 }
 
 impl State {
@@ -51,12 +52,8 @@ impl State {
             (Message::Serve(message), State::Serve(ss)) => message.handle(ss),
             (Message::Client(message), State::Client(cs)) => message.handle(cs),
             (Message::Mode(message), State::Mode(sm)) => message.handle(sm),
-            (Message::ToServe { ip, port }, state) => {
-                *state = State::Serve(ServeState {
-                    ip,
-                    port,
-                    ..Default::default()
-                });
+            (Message::ToServe, state) => {
+                *state = State::Serve(ServeState::default());
                 Task::none()
             }
             (Message::ToClient(client), state) => {

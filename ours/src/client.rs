@@ -1,6 +1,6 @@
 use iced::{
     Task,
-    widget::{Container, Text, button::text},
+    widget::{Container, Text},
 };
 
 use crate::Message;

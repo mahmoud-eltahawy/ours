@@ -21,10 +21,7 @@ pub struct ModeState {}
 
 impl ModeState {
     pub fn view(&self) -> Container<'_, Message> {
-        let serve = Button::new("to serve").on_press(Message::ToServe {
-            ip: std::net::IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
-            port: 8080,
-        });
+        let serve = Button::new("to serve").on_press(Message::ToServe);
         let client = Button::new("to client").on_press(Message::ToClient(ClientState {}));
 
         let title = Text::new("mode");
