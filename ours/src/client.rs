@@ -1,4 +1,7 @@
-use iced::Task;
+use iced::{
+    Task,
+    widget::{Container, Text, button::text},
+};
 
 use crate::Message;
 
@@ -11,4 +14,11 @@ impl ClientMessage {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct ClientState {}
+
+impl ClientState {
+    pub fn view(&self) -> Container<'_, Message> {
+        Container::new(Text::new("client"))
+    }
+}

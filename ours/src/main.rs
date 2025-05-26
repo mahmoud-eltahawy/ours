@@ -20,9 +20,9 @@ pub fn main() -> iced::Result {
             text_color: Color::WHITE,
         })
         .run_with(|| {
-            let ip: IpAddr = local_ip().unwrap();
-            let port = get_port::tcp::TcpPort::any("127.0.0.1").unwrap();
-            (State::new(ip, port), Task::none())
+            // let ip: IpAddr = local_ip().unwrap();
+            // let port = get_port::tcp::TcpPort::any("127.0.0.1").unwrap();
+            (State::Mode(ModeState {}), Task::none())
         })
 }
 
@@ -37,6 +37,9 @@ enum Message {
     Serve(ServeMessage),
     Client(ClientMessage),
     Mode(ModeMessage),
+    ToServe { ip: IpAddr, port: u16 },
+    ToClient(ClientState),
+    ToMode(ModeState),
 }
 
 impl State {
@@ -48,15 +51,31 @@ impl State {
             (Message::Serve(message), State::Serve(ss)) => message.handle(ss),
             (Message::Client(message), State::Client(cs)) => message.handle(cs),
             (Message::Mode(message), State::Mode(sm)) => message.handle(sm),
+            (Message::ToServe { ip, port }, state) => {
+                *state = State::Serve(ServeState {
+                    ip,
+                    port,
+                    ..Default::default()
+                });
+                Task::none()
+            }
+            (Message::ToClient(client), state) => {
+                *state = State::Client(client);
+                Task::none()
+            }
+            (Message::ToMode(mode), state) => {
+                *state = State::Mode(mode);
+                Task::none()
+            }
             _ => unreachable!(),
         }
     }
 
     fn view(&self) -> Container<Message> {
         match self {
-            State::Serve(s) => s.serve_view(),
-            State::Client(s) => todo!(),
-            State::Mode(s) => todo!(),
+            State::Serve(s) => s.view(),
+            State::Client(s) => s.view(),
+            State::Mode(s) => s.view(),
         }
     }
 }

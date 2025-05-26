@@ -6,6 +6,7 @@ use iced::{
 };
 use rfd::AsyncFileDialog;
 use std::env::home_dir;
+use std::net::Ipv4Addr;
 use std::{env::args, fs::canonicalize, net::IpAddr, path::PathBuf};
 use tokio::task::JoinHandle;
 
@@ -20,11 +21,23 @@ pub enum ServeMessage {
 }
 
 pub struct ServeState {
-    ip: IpAddr,
-    port: u16,
-    target_path: Option<PathBuf>,
-    url: Data,
-    working_process: Option<JoinHandle<()>>,
+    pub ip: IpAddr,
+    pub port: u16,
+    pub target_path: Option<PathBuf>,
+    pub url: Data,
+    pub working_process: Option<JoinHandle<()>>,
+}
+
+impl Default for ServeState {
+    fn default() -> Self {
+        Self {
+            ip: IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
+            port: 8080,
+            target_path: None,
+            url: Data::new([]).unwrap(),
+            working_process: None,
+        }
+    }
 }
 
 impl ServeState {
@@ -98,7 +111,7 @@ impl ServeMessage {
 }
 
 impl ServeState {
-    pub fn serve_view(&self) -> Container<'_, Message> {
+    pub fn view(&self) -> Container<'_, Message> {
         let serve = self.serve_button();
         let tp = self.target_pick();
         let us = self.url_section();
@@ -106,8 +119,7 @@ impl ServeState {
             .spacing(30)
             .padding(20)
             .align_x(Center);
-        let result = Container::new(col);
-        result
+        Container::new(col)
     }
 
     fn is_working(&self) -> bool {
@@ -119,10 +131,8 @@ impl ServeState {
         let target = my_text(
             self.target_path
                 .clone()
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .to_string(),
+                .and_then(|x| x.to_str().map(|x| x.to_string()))
+                .unwrap_or_default(),
         );
         let or = my_text(String::from("or"));
         let pick = self.pick_button();
