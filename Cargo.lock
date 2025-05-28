@@ -348,13 +348,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
-name = "atoms"
-version = "0.1.0"
-dependencies = [
- "leptos",
-]
-
-[[package]]
 name = "attribute-derive"
 version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4990,7 +4983,6 @@ checksum = "56199f7ddabf13fe5074ce809e7d3f42b42ae711800501b5b16ea82ad029c39d"
 name = "site"
 version = "0.1.0"
 dependencies = [
- "atoms",
  "common",
  "console_error_panic_hook",
  "console_log",
