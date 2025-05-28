@@ -55,5 +55,5 @@ pub fn ToMp4() -> impl IntoView {
         }
     });
 
-    view! { <LoadableTool active name="mp4" onclick finished /> }
+    view! { <LoadableTool active icon=icondata::BsFiletypeMp4 onclick finished /> }
 }

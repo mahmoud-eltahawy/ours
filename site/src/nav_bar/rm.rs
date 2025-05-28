@@ -48,5 +48,5 @@ pub fn Remove() -> impl IntoView {
         }
     });
 
-    view! { <LoadableTool active name="delete" onclick finished /> }
+    view! { <LoadableTool active icon=icondata::AiDeleteFilled onclick finished /> }
 }

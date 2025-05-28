@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
 use crate::Icon;
-use atoms::ActiveIcon;
 use common::{GlobalState, GlobalStateStoreFields, SelectedState, Store};
 use info::Info;
 use leptos::{either::either, prelude::*};
@@ -17,8 +16,6 @@ mod mp4;
 mod paste;
 mod rm;
 pub mod upload;
-
-//TODO : add button to navbar to refresh mounted disks
 
 #[component]
 pub fn NavBar(
@@ -107,39 +104,23 @@ pub fn AdminRequired(
 }
 
 #[component]
-fn Tool<Name, Active, OnClick>(name: Name, active: Active, onclick: OnClick) -> impl IntoView
-where
-    Name: ToString + Send + Clone + 'static,
-    Active: Fn() -> bool + Send + Clone + Copy + 'static,
-    OnClick: Fn() + Send + 'static,
-{
-    let on_click = move |_| onclick();
-    view! {
-        <button on:click=on_click disabled=move || !active()>
-            <ActiveIcon name active />
-        </button>
-    }
-}
-
-#[component]
-fn LoadableTool<Name, Active, OnClick, Finished>(
-    name: Name,
+fn LoadableTool<Active, OnClick, Finished>(
+    icon: &'static icondata_core::IconData,
     active: Active,
     onclick: OnClick,
     finished: Finished,
 ) -> impl IntoView
 where
-    Name: ToString + Send + Sync + Clone + Copy + 'static,
     Active: Fn() -> bool + Send + Sync + Clone + Copy + 'static,
     OnClick: Fn() + Send + Sync + Clone + 'static,
-    Finished: Fn() -> bool + Send + Sync + 'static,
+    Finished: Fn() -> bool + Send + Sync + Clone + Copy + 'static,
 {
     view! {
         <Show
             when=finished
-            fallback=move || view! { <img class="m-1 p-1" src="load.gif" width=65 /> }
+            fallback=move || view! { <Tool icon=icondata::CgSearchLoading active=||true onclick=|| {} /> }
         >
-            <Tool name active onclick=onclick.clone() />
+            <Tool icon active onclick=onclick.clone() />
         </Show>
     }
 }
@@ -150,7 +131,29 @@ fn Home(current_path: RwSignal<PathBuf>) -> impl IntoView {
     let navigate = use_navigate();
     let active = move || current_path.read().file_name().is_some();
 
-    let icon = RwSignal::new(icondata::BiHomeSmileRegular.to_owned());
+    let onclick = move || {
+        if let SelectedState::None = store.select().get().state {
+            store.select().write().clear();
+        }
+        navigate("/", NavigateOptions::default())
+    };
+
+    view! {
+        <Tool icon=icondata::BiHomeSmileRegular active onclick/>
+    }
+}
+
+#[component]
+fn Tool<Active, OnClick>(
+    active: Active,
+    onclick: OnClick,
+    icon: &'static icondata_core::IconData,
+) -> impl IntoView
+where
+    Active: Fn() -> bool + Send + Clone + Copy + 'static,
+    OnClick: Fn() + Send + 'static,
+{
+    let icon = RwSignal::new(icon.to_owned());
     Effect::new(move || {
         if active() {
             icon.update(|x| x.fill = Some("green"));
@@ -159,15 +162,8 @@ fn Home(current_path: RwSignal<PathBuf>) -> impl IntoView {
         }
     });
 
-    let onclick = move |_| {
-        if let SelectedState::None = store.select().get().state {
-            store.select().write().clear();
-        }
-        navigate("/", NavigateOptions::default())
-    };
-
     view! {
-        <button on:click=onclick disabled=move || !active()>
+        <button on:click=move |_| onclick() disabled=move || !active()>
             <Icon icon/>
         </button>
     }
@@ -176,25 +172,14 @@ fn Home(current_path: RwSignal<PathBuf>) -> impl IntoView {
 #[component]
 fn Clear() -> impl IntoView {
     let store = use_context::<Store<GlobalState>>().unwrap();
-    let onclick = move |_| {
+    let onclick = move || {
         store.select().write().clear();
     };
 
     let active = move || !store.select().read().is_clear();
 
-    let icon = RwSignal::new(icondata::VsClearAll.to_owned());
-    Effect::new(move || {
-        if active() {
-            icon.update(|x| x.fill = Some("green"));
-        } else {
-            icon.update(|x| x.fill = Some("black"));
-        }
-    });
-
     view! {
-        <button on:click=onclick disabled=move || !active()>
-            <Icon icon/>
-        </button>
+        <Tool icon=icondata::VsClearAll active onclick/>
     }
 }
 
@@ -211,7 +196,7 @@ fn Download() -> impl IntoView {
         !select.is_clear() && !select.has_dirs()
     };
 
-    view! { <Tool name="download" active onclick /> }
+    view! { <Tool icon=icondata::BiCloudDownloadRegular active onclick /> }
 }
 
 #[component]
@@ -221,7 +206,7 @@ fn Admin() -> impl IntoView {
         *store.password().write() = true;
     };
 
-    view! { <Tool name="admin" active=|| true onclick /> }
+    view! { <Tool icon=icondata::RiAdminUserFacesFill active=|| true onclick /> }
 }
 
 #[component]
@@ -234,5 +219,5 @@ fn Mkdir() -> impl IntoView {
 
     let active = move || store.select().read().is_clear();
 
-    view! { <Tool name="mkdir" active onclick /> }
+    view! { <Tool icon=icondata::AiFolderAddFilled active onclick /> }
 }

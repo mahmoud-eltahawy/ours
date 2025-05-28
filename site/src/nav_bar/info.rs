@@ -21,7 +21,7 @@ pub fn Info() -> impl IntoView {
 
     let active = move || true;
     view! {
-       <Tool name="info" active onclick />
+       <Tool icon=icondata::AiInfoCircleFilled active onclick />
        <Show when=move || display.get()>
            <InfoCard display/>
        </Show>

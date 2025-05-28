@@ -79,14 +79,14 @@ pub fn Paste(current_path: RwSignal<PathBuf>) -> impl IntoView {
     view! {
         <Copy finished=copy_finished />
         <Cut finished=cut_finished />
-        <LoadableTool active name="paste" onclick finished />
+        <LoadableTool active icon=icondata::BiPasteRegular onclick finished />
     }
 }
 
 #[component]
 fn Copy<Finished>(finished: Finished) -> impl IntoView
 where
-    Finished: Fn() -> bool + Send + Sync + 'static,
+    Finished: Fn() -> bool + Send + Sync + 'static + Clone + Copy,
 {
     let store: Store<GlobalState> = use_context().unwrap();
 
@@ -107,13 +107,13 @@ where
         }
     });
 
-    view! { <LoadableTool active name="copy" onclick finished /> }
+    view! { <LoadableTool icon=icondata::AiCopyFilled active  onclick finished /> }
 }
 
 #[component]
 fn Cut<Finished>(finished: Finished) -> impl IntoView
 where
-    Finished: Fn() -> bool + Send + Sync + 'static,
+    Finished: Fn() -> bool + Send + Sync + 'static + Clone + Copy,
 {
     let store: Store<GlobalState> = use_context().unwrap();
 
@@ -136,5 +136,5 @@ where
         }
     });
 
-    view! { <LoadableTool active name="cut" onclick finished /> }
+    view! { <LoadableTool active icon=icondata::BiCutRegular onclick finished /> }
 }
