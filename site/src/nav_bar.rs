@@ -71,14 +71,14 @@ pub fn More(more: RwSignal<bool>) -> impl IntoView {
     let on_click = move |_| {
         more.update(|x| *x = !*x);
     };
-    let icon = move || {
-        let icon = if more.get() {
-            icondata::BiExpandRegular.to_owned()
+    let icon = RwSignal::new(icondata::BiExpandRegular.to_owned());
+    Effect::new(move || {
+        if more.get() {
+            icon.update(|x| x.fill = Some("green"));
         } else {
-            icondata::BiCollapseRegular.to_owned()
-        };
-        view! {<Icon icon/>}
-    };
+            icon.update(|x| x.fill = Some("black"));
+        }
+    });
     view! {
         <button
             class="flex bg-white m-1 p-1 rounded-lg place-content-center"
@@ -87,7 +87,7 @@ pub fn More(more: RwSignal<bool>) -> impl IntoView {
             class:right-0=more
             on:click=on_click
         >
-            {icon}
+            <Icon icon/>
         </button>
     }
 }
@@ -149,15 +149,15 @@ fn Home(current_path: RwSignal<PathBuf>) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let navigate = use_navigate();
     let active = move || current_path.read().file_name().is_some();
-    let icon = move || {
-        let icon = if active() {
-            icondata::BiHomeSmileRegular
+
+    let icon = RwSignal::new(icondata::BiHomeSmileRegular.to_owned());
+    Effect::new(move || {
+        if active() {
+            icon.update(|x| x.fill = Some("green"));
         } else {
-            icondata::BiHomeAltRegular
+            icon.update(|x| x.fill = Some("black"));
         }
-        .to_owned();
-        view! {<Icon icon/>}
-    };
+    });
 
     let onclick = move |_| {
         if let SelectedState::None = store.select().get().state {
@@ -168,7 +168,7 @@ fn Home(current_path: RwSignal<PathBuf>) -> impl IntoView {
 
     view! {
         <button on:click=onclick disabled=move || !active()>
-            {icon}
+            <Icon icon/>
         </button>
     }
 }
@@ -176,13 +176,26 @@ fn Home(current_path: RwSignal<PathBuf>) -> impl IntoView {
 #[component]
 fn Clear() -> impl IntoView {
     let store = use_context::<Store<GlobalState>>().unwrap();
-    let onclick = move || {
+    let onclick = move |_| {
         store.select().write().clear();
     };
 
     let active = move || !store.select().read().is_clear();
 
-    view! { <Tool name="clear" active onclick /> }
+    let icon = RwSignal::new(icondata::VsClearAll.to_owned());
+    Effect::new(move || {
+        if active() {
+            icon.update(|x| x.fill = Some("green"));
+        } else {
+            icon.update(|x| x.fill = Some("black"));
+        }
+    });
+
+    view! {
+        <button on:click=onclick disabled=move || !active()>
+            <Icon icon/>
+        </button>
+    }
 }
 
 #[component]
