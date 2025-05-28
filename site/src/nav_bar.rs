@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
-use atoms::{ActiveIcon, Icon};
+use crate::Icon;
+use atoms::ActiveIcon;
 use common::{GlobalState, GlobalStateStoreFields, SelectedState, Store};
 use info::Info;
 use leptos::{either::either, prelude::*};
@@ -64,10 +65,19 @@ pub fn NavBar(
         </nav>
     }
 }
+
 #[component]
 pub fn More(more: RwSignal<bool>) -> impl IntoView {
     let on_click = move |_| {
         more.update(|x| *x = !*x);
+    };
+    let icon = move || {
+        let icon = if more.get() {
+            icondata::BiExpandRegular.to_owned()
+        } else {
+            icondata::BiCollapseRegular.to_owned()
+        };
+        view! {<Icon icon/>}
     };
     view! {
         <button
@@ -77,7 +87,7 @@ pub fn More(more: RwSignal<bool>) -> impl IntoView {
             class:right-0=more
             on:click=on_click
         >
-            <Icon src="more" />
+            {icon}
         </button>
     }
 }

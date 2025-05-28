@@ -4,6 +4,7 @@ use common::{GlobalState, GlobalStateStoreFields, SelectedState, SortUnits};
 use common::{Retype, Unit};
 use files_box::{ls, FilesBox};
 use leptos::html::Ol;
+use leptos::svg;
 use leptos::{ev, prelude::*};
 use leptos_meta::*;
 use leptos_router::{components::*, StaticSegment};
@@ -82,4 +83,34 @@ pub fn App() -> impl IntoView {
             <MediaPlayer />
         </Router>
     }
+}
+
+/// The Icon component.
+#[component]
+pub fn Icon(
+    icon: icondata_core::IconData,
+    // #[prop(optional)] style: Option<&'static str>,
+    // #[prop(optional)] width: Option<&'static str>,
+    // #[prop(optional)] height: Option<&'static str>,
+) -> impl IntoView {
+    svg::svg()
+        // .style(match (style, icon.style) {
+        //     (Some(a), Some(b)) => Some(format!("{b} {a}")),
+        //     (Some(a), None) => Some(a.to_string()),
+        //     (None, Some(b)) => Some(b.to_string()),
+        //     _ => None,
+        // })
+        .style(icon.style)
+        .attr("x", icon.x)
+        .attr("y", icon.y)
+        .attr("width", "4em")
+        .attr("height", "4em")
+        .attr("viewBox", icon.view_box)
+        .attr("stroke-linecap", icon.stroke_linecap)
+        .attr("stroke-linejoin", icon.stroke_linejoin)
+        .attr("stroke-width", icon.stroke_width)
+        .attr("stroke", icon.stroke)
+        .attr("fill", icon.fill.unwrap_or("currentColor"))
+        .attr("role", "graphics-symbol")
+        .inner_html(icon.data)
 }
