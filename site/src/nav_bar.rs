@@ -149,15 +149,28 @@ fn Home(current_path: RwSignal<PathBuf>) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let navigate = use_navigate();
     let active = move || current_path.read().file_name().is_some();
+    let icon = move || {
+        let icon = if active() {
+            icondata::BiHomeSmileRegular
+        } else {
+            icondata::BiHomeAltRegular
+        }
+        .to_owned();
+        view! {<Icon icon/>}
+    };
 
-    let onclick = move || {
+    let onclick = move |_| {
         if let SelectedState::None = store.select().get().state {
             store.select().write().clear();
         }
         navigate("/", NavigateOptions::default())
     };
 
-    view! { <Tool name="home" active onclick /> }
+    view! {
+        <button on:click=onclick disabled=move || !active()>
+            {icon}
+        </button>
+    }
 }
 
 #[component]
