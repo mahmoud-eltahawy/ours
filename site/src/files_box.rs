@@ -3,8 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::Unit;
-use atoms::{BaseIcon, Icon, IconSize};
+use crate::{nav_bar::Tool, Icon, Unit};
 use common::{GlobalState, GlobalStateStoreFields, SelectedState, LS_PATH, MKDIR_PATH};
 use common::{Store, UnitKind};
 use leptos::{either::Either, ev, html::Ol, prelude::*};
@@ -136,7 +135,7 @@ fn Mkdir(current_path: RwSignal<PathBuf>) -> impl IntoView {
     view! {
         <Show when=when>
             <button>
-                <Icon src="directory" />
+                <Icon icon=RwSignal::new(icondata::AiFolderFilled.to_owned()) />
                 <input
                     class="p-2 border-2 border-black text-2xl"
                     on:keypress=enter
@@ -210,12 +209,12 @@ fn UnitComp(unit: Unit, is_over_drop_zone: Signal<bool>) -> impl IntoView {
             let select = store.select().read();
             let is_selected = select.is_selected(&unit);
             match &select.state {
-                SelectedState::Cut if is_selected => {
-                    Either::Right(Either::Left(view! { <Icon src="cut" /> }))
-                }
-                SelectedState::Copy if is_selected => {
-                    Either::Right(Either::Right(view! { <Icon src="copy" /> }))
-                }
+                SelectedState::Cut if is_selected => Either::Right(Either::Left(
+                    view! { <Icon icon=RwSignal::new(icondata::BiCutRegular.to_owned())  /> },
+                )),
+                SelectedState::Copy if is_selected => Either::Right(Either::Right(
+                    view! { <Icon  icon=RwSignal::new(icondata::BiCopyRegular.to_owned())/> },
+                )),
                 _ => Either::Left(view! { <UnitIcon unit=unit.clone() is_over_drop_zone /> }),
             }
         }
@@ -252,22 +251,35 @@ fn UnitIcon(unit: Unit, is_over_drop_zone: Signal<bool>) -> impl IntoView {
         ></a>
     });
 
-    let size = move || {
-        if is_over_drop_zone.get() {
-            IconSize::Small
-        } else {
-            IconSize::default()
-        }
+    let icon_kind = match unit.kind {
+        UnitKind::Dirctory => icondata::AiFolderFilled,
+        UnitKind::Video => icondata::BiVideoRegular,
+        UnitKind::Audio => icondata::AiAudioFilled,
+        UnitKind::File => icondata::AiFileFilled,
     };
+
+    let icon = RwSignal::new(icon_kind.to_owned());
+
+    Effect::new(move || {
+        if is_over_drop_zone.get() {
+            icon.write().width = Some("2em");
+            icon.write().height = Some("2em");
+        } else {
+            icon.write().width = Some("4em");
+            icon.write().height = Some("4em");
+        }
+    });
+
     view! {
-        <BaseIcon
-            src={
-                let kind = unit.kind.clone();
-                move || kind.to_string()
-            }
-            active=move || !store.select().read().is_selected(&unit)
-            size
-        />
+        <Tool icon=icon active=move || !store.select().read().is_selected(&unit) onclick=|| {}/>
+        // <BaseIcon
+        //     src={
+        //         let kind = unit.kind.clone();
+        //         move || kind.to_string()
+        //     }
+        //     active=
+        //     size
+        // />
         {download_link}
     }
 }

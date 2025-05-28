@@ -66,7 +66,7 @@ pub fn Upload(
     let active = move || store.select().read().is_clear();
     let finished = move || !upload_action.pending().get();
     view! {
-        <LoadableTool icon=icondata::BiUploadRegular active onclick finished />
+        <LoadableTool icon=RwSignal::new(icondata::BiUploadRegular.to_owned()) active onclick finished />
         <input node_ref=input_ref on:change=on_change type="file" multiple hidden />
     }
 }

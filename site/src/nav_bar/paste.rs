@@ -79,7 +79,7 @@ pub fn Paste(current_path: RwSignal<PathBuf>) -> impl IntoView {
     view! {
         <Copy finished=copy_finished />
         <Cut finished=cut_finished />
-        <LoadableTool active icon=icondata::BiPasteRegular onclick finished />
+        <LoadableTool active icon=RwSignal::new(icondata::BiPasteRegular.to_owned()) onclick finished />
     }
 }
 
@@ -107,7 +107,7 @@ where
         }
     });
 
-    view! { <LoadableTool icon=icondata::AiCopyFilled active  onclick finished /> }
+    view! { <LoadableTool icon=RwSignal::new(icondata::AiCopyFilled.to_owned()) active  onclick finished /> }
 }
 
 #[component]
@@ -136,5 +136,5 @@ where
         }
     });
 
-    view! { <LoadableTool active icon=icondata::BiCutRegular onclick finished /> }
+    view! { <LoadableTool active icon=RwSignal::new(icondata::BiCutRegular.to_owned()) onclick finished /> }
 }

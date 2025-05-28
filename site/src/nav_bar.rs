@@ -105,7 +105,7 @@ pub fn AdminRequired(
 
 #[component]
 fn LoadableTool<Active, OnClick, Finished>(
-    icon: &'static icondata_core::IconData,
+    icon: RwSignal<icondata_core::IconData>,
     active: Active,
     onclick: OnClick,
     finished: Finished,
@@ -118,7 +118,7 @@ where
     view! {
         <Show
             when=finished
-            fallback=move || view! { <Tool icon=icondata::CgSearchLoading active=||true onclick=|| {} /> }
+            fallback=move || view! { <Tool icon=RwSignal::new(icondata::CgSearchLoading.to_owned()) active=||true onclick=|| {} /> }
         >
             <Tool icon active onclick=onclick.clone() />
         </Show>
@@ -139,26 +139,28 @@ fn Home(current_path: RwSignal<PathBuf>) -> impl IntoView {
     };
 
     view! {
-        <Tool icon=icondata::BiHomeSmileRegular active onclick/>
+        <Tool icon=RwSignal::new(icondata::BiHomeSmileRegular.to_owned()) active onclick/>
     }
 }
 
 #[component]
-fn Tool<Active, OnClick>(
+pub fn Tool<Active, OnClick>(
     active: Active,
     onclick: OnClick,
-    icon: &'static icondata_core::IconData,
+    icon: RwSignal<icondata_core::IconData>,
 ) -> impl IntoView
 where
-    Active: Fn() -> bool + Send + Clone + Copy + 'static,
+    Active: Fn() -> bool + Send + Clone + 'static,
     OnClick: Fn() + Send + 'static,
 {
-    let icon = RwSignal::new(icon.to_owned());
-    Effect::new(move || {
-        if active() {
-            icon.update(|x| x.fill = Some("green"));
-        } else {
-            icon.update(|x| x.fill = Some("black"));
+    Effect::new({
+        let active = active.clone();
+        move || {
+            if active() {
+                icon.update(|x| x.fill = Some("green"));
+            } else {
+                icon.update(|x| x.fill = Some("black"));
+            }
         }
     });
 
@@ -179,7 +181,7 @@ fn Clear() -> impl IntoView {
     let active = move || !store.select().read().is_clear();
 
     view! {
-        <Tool icon=icondata::VsClearAll active onclick/>
+        <Tool icon=RwSignal::new(icondata::VsClearAll.to_owned()) active onclick/>
     }
 }
 
@@ -196,7 +198,7 @@ fn Download() -> impl IntoView {
         !select.is_clear() && !select.has_dirs()
     };
 
-    view! { <Tool icon=icondata::BiCloudDownloadRegular active onclick /> }
+    view! { <Tool icon=RwSignal::new(icondata::BiCloudDownloadRegular.to_owned()) active onclick /> }
 }
 
 #[component]
@@ -206,7 +208,7 @@ fn Admin() -> impl IntoView {
         *store.password().write() = true;
     };
 
-    view! { <Tool icon=icondata::RiAdminUserFacesFill active=|| true onclick /> }
+    view! { <Tool icon=RwSignal::new(icondata::RiAdminUserFacesFill.to_owned()) active=|| true onclick /> }
 }
 
 #[component]
@@ -219,5 +221,5 @@ fn Mkdir() -> impl IntoView {
 
     let active = move || store.select().read().is_clear();
 
-    view! { <Tool icon=icondata::AiFolderAddFilled active onclick /> }
+    view! { <Tool icon=RwSignal::new(icondata::AiFolderAddFilled.to_owned()) active onclick /> }
 }
