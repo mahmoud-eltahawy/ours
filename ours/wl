@@ -1,28 +1,17 @@
 #!/usr/bin/env nu
 
 def "main dev" [] {
-  rm ../target/app/ -rf
   cd ../site
   trunk build
   cd ../ours
-  cargo build
-  cd ../target
-  mkdir app
-  cd app
-  cp ../debug/ours ./
-  ./ours
+  cargo run
 }
 
 def "main release" [] {
-  rm ../target/app/ -rf
   cd ../site
   trunk build --release
   cd ../ours
   cargo build --release
-  cd ../target
-  mkdir app
-  cd app
-  cp ../release/ours ./
 }
 
 def main [] {}
