@@ -4,7 +4,7 @@ members = [
     "partitions",
     "server",
     "site",
-    "ours",
+    "ours", "assets",
 ]
 resolver = "2"
 

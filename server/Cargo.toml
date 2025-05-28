@@ -13,3 +13,5 @@ tower-http = { version = "0.6", features = ["fs","timeout","cors"] }
 tower = "0.5"
 get-port = "4.0.0"
 sysinfo  = "0.33.1"
+assets = { path = "../assets"}
+axum-extra = "0.10.1"

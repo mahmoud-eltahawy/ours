@@ -4,8 +4,10 @@ use app_error::{ServerError, ServerResult};
 use axum::{
     Router,
     extract::DefaultBodyLimit,
+    response::Html,
     routing::{get, post},
 };
+use axum_extra::response::{JavaScript, Wasm};
 use common::{CP_PATH, DISKS_PATH, LS_PATH, MKDIR_PATH, MP4_PATH, MV_PATH, RM_PATH, UPLOAD_PATH};
 use get_port::Ops;
 use tower_http::{cors::CorsLayer, services::ServeDir, timeout::TimeoutLayer};
@@ -58,10 +60,13 @@ impl Server {
         };
         let addr = SocketAddr::from(([0, 0, 0, 0], port));
 
-        let site_dir = ServeDir::new(&site);
         let target_dir = ServeDir::new(&target);
 
         let app = Router::new()
+            .route("/", get(index))
+            .route("/site.js", get(js))
+            .route("/site_bg.wasm", get(wasm))
+            .route("/favicon.ico", get(favicon))
             .route(MP4_PATH, post(mp4::mp4_remux))
             .route(UPLOAD_PATH, post(cd::upload))
             .route(CP_PATH, post(cd::cp))
@@ -71,7 +76,6 @@ impl Server {
             .route(MKDIR_PATH, post(cd::mkdir))
             .route(DISKS_PATH, get(info::get_disks))
             .nest_service("/download", target_dir)
-            .fallback_service(site_dir)
             .with_state(Context { target_dir: target })
             .layer(TimeoutLayer::new(timeout))
             .layer(CorsLayer::permissive())
@@ -81,4 +85,20 @@ impl Server {
         axum::serve(listener, app).await?;
         Ok(())
     }
+}
+
+async fn index() -> Html<Vec<u8>> {
+    Html(assets::INDEX.into())
+}
+
+async fn js() -> JavaScript<Vec<u8>> {
+    JavaScript(assets::JS.into())
+}
+
+async fn wasm() -> Wasm<Vec<u8>> {
+    Wasm(assets::WASM.into())
+}
+
+async fn favicon() -> Vec<u8> {
+    assets::FAVICON.into()
 }
