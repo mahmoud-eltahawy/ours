@@ -4,16 +4,14 @@ use app_error::{ServerError, ServerResult};
 use axum::{
     Router,
     extract::DefaultBodyLimit,
-    http::HeaderMap,
-    response::Html,
     routing::{get, post},
 };
-use axum_extra::response::{JavaScript, Wasm};
 use common::{CP_PATH, DISKS_PATH, LS_PATH, MKDIR_PATH, MP4_PATH, MV_PATH, RM_PATH, UPLOAD_PATH};
 use get_port::Ops;
 use tower_http::{cors::CorsLayer, services::ServeDir, timeout::TimeoutLayer};
 
 pub mod app_error;
+mod assets_router;
 mod cd;
 mod info;
 mod mp4;
@@ -61,10 +59,6 @@ impl Server {
         let target_dir = ServeDir::new(&target);
 
         let app = Router::new()
-            .route("/", get(index))
-            .route("/site.js", get(js))
-            .route("/site_bg.wasm", get(wasm))
-            .route("/favicon.ico", get(favicon))
             .route(MP4_PATH, post(mp4::mp4_remux))
             .route(UPLOAD_PATH, post(cd::upload))
             .route(CP_PATH, post(cd::cp))
@@ -79,30 +73,10 @@ impl Server {
             .layer(CorsLayer::permissive())
             .layer(DefaultBodyLimit::disable());
 
+        let app = app.merge(assets_router::assets_router());
+
         let listener = tokio::net::TcpListener::bind(&addr).await?;
         axum::serve(listener, app).await?;
         Ok(())
     }
-}
-
-fn gzip_headers() -> HeaderMap {
-    let mut headers = HeaderMap::new();
-    headers.insert("content-encoding", "gzip".parse().unwrap());
-    headers
-}
-
-async fn index() -> (HeaderMap, Html<Vec<u8>>) {
-    (gzip_headers(), Html(assets::INDEX.into()))
-}
-
-async fn js() -> (HeaderMap, JavaScript<Vec<u8>>) {
-    (gzip_headers(), JavaScript(assets::JS.into()))
-}
-
-async fn wasm() -> (HeaderMap, Wasm<Vec<u8>>) {
-    (gzip_headers(), Wasm(assets::WASM.into()))
-}
-
-async fn favicon() -> (HeaderMap, Vec<u8>) {
-    (gzip_headers(), assets::FAVICON.into())
 }
