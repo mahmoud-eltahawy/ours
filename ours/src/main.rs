@@ -43,7 +43,7 @@ enum Message {
 
 impl State {
     fn new(ip: IpAddr, port: u16) -> Self {
-        Self::Serve(ServeState::new(ip, port))
+        Self::Serve(ServeState::default().with(ip, port))
     }
     fn update(&mut self, message: Message) -> Task<Message> {
         match (message, self) {

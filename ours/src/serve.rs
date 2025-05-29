@@ -62,12 +62,12 @@ impl Default for ServeState {
 }
 
 impl ServeState {
-    pub fn new(ip: IpAddr, port: u16) -> Self {
+    pub fn with(self, ip: IpAddr, port: u16) -> Self {
         let origin = Origin { ip, port };
         Self {
             url: origin.qr_data(),
             origin,
-            ..Default::default()
+            ..self
         }
     }
 }
