@@ -5,10 +5,11 @@ use iced::{
     border::Radius,
     widget::{Button, Column, Container, Row, button::Style, column, qr_code, row, text},
 };
+use local_ip_address::linux::local_ip;
 use rfd::AsyncFileDialog;
 use std::env::home_dir;
-use std::net::Ipv4Addr;
-use std::{env::args, fs::canonicalize, net::IpAddr, path::PathBuf};
+use std::fmt::Display;
+use std::{net::IpAddr, path::PathBuf};
 use tokio::task::JoinHandle;
 
 use crate::Message;
@@ -22,22 +23,39 @@ pub enum ServeMessage {
 }
 
 pub struct ServeState {
-    pub ip: IpAddr,
-    pub port: u16,
+    pub origin: Origin,
     pub target_path: PathBuf,
     pub url: Data,
     pub working_process: Option<JoinHandle<()>>,
 }
 
+pub struct Origin {
+    pub ip: IpAddr,
+    pub port: u16,
+}
+
+impl Display for Origin {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self { ip, port } = self;
+        write!(f, "http://{ip}:{port}")
+    }
+}
+
+impl Origin {
+    fn qr_data(&self) -> Data {
+        Data::new(self.to_string().into_bytes()).unwrap()
+    }
+}
+
 impl Default for ServeState {
     fn default() -> Self {
-        let ip = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
+        let ip = local_ip().unwrap();
         let port = get_port::tcp::TcpPort::any(&ip.to_string()).unwrap();
+        let origin = Origin { ip, port };
         Self {
-            ip,
-            port,
             target_path: home_dir().unwrap_or_default(),
-            url: Data::new([]).unwrap(),
+            url: origin.qr_data(),
+            origin,
             working_process: None,
         }
     }
@@ -45,33 +63,17 @@ impl Default for ServeState {
 
 impl ServeState {
     pub fn new(ip: IpAddr, port: u16) -> Self {
+        let origin = Origin { ip, port };
         Self {
-            ip,
-            port,
-            url: Data::new(format!("http://{ip}:{port}").into_bytes()).unwrap(),
+            url: origin.qr_data(),
+            origin,
             ..Default::default()
         }
-    }
-
-    pub fn url(&self) -> String {
-        format!("http://{}:{}", self.ip, self.port)
     }
 }
 
 pub async fn serve(root: PathBuf, port: u16) {
-    let mut site = args()
-        .next()
-        .and_then(|x| x.parse::<PathBuf>().ok())
-        .and_then(|x| canonicalize(x).ok())
-        .unwrap();
-    site.pop();
-    site.push("site");
-
-    server::Server::new(site, root)
-        .port(port)
-        .serve()
-        .await
-        .unwrap();
+    server::Server::new(root).port(port).serve().await.unwrap();
 }
 
 pub async fn which_target() -> Option<PathBuf> {
@@ -85,8 +87,10 @@ impl ServeMessage {
     pub fn handle(self, state: &mut ServeState) -> Task<Message> {
         match self {
             ServeMessage::Launch => {
-                state.working_process =
-                    Some(tokio::spawn(serve(state.target_path.clone(), state.port)));
+                state.working_process = Some(tokio::spawn(serve(
+                    state.target_path.clone(),
+                    state.origin.port,
+                )));
                 Task::none()
             }
             ServeMessage::Stop => {
@@ -144,7 +148,7 @@ impl ServeState {
     fn url_section(&self) -> Column<Message> {
         let my_text = |x: String| text(x).size(60).align_x(Center).center();
         let at = my_text(String::from("at"));
-        let url = my_text(self.url());
+        let url = my_text(self.origin.to_string());
         let qr = qr_code(&self.url).cell_size(13);
         column![at, url, qr]
     }

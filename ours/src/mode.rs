@@ -1,5 +1,3 @@
-use std::net::Ipv4Addr;
-
 use iced::{
     Task,
     widget::{Button, Container, Text, column},

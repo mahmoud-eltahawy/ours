@@ -1,11 +1,9 @@
 use std::net::IpAddr;
 
 use client::{ClientMessage, ClientState};
-use get_port::Ops;
 use iced::daemon::Appearance;
 use iced::widget::Container;
 use iced::{Color, Task};
-use local_ip_address::local_ip;
 use mode::{ModeMessage, ModeState};
 use serve::{ServeMessage, ServeState};
 

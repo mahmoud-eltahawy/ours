@@ -23,17 +23,15 @@ struct Context {
 }
 
 pub struct Server {
-    site: PathBuf,
     target: PathBuf,
     port: Option<u16>,
     timeout: Duration,
 }
 
 impl Server {
-    pub fn new(site: PathBuf, target: PathBuf) -> Self {
+    pub fn new(target: PathBuf) -> Self {
         let port = get_port::tcp::TcpPort::any("0.0.0.0");
         Self {
-            site,
             target,
             port,
             timeout: Duration::from_secs(60 * 60),
@@ -50,7 +48,6 @@ impl Server {
     }
     pub async fn serve(self) -> ServerResult<()> {
         let Self {
-            site,
             target,
             port,
             timeout,

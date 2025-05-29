@@ -7,7 +7,7 @@ use leptos::{html, prelude::*};
 use send_wrapper::SendWrapper;
 use web_sys::{Blob, Event, FormData, HtmlInputElement};
 
-async fn upload(form_data: FormData) -> Result<(), String> {
+async fn upload(_form_data: FormData) -> Result<(), String> {
     Ok(())
 }
 
