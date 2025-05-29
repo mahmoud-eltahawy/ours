@@ -3,15 +3,21 @@
 def "main dev" [] {
   cd ../site
   trunk build
-  cd ../ours
+  cd ..
+  ls assets/temp | get name | par-each {|x| gzip $x}  
+  cd ours
   cargo run
+  # rm ../assets/temp -rf
 }
 
 def "main release" [] {
   cd ../site
   trunk build --release
-  cd ../ours
+  cd ..
+  ls assets/temp | get name | par-each {|x| gzip $x}  
+  cd ours
   cargo build --release
+  # rm ../assets/temp -rf
 }
 
 def main [] {}

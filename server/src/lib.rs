@@ -4,6 +4,7 @@ use app_error::{ServerError, ServerResult};
 use axum::{
     Router,
     extract::DefaultBodyLimit,
+    http::HeaderMap,
     response::Html,
     routing::{get, post},
 };
@@ -84,18 +85,24 @@ impl Server {
     }
 }
 
-async fn index() -> Html<Vec<u8>> {
-    Html(assets::INDEX.into())
+fn gzip_headers() -> HeaderMap {
+    let mut headers = HeaderMap::new();
+    headers.insert("content-encoding", "gzip".parse().unwrap());
+    headers
 }
 
-async fn js() -> JavaScript<Vec<u8>> {
-    JavaScript(assets::JS.into())
+async fn index() -> (HeaderMap, Html<Vec<u8>>) {
+    (gzip_headers(), Html(assets::INDEX.into()))
 }
 
-async fn wasm() -> Wasm<Vec<u8>> {
-    Wasm(assets::WASM.into())
+async fn js() -> (HeaderMap, JavaScript<Vec<u8>>) {
+    (gzip_headers(), JavaScript(assets::JS.into()))
 }
 
-async fn favicon() -> Vec<u8> {
-    assets::FAVICON.into()
+async fn wasm() -> (HeaderMap, Wasm<Vec<u8>>) {
+    (gzip_headers(), Wasm(assets::WASM.into()))
+}
+
+async fn favicon() -> (HeaderMap, Vec<u8>) {
+    (gzip_headers(), assets::FAVICON.into())
 }
