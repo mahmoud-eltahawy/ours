@@ -3,11 +3,18 @@ use crate::{
     Context,
     app_error::{ServerError, ServerResult},
 };
+use axum::extract::ws::{Message, WebSocket};
+use axum::extract::{ConnectInfo, WebSocketUpgrade};
+use axum::response::Response;
 use axum::{
     Json,
     extract::{Multipart, State},
 };
 use common::{Unit, UnitKind, VIDEO_X};
+use std::ffi::OsStr;
+use std::io;
+use std::net::SocketAddr;
+use std::os::unix::ffi::OsStrExt;
 use std::{
     path::{Path, PathBuf},
     str::FromStr,
@@ -17,6 +24,8 @@ use tokio::{
     fs::File,
     io::{AsyncWriteExt, BufWriter},
 };
+
+use futures_util::{sink::SinkExt, stream::StreamExt};
 
 pub async fn cp(
     State(Context { target_dir }): State<Context>,
@@ -123,6 +132,68 @@ pub async fn upload(
     Ok(())
 }
 
+pub async fn ws_ls(
+    ws: WebSocketUpgrade,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    State(Context { target_dir }): State<Context>,
+) -> Response {
+    println!("connected to addr : {addr:#?}");
+    ws.on_upgrade(|socket| ws_ls_handler(socket, target_dir))
+}
+
+async fn ws_ls_handler(socket: WebSocket, target_dir: PathBuf) {
+    let (mut sender, mut receiver) = socket.split();
+
+    loop {
+        if let Some(msg) = receiver.next().await.and_then(|x| x.ok()) {
+            match msg {
+                Message::Binary(bytes) => {
+                    let b = OsStr::from_bytes(&bytes);
+                    let base = Path::new(&b);
+                    match get_dir_units(&target_dir, base).await {
+                        Ok(units) => {
+                            let _ = sender
+                                .send(Message::Binary(serde_json::json!(units).to_string().into()))
+                                .await;
+                        }
+                        Err(err) => {
+                            println!("can not get units : {err:#?}");
+                        }
+                    };
+                }
+                Message::Close(_) => {
+                    if let Err(e) = sender.send(Message::Close(None)).await {
+                        println!("Error while closing connection : {e:#?}")
+                    };
+                    break;
+                }
+                _ => (),
+            }
+        };
+    }
+}
+
+async fn get_dir_units(target_dir: &PathBuf, base: &Path) -> io::Result<Vec<Unit>> {
+    let root = target_dir.join(base);
+    let mut units = Vec::new();
+    let mut dir = fs::read_dir(&root).await?;
+    while let Some(x) = dir.next_entry().await? {
+        let kind = if x.file_type().await?.is_dir() {
+            UnitKind::Dirctory
+        } else {
+            UnitKind::File
+        };
+        let path = match x.path().strip_prefix(target_dir) {
+            Ok(p) => p.to_path_buf(),
+            Err(err) => {
+                println!("can not strip prefix ({target_dir:#?}) because of : {err:#?}");
+                continue;
+            }
+        };
+        units.push(Unit { path, kind });
+    }
+    Ok(units)
+}
 pub async fn ls(
     State(Context { target_dir }): State<Context>,
     Json(base): Json<PathBuf>,

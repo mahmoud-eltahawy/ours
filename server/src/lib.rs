@@ -4,8 +4,9 @@ use app_error::{ServerError, ServerResult};
 use axum::{
     Router,
     extract::DefaultBodyLimit,
-    routing::{get, post},
+    routing::{any, get, post},
 };
+use cd::ws_ls;
 use common::{CP_PATH, DISKS_PATH, LS_PATH, MKDIR_PATH, MP4_PATH, MV_PATH, RM_PATH, UPLOAD_PATH};
 use get_port::Ops;
 use tower_http::{cors::CorsLayer, services::ServeDir, timeout::TimeoutLayer};
@@ -65,6 +66,7 @@ impl Server {
             .route(MV_PATH, post(cd::mv))
             .route(RM_PATH, post(cd::rm))
             .route(LS_PATH, post(cd::ls))
+            .route("/wls", any(ws_ls))
             .route(MKDIR_PATH, post(cd::mkdir))
             .route(DISKS_PATH, get(info::get_disks))
             .nest_service("/download", target_dir)
@@ -76,7 +78,11 @@ impl Server {
         let app = app.merge(assets_router::assets_router());
 
         let listener = tokio::net::TcpListener::bind(&addr).await?;
-        axum::serve(listener, app).await?;
+        axum::serve(
+            listener,
+            app.into_make_service_with_connect_info::<SocketAddr>(),
+        )
+        .await?;
         Ok(())
     }
 }
