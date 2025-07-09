@@ -808,6 +808,7 @@ version = "0.1.0"
 dependencies = [
  "leptos",
  "reactive_stores",
+ "reqwest",
  "serde",
  "web-sys",
 ]
@@ -4029,6 +4030,7 @@ dependencies = [
 name = "ours"
 version = "0.1.0"
 dependencies = [
+ "common",
  "get-port",
  "iced",
  "local-ip-address",

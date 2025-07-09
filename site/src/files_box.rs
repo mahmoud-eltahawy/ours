@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{nav_bar::Tool, Icon, Unit};
-use common::{GlobalState, GlobalStateStoreFields, SelectedState, LS_PATH, MKDIR_PATH};
+use common::{GlobalState, GlobalStateStoreFields, SelectedState, MKDIR_PATH};
 use common::{Store, UnitKind};
 use leptos::{either::Either, ev, html::Ol, prelude::*};
 use leptos_router::hooks::{use_navigate, use_query_map};
@@ -19,18 +19,15 @@ pub fn origin_with(rel: &str) -> String {
         .unwrap()
 }
 
+pub fn origin() -> String {
+    window().location().origin().unwrap()
+}
+
 pub async fn ls(base: PathBuf) -> Result<Vec<Unit>, String> {
-    let url = origin_with(LS_PATH);
-    let res = reqwest::Client::new()
-        .post(url)
-        .json(&base)
-        .send()
-        .await
-        .map_err(|x| x.to_string())?
-        .json::<Vec<Unit>>()
+    let units = common::ls(&origin(), base)
         .await
         .map_err(|x| x.to_string())?;
-    Ok(res)
+    Ok(units)
 }
 
 #[component]

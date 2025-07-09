@@ -13,6 +13,18 @@ pub const MV_PATH: &str = "/mv";
 pub const RM_PATH: &str = "/rm";
 pub const DISKS_PATH: &str = "/disks";
 
+pub async fn ls(origin: &str, base: PathBuf) -> Result<Vec<Unit>, reqwest::Error> {
+    let url = format!("{origin}{LS_PATH}");
+    let res = reqwest::Client::new()
+        .post(url)
+        .json(&base)
+        .send()
+        .await?
+        .json::<Vec<Unit>>()
+        .await?;
+    Ok(res)
+}
+
 #[derive(Default, Clone, Debug)]
 pub enum SelectedState {
     Copy,
@@ -37,7 +49,7 @@ impl Display for UnitKind {
             UnitKind::Video => "video",
             UnitKind::Audio => "audio",
         };
-        write!(f, "{}", result)
+        write!(f, "{result}")
     }
 }
 
@@ -46,6 +58,7 @@ pub struct Unit {
     pub path: PathBuf,
     pub kind: UnitKind,
 }
+
 impl Unit {
     pub fn name(&self) -> String {
         self.path.file_name().unwrap().to_str().unwrap().to_string()
