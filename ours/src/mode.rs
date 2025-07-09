@@ -3,7 +3,7 @@ use iced::{
     widget::{Button, Container, Text, column},
 };
 
-use crate::{Message, client::ClientState};
+use crate::{Message, client::ClientState, serve::Origin};
 
 #[derive(Debug, Clone)]
 pub enum ModeMessage {}
@@ -15,12 +15,14 @@ impl ModeMessage {
 }
 
 #[derive(Debug, Clone)]
-pub struct ModeState {}
+pub struct ModeState {
+    pub origin: Origin,
+}
 
 impl ModeState {
     pub fn view(&self) -> Container<'_, Message> {
         let serve = Button::new("to serve").on_press(Message::ToServe);
-        let client = Button::new("to client").on_press(Message::ToClient(ClientState {}));
+        let client = Button::new("to client").on_press(Message::PrepareClient);
 
         let title = Text::new("mode");
         let content = column![title, serve, client];

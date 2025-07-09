@@ -24,7 +24,7 @@ pub fn origin() -> String {
 }
 
 pub async fn ls(base: PathBuf) -> Result<Vec<Unit>, String> {
-    let units = common::ls(&origin(), base)
+    let units = common::ls(origin(), base)
         .await
         .map_err(|x| x.to_string())?;
     Ok(units)

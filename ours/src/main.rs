@@ -1,11 +1,13 @@
 use std::net::IpAddr;
+use std::path::PathBuf;
 
 use client::{ClientMessage, ClientState};
+use common::{LS_PATH, ls};
 use iced::daemon::Appearance;
 use iced::widget::Container;
 use iced::{Color, Task};
 use mode::{ModeMessage, ModeState};
-use serve::{ServeMessage, ServeState};
+use serve::{Origin, ServeMessage, ServeState};
 
 mod client;
 mod mode;
@@ -20,7 +22,12 @@ pub fn main() -> iced::Result {
         .run_with(|| {
             // let ip: IpAddr = local_ip().unwrap();
             // let port = get_port::tcp::TcpPort::any("127.0.0.1").unwrap();
-            (State::Mode(ModeState {}), Task::none())
+            (
+                State::Mode(ModeState {
+                    origin: Origin::new(),
+                }),
+                Task::none(),
+            )
         })
 }
 
@@ -36,6 +43,7 @@ enum Message {
     Client(ClientMessage),
     Mode(ModeMessage),
     ToServe,
+    PrepareClient,
     ToClient(ClientState),
     ToMode(ModeState),
     None,
@@ -54,12 +62,27 @@ impl State {
                 *state = State::Serve(ServeState::default());
                 Task::none()
             }
-            (Message::ToClient(client), state) => {
-                *state = State::Client(client);
-                Task::none()
+            (Message::PrepareClient, state) => {
+                let origin = match state {
+                    State::Serve(s) => s.origin.clone(),
+                    State::Client(s) => s.origin.clone(),
+                    State::Mode(s) => s.origin.clone(),
+                };
+                Task::perform(ls(origin.to_string(), PathBuf::new()), move |x| {
+                    let units = x.unwrap_or_default();
+                    let cs = ClientState {
+                        origin: origin.clone(),
+                        units,
+                    };
+                    Message::ToClient(cs)
+                })
             }
             (Message::ToMode(mode), state) => {
                 *state = State::Mode(mode);
+                Task::none()
+            }
+            (Message::ToClient(cs), state) => {
+                *state = State::Client(cs);
                 Task::none()
             }
             _ => unreachable!(),

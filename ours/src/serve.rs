@@ -29,6 +29,7 @@ pub struct ServeState {
     pub working_process: Option<JoinHandle<()>>,
 }
 
+#[derive(Debug, Clone)]
 pub struct Origin {
     pub ip: IpAddr,
     pub port: u16,
@@ -42,6 +43,11 @@ impl Display for Origin {
 }
 
 impl Origin {
+    pub fn new() -> Self {
+        let ip = local_ip().unwrap();
+        let port = get_port::tcp::TcpPort::any(&ip.to_string()).unwrap();
+        Self { ip, port }
+    }
     fn qr_data(&self) -> Data {
         Data::new(self.to_string().into_bytes()).unwrap()
     }
@@ -49,9 +55,7 @@ impl Origin {
 
 impl Default for ServeState {
     fn default() -> Self {
-        let ip = local_ip().unwrap();
-        let port = get_port::tcp::TcpPort::any(&ip.to_string()).unwrap();
-        let origin = Origin { ip, port };
+        let origin = Origin::new();
         Self {
             target_path: home_dir().unwrap_or_default(),
             url: origin.qr_data(),

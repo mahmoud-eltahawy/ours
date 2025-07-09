@@ -1,9 +1,10 @@
+use common::Unit;
 use iced::{
     Task,
     widget::{Container, Text},
 };
 
-use crate::Message;
+use crate::{Message, serve::Origin};
 
 #[derive(Debug, Clone)]
 pub enum ClientMessage {}
@@ -15,7 +16,10 @@ impl ClientMessage {
 }
 
 #[derive(Debug, Clone)]
-pub struct ClientState {}
+pub struct ClientState {
+    pub origin: Origin,
+    pub units: Vec<Unit>,
+}
 
 impl ClientState {
     pub fn view(&self) -> Container<'_, Message> {
