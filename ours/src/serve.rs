@@ -65,17 +65,6 @@ impl Default for ServeState {
     }
 }
 
-impl ServeState {
-    pub fn with(self, ip: IpAddr, port: u16) -> Self {
-        let origin = Origin { ip, port };
-        Self {
-            url: origin.qr_data(),
-            origin,
-            ..self
-        }
-    }
-}
-
 pub async fn serve(root: PathBuf, port: u16) {
     server::Server::new(root).port(port).serve().await.unwrap();
 }

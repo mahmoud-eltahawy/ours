@@ -1,16 +1,15 @@
-use std::net::IpAddr;
 use std::path::PathBuf;
 
 use client::{ClientMessage, ClientState};
-use common::{LS_PATH, ls};
+use common::ls;
+use home::home_view;
 use iced::daemon::Appearance;
 use iced::widget::Container;
 use iced::{Color, Task};
-use mode::{ModeMessage, ModeState};
 use serve::{Origin, ServeMessage, ServeState};
 
 mod client;
-mod mode;
+mod home;
 mod serve;
 
 pub fn main() -> iced::Result {
@@ -19,55 +18,37 @@ pub fn main() -> iced::Result {
             background_color: Color::BLACK,
             text_color: Color::WHITE,
         })
-        .run_with(|| {
-            // let ip: IpAddr = local_ip().unwrap();
-            // let port = get_port::tcp::TcpPort::any("127.0.0.1").unwrap();
-            (
-                State::Mode(ModeState {
-                    origin: Origin::new(),
-                }),
-                Task::none(),
-            )
-        })
+        .run_with(|| (State::Mode, Task::none()))
 }
 
 enum State {
     Serve(ServeState),
     Client(ClientState),
-    Mode(ModeState),
+    Mode,
 }
 
 #[derive(Debug, Clone)]
 enum Message {
     Serve(ServeMessage),
     Client(ClientMessage),
-    Mode(ModeMessage),
-    ToServe,
-    PrepareClient,
+    GetClientPrequsits,
     ToClient(ClientState),
-    ToMode(ModeState),
+    ToServe,
+    ToHome,
     None,
 }
 
 impl State {
-    fn new(ip: IpAddr, port: u16) -> Self {
-        Self::Serve(ServeState::default().with(ip, port))
-    }
     fn update(&mut self, message: Message) -> Task<Message> {
         match (message, self) {
             (Message::Serve(message), State::Serve(ss)) => message.handle(ss),
             (Message::Client(message), State::Client(cs)) => message.handle(cs),
-            (Message::Mode(message), State::Mode(sm)) => message.handle(sm),
             (Message::ToServe, state) => {
                 *state = State::Serve(ServeState::default());
                 Task::none()
             }
-            (Message::PrepareClient, state) => {
-                let origin = match state {
-                    State::Serve(s) => s.origin.clone(),
-                    State::Client(s) => s.origin.clone(),
-                    State::Mode(s) => s.origin.clone(),
-                };
+            (Message::GetClientPrequsits, _) => {
+                let origin = Origin::new();
                 Task::perform(ls(origin.to_string(), PathBuf::new()), move |x| {
                     let units = x.unwrap_or_default();
                     let cs = ClientState {
@@ -77,8 +58,8 @@ impl State {
                     Message::ToClient(cs)
                 })
             }
-            (Message::ToMode(mode), state) => {
-                *state = State::Mode(mode);
+            (Message::ToHome, state) => {
+                *state = State::Mode;
                 Task::none()
             }
             (Message::ToClient(cs), state) => {
@@ -93,7 +74,7 @@ impl State {
         match self {
             State::Serve(s) => s.view(),
             State::Client(s) => s.view(),
-            State::Mode(s) => s.view(),
+            State::Mode => home_view(),
         }
     }
 }
