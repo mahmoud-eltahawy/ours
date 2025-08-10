@@ -13,18 +13,6 @@ pub const MV_PATH: &str = "/mv";
 pub const RM_PATH: &str = "/rm";
 pub const DISKS_PATH: &str = "/disks";
 
-pub async fn ls(origin: String, base: PathBuf) -> Result<Vec<Unit>, reqwest::Error> {
-    let url = format!("{origin}{LS_PATH}");
-    let res = reqwest::Client::new()
-        .post(url)
-        .json(&base)
-        .send()
-        .await?
-        .json::<Vec<Unit>>()
-        .await?;
-    Ok(res)
-}
-
 #[derive(Default, Clone, Debug)]
 pub enum SelectedState {
     Copy,

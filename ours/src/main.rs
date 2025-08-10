@@ -1,7 +1,8 @@
 use std::path::PathBuf;
+use std::sync::LazyLock;
 
 use client::{ClientMessage, ClientState};
-use common::ls;
+use delivery::Delivery;
 use home::home_view;
 use iced::daemon::Appearance;
 use iced::widget::Container;
@@ -38,6 +39,10 @@ enum Message {
     None,
 }
 
+//FIX : Origin should be retrieved from user input
+pub static DELIVERY: LazyLock<Delivery> =
+    LazyLock::new(|| Delivery::new(Origin::new().to_string()));
+
 impl State {
     fn update(&mut self, message: Message) -> Task<Message> {
         match (message, self) {
@@ -49,7 +54,7 @@ impl State {
             }
             (Message::GetClientPrequsits, _) => {
                 let origin = Origin::new();
-                Task::perform(ls(origin.to_string(), PathBuf::new()), move |x| {
+                Task::perform(DELIVERY.ls(PathBuf::new()), move |x| {
                     let units = x.unwrap_or_default();
                     let cs = ClientState {
                         origin: origin.clone(),

@@ -4067,6 +4067,7 @@ name = "ours"
 version = "0.1.0"
 dependencies = [
  "common",
+ "delivery",
  "get-port",
  "iced",
  "local-ip-address",

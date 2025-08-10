@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use common::{CP_PATH, MP4_PATH, MV_PATH};
+use common::{CP_PATH, LS_PATH, MP4_PATH, MV_PATH, Unit};
 
 #[derive(Debug, Clone)]
 pub struct Delivery {
@@ -44,5 +44,18 @@ impl Delivery {
             .await
             .map_err(|x| x.to_string())?;
         Ok(())
+    }
+
+    pub async fn ls(&self, base: PathBuf) -> Result<Vec<Unit>, String> {
+        let res = reqwest::Client::new()
+            .post(self.url_path(LS_PATH))
+            .json(&base)
+            .send()
+            .await
+            .map_err(|x| x.to_string())?
+            .json::<Vec<Unit>>()
+            .await
+            .map_err(|x| x.to_string())?;
+        Ok(res)
     }
 }

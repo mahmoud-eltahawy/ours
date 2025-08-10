@@ -19,17 +19,6 @@ pub fn origin_with(rel: &str) -> String {
         .unwrap()
 }
 
-pub fn origin() -> String {
-    window().location().origin().unwrap()
-}
-
-pub async fn ls(base: PathBuf) -> Result<Vec<Unit>, String> {
-    let units = common::ls(origin(), base)
-        .await
-        .map_err(|x| x.to_string())?;
-    Ok(units)
-}
-
 #[component]
 pub fn FilesBox(
     drop_zone_el: NodeRef<Ol>,

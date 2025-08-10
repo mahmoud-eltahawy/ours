@@ -4,7 +4,7 @@ use std::sync::LazyLock;
 use common::{GlobalState, GlobalStateStoreFields, SelectedState, SortUnits};
 use common::{Retype, Unit};
 use delivery::Delivery;
-use files_box::{ls, FilesBox};
+use files_box::FilesBox;
 use leptos::html::Ol;
 use leptos::svg;
 use leptos::{ev, prelude::*};
@@ -28,7 +28,7 @@ pub static DELIVERY: LazyLock<Delivery> =
 pub fn App() -> impl IntoView {
     let store = GlobalState::new_store();
     let current_path = RwSignal::new(PathBuf::new());
-    let ls_result = LocalResource::new(move || ls(current_path.get()));
+    let ls_result = LocalResource::new(move || DELIVERY.ls(current_path.get()));
 
     let units = Memo::new(move |other| {
         let ls = match ls_result.get().transpose() {
