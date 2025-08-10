@@ -7,15 +7,15 @@ authors = ["mahmoud-eltahawy <gemmy9300@gmail.com>"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-leptos = { version = "0.8.0-rc2", features = ["csr"] }
-leptos_meta = { version = "0.8.0-rc2" }
-leptos_router = { version = "0.8.0-rc2" }
+leptos = { version = "0.8", features = ["csr"] }
+leptos_meta = { version = "0.8" }
+leptos_router = { version = "0.8" }
 console_log = "1"
 log = "0.4"
 console_error_panic_hook = "0.1"
 
 common.workspace = true
-leptos-use = "0.16.0-beta"
+leptos-use = "0.16"
 web-sys = { version = "0.3", features = ["Document", "Window","File","FileList"] }
 serde_json.workspace = true
 send_wrapper = "0.6.0"
