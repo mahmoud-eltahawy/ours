@@ -15,6 +15,7 @@ log = "0.4"
 console_error_panic_hook = "0.1"
 
 common.workspace = true
+delivery.workspace = true
 leptos-use = "0.16"
 web-sys = { version = "0.3", features = ["Document", "Window","File","FileList"] }
 serde_json.workspace = true

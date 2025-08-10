@@ -4,7 +4,9 @@ members = [
     "partitions",
     "server",
     "site",
-    "ours", "assets",
+    "ours",
+    "assets",
+    "delivery",
 ]
 resolver = "2"
 
@@ -20,6 +22,8 @@ tokio = "1"
 web-sys = "0.3"
 reqwest = "0.12"
 
+[workspace.dependencies.delivery]
+path = "./delivery"
 
 [workspace.dependencies.server]
 path = "./server"

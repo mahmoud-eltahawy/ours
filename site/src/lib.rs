@@ -1,7 +1,9 @@
 use std::path::PathBuf;
+use std::sync::LazyLock;
 
 use common::{GlobalState, GlobalStateStoreFields, SelectedState, SortUnits};
 use common::{Retype, Unit};
+use delivery::Delivery;
 use files_box::{ls, FilesBox};
 use leptos::html::Ol;
 use leptos::svg;
@@ -18,6 +20,9 @@ use nav_bar::NavBar;
 mod files_box;
 mod media_player;
 mod nav_bar;
+
+pub static DELIVERY: LazyLock<Delivery> =
+    LazyLock::new(|| Delivery::new(window().location().origin().unwrap()));
 
 #[component]
 pub fn App() -> impl IntoView {
