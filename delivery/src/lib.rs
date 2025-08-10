@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use common::MP4_PATH;
+use common::{CP_PATH, MP4_PATH, MV_PATH};
 
 #[derive(Debug, Clone)]
 pub struct Delivery {
@@ -20,6 +20,26 @@ impl Delivery {
         reqwest::Client::new()
             .post(self.url_path(MP4_PATH))
             .json(&targets)
+            .send()
+            .await
+            .map_err(|x| x.to_string())?;
+        Ok(())
+    }
+
+    pub async fn cp(&self, targets: Vec<PathBuf>, to: PathBuf) -> Result<(), String> {
+        reqwest::Client::new()
+            .post(self.url_path(CP_PATH))
+            .json(&(targets, to))
+            .send()
+            .await
+            .map_err(|x| x.to_string())?;
+        Ok(())
+    }
+
+    pub async fn mv(&self, targets: Vec<PathBuf>, to: PathBuf) -> Result<(), String> {
+        reqwest::Client::new()
+            .post(self.url_path(MV_PATH))
+            .json(&(targets, to))
             .send()
             .await
             .map_err(|x| x.to_string())?;
