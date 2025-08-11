@@ -4,17 +4,16 @@ use app_error::{ServerError, ServerResult};
 use axum::{
     Router,
     extract::DefaultBodyLimit,
-    routing::{any, get, post},
+    routing::{any, post},
 };
 use cd::ws_ls;
-use common::{CP_PATH, DISKS_PATH, LS_PATH, MKDIR_PATH, MP4_PATH, MV_PATH, RM_PATH, UPLOAD_PATH};
+use common::{CP_PATH, LS_PATH, MKDIR_PATH, MP4_PATH, MV_PATH, RM_PATH, UPLOAD_PATH};
 use get_port::Ops;
 use tower_http::{cors::CorsLayer, services::ServeDir, timeout::TimeoutLayer};
 
 pub mod app_error;
 mod assets_router;
 mod cd;
-mod info;
 mod mp4;
 
 #[derive(Clone)]
@@ -68,7 +67,6 @@ impl Server {
             .route(LS_PATH, post(cd::ls))
             .route("/wls", any(ws_ls))
             .route(MKDIR_PATH, post(cd::mkdir))
-            .route(DISKS_PATH, get(info::get_disks))
             .nest_service("/download", target_dir)
             .with_state(Context { target_dir: target })
             .layer(TimeoutLayer::new(timeout))

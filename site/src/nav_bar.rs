@@ -2,7 +2,6 @@ use std::path::PathBuf;
 
 use crate::Icon;
 use common::{GlobalState, GlobalStateStoreFields, SelectedState, Store};
-use info::Info;
 use leptos::{either::either, prelude::*};
 use leptos_router::{hooks::use_navigate, NavigateOptions};
 use mp4::ToMp4;
@@ -11,7 +10,6 @@ use rm::Remove;
 use send_wrapper::SendWrapper;
 use upload::Upload;
 
-mod info;
 mod mp4;
 mod paste;
 mod rm;
@@ -40,7 +38,7 @@ pub fn NavBar(
     };
     view! {
         <nav
-            class="fixed right-0 z-10 h-fit w-fit bg-white grid grid-cols-1  place-content-center border-2 border-lime-500 rounded-lg overflow-scroll"
+            class="fixed right-0 z-10 h-fit w-fit bg-white grid grid-cols-1 place-content-center border-2 border-lime-500 rounded-lg overflow-scroll"
             style=transparent
         >
             <More more />
@@ -57,7 +55,6 @@ pub fn NavBar(
                             false => view! {<Admin/>},
                     )
                 }}
-                <Info/>
             </div>
         </nav>
     }

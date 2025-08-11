@@ -11,7 +11,6 @@ pub const UPLOAD_PATH: &str = "/upload";
 pub const CP_PATH: &str = "/cp";
 pub const MV_PATH: &str = "/mv";
 pub const RM_PATH: &str = "/rm";
-pub const DISKS_PATH: &str = "/disks";
 
 #[derive(Default, Clone, Debug)]
 pub enum SelectedState {
