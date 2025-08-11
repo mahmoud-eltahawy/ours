@@ -124,7 +124,7 @@ impl ServeState {
         self.working_process.is_some()
     }
 
-    fn target_pick(&self) -> Row<Message> {
+    fn target_pick(&self) -> Row<'_, Message> {
         let my_text = |x: String| text(x).size(60).align_x(Center).center();
         let target = my_text(
             self.target_path
@@ -138,7 +138,7 @@ impl ServeState {
         row![target, or, pick].align_y(Center).spacing(20.)
     }
 
-    fn url_section(&self) -> Column<Message> {
+    fn url_section(&self) -> Column<'_, Message> {
         let my_text = |x: String| text(x).size(60).align_x(Center).center();
         let at = my_text(String::from("at"));
         let url = my_text(self.origin.to_string());
@@ -146,7 +146,7 @@ impl ServeState {
         column![at, url, qr]
     }
 
-    fn pick_button(&self) -> Button<Message> {
+    fn pick_button(&self) -> Button<'_, Message> {
         let working = self.is_working();
         let pt = text("pick other target")
             .align_x(Center)
@@ -183,7 +183,7 @@ impl ServeState {
             })
     }
 
-    fn serve_button(&self) -> Button<Message> {
+    fn serve_button(&self) -> Button<'_, Message> {
         let working = self.is_working();
         let h = 80.;
         let lt = if working { "stop" } else { "serve" };

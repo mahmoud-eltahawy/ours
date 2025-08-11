@@ -1202,7 +1202,9 @@ name = "delivery"
 version = "0.1.0"
 dependencies = [
  "common",
+ "gloo",
  "reqwest",
+ "web-sys",
 ]
 
 [[package]]

@@ -78,4 +78,21 @@ impl Delivery {
             .map_err(|x| x.to_string())?;
         Ok(())
     }
+
+    #[cfg(all(target_family = "wasm", target_os = "unknown"))]
+    pub async fn upload(&self, form_data: web_sys::FormData) -> Result<(), String> {
+        gloo::net::http::Request::post(common::UPLOAD_PATH)
+            .body(form_data)
+            .map_err(|x| x.to_string())?
+            .send()
+            .await
+            .map_err(|x| x.to_string())?;
+        Ok(())
+    }
+
+    #[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
+    pub async fn upload(&self, _files: &[std::fs::File]) -> Result<(), String> {
+        //
+        todo!()
+    }
 }

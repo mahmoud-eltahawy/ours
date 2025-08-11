@@ -75,7 +75,7 @@ impl State {
         }
     }
 
-    fn view(&self) -> Container<Message> {
+    fn view(&self) -> Container<'_, Message> {
         match self {
             State::Serve(s) => s.view(),
             State::Client(s) => s.view(),

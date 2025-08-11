@@ -6,3 +6,7 @@ edition.workspace = true
 [dependencies]
 reqwest = { workspace = true , features = ["json","multipart"] }
 common.workspace = true
+
+[target.'cfg(all(target_family = "wasm", target_os = "unknown"))'.dependencies]
+gloo.workspace = true
+web-sys.workspace = true
