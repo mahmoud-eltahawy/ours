@@ -3,8 +3,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{nav_bar::Tool, Icon, Unit};
-use common::{GlobalState, GlobalStateStoreFields, SelectedState, MKDIR_PATH};
+use crate::{nav_bar::Tool, Icon, Unit, DELIVERY};
+use common::{GlobalState, GlobalStateStoreFields, SelectedState};
 use common::{Store, UnitKind};
 use leptos::{either::Either, ev, html::Ol, prelude::*};
 use leptos_router::hooks::{use_navigate, use_query_map};
@@ -84,23 +84,13 @@ pub fn FilesBox(
     }
 }
 
-pub async fn mkdir(target: PathBuf) -> Result<(), String> {
-    let _ = reqwest::Client::new()
-        .post(origin_with(MKDIR_PATH))
-        .json(&target)
-        .send()
-        .await
-        .map_err(|x| x.to_string())?;
-    Ok(())
-}
-
 #[component]
 fn Mkdir(current_path: RwSignal<PathBuf>) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let mkdir_state = store.mkdir_state();
     let value = RwSignal::new(String::new());
 
-    let mkdir = Action::new_local(move |input: &PathBuf| mkdir(input.clone()));
+    let mkdir = Action::new_local(move |input: &PathBuf| DELIVERY.mkdir(input.clone()));
     let enter = move |ev: KeyboardEvent| {
         if ev.key() == "Enter" && mkdir_state.get().is_some() {
             let path = current_path.get_untracked();
