@@ -7,7 +7,6 @@ use leptos_router::{hooks::use_navigate, NavigateOptions};
 use mp4::ToMp4;
 use paste::Paste;
 use rm::Remove;
-use send_wrapper::SendWrapper;
 use upload::Upload;
 
 mod mp4;
@@ -16,10 +15,7 @@ mod rm;
 pub mod upload;
 
 #[component]
-pub fn NavBar(
-    files: Signal<Vec<SendWrapper<web_sys::File>>>,
-    current_path: RwSignal<PathBuf>,
-) -> impl IntoView {
+pub fn NavBar(current_path: RwSignal<PathBuf>) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let more = RwSignal::new(true);
     let hidden = move || {
@@ -50,7 +46,7 @@ pub fn NavBar(
                     either!(
                         store.password().get(),
                             true => view! {
-                                <AdminRequired files current_path/>
+                                <AdminRequired current_path/>
                             },
                             false => view! {<Admin/>},
                     )
@@ -87,12 +83,9 @@ pub fn More(more: RwSignal<bool>) -> impl IntoView {
 }
 
 #[component]
-pub fn AdminRequired(
-    files: Signal<Vec<SendWrapper<web_sys::File>>>,
-    current_path: RwSignal<PathBuf>,
-) -> impl IntoView {
+pub fn AdminRequired(current_path: RwSignal<PathBuf>) -> impl IntoView {
     view! {
-        <Upload files current_path/>
+        <Upload current_path/>
         <Remove />
         <Mkdir />
         <Paste current_path/>

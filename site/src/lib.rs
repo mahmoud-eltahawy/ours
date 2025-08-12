@@ -5,15 +5,11 @@ use common::{GlobalState, GlobalStateStoreFields, SelectedState, SortUnits};
 use common::{Retype, Unit};
 use delivery::Delivery;
 use files_box::FilesBox;
-use leptos::html::Ol;
 use leptos::svg;
 use leptos::{ev, prelude::*};
 use leptos_meta::*;
 use leptos_router::{components::*, StaticSegment};
-use leptos_use::{
-    use_drop_zone_with_options, use_event_listener, use_window, UseDropZoneOptions,
-    UseDropZoneReturn,
-};
+use leptos_use::{use_event_listener, use_window};
 use media_player::MediaPlayer;
 use nav_bar::NavBar;
 
@@ -67,21 +63,15 @@ pub fn App() -> impl IntoView {
             store.select().write().clear();
         }
     });
-    let drop_zone_el = NodeRef::<Ol>::new();
-
-    let UseDropZoneReturn {
-        is_over_drop_zone,
-        files,
-    } = use_drop_zone_with_options(drop_zone_el, UseDropZoneOptions::default());
 
     view! {
         <Router>
-            <NavBar files current_path/>
+            <NavBar current_path/>
             <main>
                 <Routes fallback=|| "Page not found.">
                     <Route
                         path=StaticSegment("")
-                        view=move || view! { <FilesBox drop_zone_el is_over_drop_zone current_path units/> }
+                        view=move || view! { <FilesBox current_path units/> }
                     />
                 </Routes>
             </main>

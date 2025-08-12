@@ -9,10 +9,7 @@ use send_wrapper::SendWrapper;
 use web_sys::{Blob, Event, FormData, HtmlInputElement};
 
 #[component]
-pub fn Upload(
-    files: Signal<Vec<SendWrapper<web_sys::File>>>,
-    current_path: RwSignal<PathBuf>,
-) -> impl IntoView {
+pub fn Upload(current_path: RwSignal<PathBuf>) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let upload_action = Action::new_local(|data: &FormData| DELIVERY.upload(data.clone()));
     let upload_files = RwSignal::new(Vec::<SendWrapper<web_sys::File>>::new());
@@ -26,10 +23,6 @@ pub fn Upload(
                 .unwrap();
         }
         upload_action.dispatch_local(data);
-    });
-
-    Effect::new(move || {
-        *upload_files.write() = files.get();
     });
 
     let on_change = move |ev: Event| {

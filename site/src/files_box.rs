@@ -6,7 +6,7 @@ use std::{
 use crate::{nav_bar::Tool, Icon, Unit, DELIVERY};
 use common::{GlobalState, GlobalStateStoreFields, SelectedState};
 use common::{Store, UnitKind};
-use leptos::{either::Either, ev, html::Ol, prelude::*};
+use leptos::{either::Either, ev, prelude::*};
 use leptos_router::hooks::{use_navigate, use_query_map};
 use leptos_use::{use_event_listener, use_window};
 use web_sys::KeyboardEvent;
@@ -20,12 +20,7 @@ pub fn origin_with(rel: &str) -> String {
 }
 
 #[component]
-pub fn FilesBox(
-    drop_zone_el: NodeRef<Ol>,
-    is_over_drop_zone: Signal<bool>,
-    current_path: RwSignal<PathBuf>,
-    units: Memo<Option<Vec<Unit>>>,
-) -> impl IntoView {
+pub fn FilesBox(current_path: RwSignal<PathBuf>, units: Memo<Option<Vec<Unit>>>) -> impl IntoView {
     let query = use_query_map();
     let store: Store<GlobalState> = use_context().unwrap();
     let navigate = use_navigate();
@@ -68,7 +63,6 @@ pub fn FilesBox(
     view! {
         <ol
             class="w-full min-h-80 m-5 p-5 border-2 border-lime-500 rounded-lg"
-            node_ref=drop_zone_el
         >
             <li>
                 <Mkdir current_path/>
@@ -76,7 +70,7 @@ pub fn FilesBox(
             {
                 move || units.get().map(|xs| {
                     xs.into_iter().map(|x| {view! {
-                        <UnitComp unit=x is_over_drop_zone />
+                        <UnitComp unit=x />
                     }}).collect_view()
                 })
             }
@@ -148,7 +142,7 @@ fn path_as_query_test() {
 }
 
 #[component]
-fn UnitComp(unit: Unit, is_over_drop_zone: Signal<bool>) -> impl IntoView {
+fn UnitComp(unit: Unit) -> impl IntoView {
     let navigate = use_navigate();
     let store = use_context::<Store<GlobalState>>().unwrap();
 
@@ -191,7 +185,7 @@ fn UnitComp(unit: Unit, is_over_drop_zone: Signal<bool>) -> impl IntoView {
                 SelectedState::Copy if is_selected => Either::Right(Either::Right(
                     view! { <Icon  icon=RwSignal::new(icondata::BiCopyRegular.to_owned())/> },
                 )),
-                _ => Either::Left(view! { <UnitIcon unit=unit.clone() is_over_drop_zone /> }),
+                _ => Either::Left(view! { <UnitIcon unit=unit.clone() /> }),
             }
         }
     };
@@ -211,7 +205,7 @@ fn UnitComp(unit: Unit, is_over_drop_zone: Signal<bool>) -> impl IntoView {
 }
 
 #[component]
-fn UnitIcon(unit: Unit, is_over_drop_zone: Signal<bool>) -> impl IntoView {
+fn UnitIcon(unit: Unit) -> impl IntoView {
     let store = use_context::<Store<GlobalState>>().unwrap();
 
     let href = origin_with(&format!(
@@ -236,26 +230,8 @@ fn UnitIcon(unit: Unit, is_over_drop_zone: Signal<bool>) -> impl IntoView {
 
     let icon = RwSignal::new(icon_kind.to_owned());
 
-    Effect::new(move || {
-        if is_over_drop_zone.get() {
-            icon.write().width = Some("2em");
-            icon.write().height = Some("2em");
-        } else {
-            icon.write().width = Some("4em");
-            icon.write().height = Some("4em");
-        }
-    });
-
     view! {
         <Tool icon=icon active=move || !store.select().read().is_selected(&unit) onclick=|| {}/>
-        // <BaseIcon
-        //     src={
-        //         let kind = unit.kind.clone();
-        //         move || kind.to_string()
-        //     }
-        //     active=
-        //     size
-        // />
         {download_link}
     }
 }
