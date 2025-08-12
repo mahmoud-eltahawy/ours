@@ -117,7 +117,7 @@ fn Mkdir(current_path: RwSignal<PathBuf>) -> impl IntoView {
     }
 }
 
-fn path_as_query(path: &Path) -> String {
+pub fn path_as_query(path: &Path) -> String {
     let mut it = path.iter();
     let kv = |(i, x): (_, &OsStr)| format!("{}={}", i, x.to_str().unwrap());
 

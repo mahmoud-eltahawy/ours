@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::Icon;
+use crate::{files_box::path_as_query, Icon};
 use common::{GlobalState, GlobalStateStoreFields, SelectedState, Store};
 use leptos::{either::either, prelude::*};
 use leptos_router::{hooks::use_navigate, NavigateOptions};
@@ -40,6 +40,7 @@ pub fn NavBar(current_path: RwSignal<PathBuf>) -> impl IntoView {
             <More more />
             <div class="grid grid-cols-2 place-content-center" style=hidden>
                 <Home current_path/>
+                <Open/>
                 <Clear />
                 <Download />
                 {move || {
@@ -172,6 +173,31 @@ fn Clear() -> impl IntoView {
 
     view! {
         <Tool icon=RwSignal::new(icondata::VsClearAll.to_owned()) active onclick/>
+    }
+}
+
+#[component]
+fn Open() -> impl IntoView {
+    let store = use_context::<Store<GlobalState>>().unwrap();
+    let navigate = use_navigate();
+
+    let target = move || match &store.select().read().units[..] {
+        [target] => match target.kind {
+            common::UnitKind::Dirctory => Some(target.clone()),
+            _ => None,
+        },
+        _ => None,
+    };
+    let onclick = move || {
+        if let Some(target) = target() {
+            navigate(&path_as_query(&target.path), Default::default());
+        }
+    };
+
+    let active = move || target().is_some();
+
+    view! {
+        <Tool icon=RwSignal::new(icondata::TiFolderOpen.to_owned()) active onclick/>
     }
 }
 

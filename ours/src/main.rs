@@ -29,7 +29,7 @@ struct State {
 impl Default for State {
     fn default() -> Self {
         Self {
-            page: Page::Mode,
+            page: Page::Home,
             serve: ServeState::default(),
             client: ClientState::default(),
         }
@@ -39,7 +39,7 @@ impl Default for State {
 enum Page {
     Serve,
     Client,
-    Mode,
+    Home,
 }
 
 #[derive(Debug, Clone)]
@@ -79,7 +79,7 @@ impl State {
                 })
             }
             (Message::ToHome, page) => {
-                *page = Page::Mode;
+                *page = Page::Home;
                 Task::none()
             }
             (Message::ToClient(cs), page) => {
@@ -96,7 +96,7 @@ impl State {
         match self.page {
             Page::Serve => self.serve.view(),
             Page::Client => self.client.view(),
-            Page::Mode => home_view(),
+            Page::Home => home_view(),
         }
     }
 }
