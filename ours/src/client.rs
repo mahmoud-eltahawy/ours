@@ -1,3 +1,5 @@
+use std::net::{IpAddr, Ipv4Addr};
+
 use common::Unit;
 use iced::{
     Task,
@@ -19,6 +21,18 @@ impl ClientMessage {
 pub struct ClientState {
     pub origin: Origin,
     pub units: Vec<Unit>,
+}
+
+impl Default for ClientState {
+    fn default() -> Self {
+        Self {
+            origin: Origin {
+                ip: IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
+                port: 80,
+            },
+            units: Vec::new(),
+        }
+    }
 }
 
 impl ClientState {

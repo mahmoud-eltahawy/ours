@@ -17,12 +17,28 @@ pub fn main() -> iced::Result {
             background_color: Color::BLACK,
             text_color: Color::WHITE,
         })
-        .run_with(|| (State::Mode, Task::none()))
+        .run_with(|| (State::default(), Task::none()))
 }
 
-enum State {
-    Serve(ServeState),
-    Client(ClientState),
+struct State {
+    serve: ServeState,
+    client: ClientState,
+    page: Page,
+}
+
+impl Default for State {
+    fn default() -> Self {
+        Self {
+            page: Page::Mode,
+            serve: ServeState::default(),
+            client: ClientState::default(),
+        }
+    }
+}
+
+enum Page {
+    Serve,
+    Client,
     Mode,
 }
 
@@ -43,11 +59,12 @@ pub static DELIVERY: LazyLock<Delivery> =
 
 impl State {
     fn update(&mut self, message: Message) -> Task<Message> {
-        match (message, self) {
-            (Message::Serve(message), State::Serve(ss)) => message.handle(ss),
-            (Message::Client(message), State::Client(cs)) => message.handle(cs),
-            (Message::ToServe, state) => {
-                *state = State::Serve(ServeState::default());
+        match (message, &mut self.page) {
+            (Message::Serve(message), Page::Serve) => message.handle(&mut self.serve),
+            (Message::Client(message), Page::Client) => message.handle(&mut self.client),
+            (Message::ToServe, page) => {
+                *page = Page::Serve;
+                self.serve = ServeState::default();
                 Task::none()
             }
             (Message::GetClientPrequsits, _) => {
@@ -61,12 +78,13 @@ impl State {
                     Message::ToClient(cs)
                 })
             }
-            (Message::ToHome, state) => {
-                *state = State::Mode;
+            (Message::ToHome, page) => {
+                *page = Page::Mode;
                 Task::none()
             }
-            (Message::ToClient(cs), state) => {
-                *state = State::Client(cs);
+            (Message::ToClient(cs), page) => {
+                *page = Page::Client;
+                self.client = cs;
                 Task::none()
             }
             (Message::None, _) => Task::none(),
@@ -75,10 +93,10 @@ impl State {
     }
 
     fn view(&self) -> Container<'_, Message> {
-        match self {
-            State::Serve(s) => s.view(),
-            State::Client(s) => s.view(),
-            State::Mode => home_view(),
+        match self.page {
+            Page::Serve => self.serve.view(),
+            Page::Client => self.client.view(),
+            Page::Mode => home_view(),
         }
     }
 }
