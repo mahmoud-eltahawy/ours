@@ -4,9 +4,7 @@ use std::sync::LazyLock;
 use client::{ClientMessage, ClientState};
 use delivery::Delivery;
 use home::home_view;
-use iced::daemon::Appearance;
-use iced::widget::Container;
-use iced::{Color, Task};
+use iced::{Color, Task, daemon::Appearance, widget::Container};
 use serve::{Origin, ServeMessage, ServeState};
 
 mod client;
@@ -71,6 +69,7 @@ impl State {
                 *state = State::Client(cs);
                 Task::none()
             }
+            (Message::None, _) => Task::none(),
             _ => unreachable!(),
         }
     }
