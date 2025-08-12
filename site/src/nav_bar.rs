@@ -191,6 +191,7 @@ fn Open() -> impl IntoView {
     let onclick = move || {
         if let Some(target) = target() {
             navigate(&path_as_query(&target.path), Default::default());
+            store.select().write().clear();
         }
     };
 

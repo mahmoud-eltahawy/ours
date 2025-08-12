@@ -1,7 +1,6 @@
 [workspace]
 members = [
     "common",
-    "partitions",
     "server",
     "site",
     "ours",
@@ -31,9 +30,6 @@ path = "./server"
 
 [workspace.dependencies.common]
 path = "./common"
-
-[workspace.dependencies.partitions]
-path = "./partitions"
 
 [workspace.dependencies.webls]
 path = "./webls"
