@@ -24,7 +24,7 @@ pub static DELIVERY: LazyLock<Delivery> =
 pub fn App() -> impl IntoView {
     let store = GlobalState::new_store();
     let current_path = RwSignal::new(PathBuf::new());
-    let ls_result = LocalResource::new(move || DELIVERY.ls(current_path.get()));
+    let ls_result = LocalResource::new(move || DELIVERY.clone().ls(current_path.get()));
 
     let units = Memo::new(move |other| {
         let ls = match ls_result.get().transpose() {

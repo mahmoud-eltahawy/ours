@@ -46,7 +46,7 @@ impl Delivery {
         Ok(())
     }
 
-    pub async fn ls(&self, base: PathBuf) -> Result<Vec<Unit>, String> {
+    pub async fn ls(self, base: PathBuf) -> Result<Vec<Unit>, String> {
         let res = reqwest::Client::new()
             .post(self.url_path(LS_PATH))
             .json(&base)

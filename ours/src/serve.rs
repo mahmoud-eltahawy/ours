@@ -43,7 +43,10 @@ impl Display for Origin {
 }
 
 impl Origin {
-    pub fn new() -> Self {
+    pub fn new(ip: IpAddr, port: u16) -> Self {
+        Self { ip, port }
+    }
+    pub fn random() -> Self {
         let ip = local_ip().unwrap();
         let port = get_port::tcp::TcpPort::any(&ip.to_string()).unwrap();
         Self { ip, port }
@@ -55,7 +58,7 @@ impl Origin {
 
 impl Default for ServeState {
     fn default() -> Self {
-        let origin = Origin::new();
+        let origin = Origin::random();
         Self {
             target_path: home_dir().unwrap_or_default(),
             url: origin.qr_data(),
