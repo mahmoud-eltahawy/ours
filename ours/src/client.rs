@@ -3,11 +3,11 @@ use std::{
     path::PathBuf,
 };
 
-use common::Unit;
+use common::{Retype, SortUnits, Unit};
 use delivery::Delivery;
 use iced::{
     Length, Task,
-    widget::{Button, Container, Svg, Text, column, row, scrollable, svg::Handle},
+    widget::{Button, Column, Container, Svg, Text, column, row, scrollable, svg::Handle},
 };
 
 use crate::{Message, home::go_home_button, serve::Origin};
@@ -19,6 +19,8 @@ pub enum ClientMessage {
         current_path: PathBuf,
         units: Vec<Unit>,
     },
+    GoBack,
+    GoneBack(Vec<Unit>),
     None,
 }
 
@@ -39,10 +41,32 @@ impl ClientMessage {
             }
             ClientMessage::CurrentPathChanged {
                 current_path,
-                units,
+                mut units,
             } => {
+                units.retype();
+                units.sort_units();
                 state.units = units;
                 state.current_path = current_path;
+                Task::none()
+            }
+            ClientMessage::GoBack => {
+                if let Some(parent) = state.current_path.parent() {
+                    Task::perform(state.delivery.clone().ls(parent.to_path_buf()), |xs| {
+                        if let Ok(xs) = xs {
+                            Message::Client(ClientMessage::GoneBack(xs))
+                        } else {
+                            Message::Client(ClientMessage::None)
+                        }
+                    })
+                } else {
+                    Task::none()
+                }
+            }
+            ClientMessage::GoneBack(mut units) => {
+                units.retype();
+                units.sort_units();
+                state.current_path.pop();
+                state.units = units;
                 Task::none()
             }
             ClientMessage::None => Task::none(),
@@ -76,11 +100,15 @@ impl Default for ClientState {
 impl ClientState {
     pub fn view(&self) -> Container<'_, Message> {
         let home = go_home_button();
-        let col = self
+        let back = Button::new("back").on_press(Message::Client(ClientMessage::GoBack));
+        let tools = column![back, home].spacing(5.);
+        let units = self
             .units
             .iter()
-            .fold(column![home].spacing(10.), |acc, x| acc.push(x.button()));
-        Container::new(scrollable(col).width(Length::Fill))
+            .fold(Column::new().spacing(10.), |acc, x| acc.push(x.button()));
+        let units = scrollable(units).width(Length::Fill);
+        let all = column![tools, units].spacing(14.);
+        Container::new(scrollable(all).width(Length::Fill))
     }
 }
 
