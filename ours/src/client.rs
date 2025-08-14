@@ -1,4 +1,7 @@
-use std::net::{IpAddr, Ipv4Addr};
+use std::{
+    net::{IpAddr, Ipv4Addr},
+    path::PathBuf,
+};
 
 use common::Unit;
 use delivery::Delivery;
@@ -10,11 +13,31 @@ use iced::{
 use crate::{Message, home::go_home_button, serve::Origin};
 
 #[derive(Debug, Clone)]
-pub enum ClientMessage {}
+pub enum ClientMessage {
+    ChangeCurrentPath(PathBuf),
+    CurrentPathChanged(Vec<Unit>),
+    None,
+}
 
 impl ClientMessage {
     pub fn handle(self, state: &mut ClientState) -> Task<Message> {
-        Task::none()
+        match self {
+            ClientMessage::ChangeCurrentPath(path_buf) => {
+                state.current_path = path_buf.clone();
+                Task::perform(state.delivery.clone().ls(path_buf), |xs| {
+                    if let Ok(xs) = xs {
+                        Message::Client(ClientMessage::CurrentPathChanged(xs))
+                    } else {
+                        Message::Client(ClientMessage::None)
+                    }
+                })
+            }
+            ClientMessage::CurrentPathChanged(units) => {
+                state.units = units;
+                Task::none()
+            }
+            ClientMessage::None => Task::none(),
+        }
     }
 }
 
@@ -22,6 +45,7 @@ impl ClientMessage {
 pub struct ClientState {
     pub delivery: Delivery,
     pub units: Vec<Unit>,
+    pub current_path: PathBuf,
 }
 
 impl Default for ClientState {
@@ -35,6 +59,7 @@ impl Default for ClientState {
                 .to_string(),
             ),
             units: Vec::new(),
+            current_path: PathBuf::new(),
         }
     }
 }
@@ -60,6 +85,8 @@ impl UnitViews for Unit {
         let icon = Svg::new(handle).width(30.);
         let text = Text::new(self.name());
         let row = row![icon, text].spacing(4.);
-        Button::new(row)
+        Button::new(row).on_press(Message::Client(ClientMessage::ChangeCurrentPath(
+            self.path.clone(),
+        )))
     }
 }
