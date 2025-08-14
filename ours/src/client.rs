@@ -1,12 +1,11 @@
 use std::net::{IpAddr, Ipv4Addr};
 
-use assets::FOLDER_ICON;
+use assets::{FILE_ICON, FOLDER_ICON};
 use common::Unit;
 use delivery::Delivery;
 use iced::{
-    Background, Border, Color, Length, Shadow, Task,
-    theme::Palette,
-    widget::{Button, Container, Svg, Text, column, row, scrollable, svg},
+    Length, Task,
+    widget::{Button, Container, Svg, Text, column, row, scrollable, svg::Handle},
 };
 
 use crate::{Message, home::go_home_button, serve::Origin};
@@ -58,18 +57,13 @@ trait UnitViews {
 
 impl UnitViews for Unit {
     fn button(&self) -> Button<'_, Message> {
-        let icon = Svg::new(svg::Handle::from_memory(FOLDER_ICON))
-            .width(40.)
-            .style(|_, _| svg::Style {
-                color: Some(Color::WHITE),
-            });
+        let icon = match self.kind {
+            common::UnitKind::Dirctory => FOLDER_ICON,
+            _ => FILE_ICON,
+        };
+        let icon = Svg::new(Handle::from_memory(icon)).width(30.);
         let text = Text::new(self.name());
-        let row = row![icon, text];
-        Button::new(row).style(|_, _| iced::widget::button::Style {
-            background: Some(Background::Color(iced::Color::BLACK)),
-            text_color: Color::WHITE,
-            border: Border::default(),
-            shadow: Shadow::default(),
-        })
+        let row = row![icon, text].spacing(4.);
+        Button::new(row)
     }
 }
