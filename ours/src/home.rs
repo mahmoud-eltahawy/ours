@@ -10,3 +10,7 @@ pub fn home_view<'a>() -> Container<'a, Message> {
     let content = column![title, serve, client];
     Container::new(content)
 }
+
+pub fn go_home_button<'a>() -> Button<'a, Message> {
+    Button::new("home").on_press(Message::ToHome)
+}

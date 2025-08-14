@@ -3,11 +3,11 @@ use std::net::{IpAddr, Ipv4Addr};
 use common::Unit;
 use delivery::Delivery;
 use iced::{
-    Task,
-    widget::{Container, Row, Text},
+    Length, Task,
+    widget::{Button, Container, Text, column, scrollable},
 };
 
-use crate::{Message, serve::Origin};
+use crate::{Message, home::go_home_button, serve::Origin};
 
 #[derive(Debug, Clone)]
 pub enum ClientMessage {}
@@ -41,10 +41,12 @@ impl Default for ClientState {
 
 impl ClientState {
     pub fn view(&self) -> Container<'_, Message> {
-        let mut row = Row::new().spacing(20.);
+        let home = go_home_button();
+        let mut col = column![home].spacing(10.);
+
         for x in self.units.iter() {
-            row = row.push(Text::new(x.path.to_str().unwrap().to_string()));
+            col = col.push(Button::new(Text::new(x.name())));
         }
-        Container::new(row)
+        Container::new(scrollable(col).width(Length::Fill))
     }
 }

@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use common::{CP_PATH, LS_PATH, MKDIR_PATH, MP4_PATH, MV_PATH, RM_PATH, Unit};
+use gloo::net::http::Request;
 
 #[derive(Debug, Clone)]
 pub struct Delivery {
@@ -79,9 +80,9 @@ impl Delivery {
         Ok(())
     }
 
-    #[cfg(all(target_family = "wasm", target_os = "unknown"))]
-    pub async fn upload(&self, form_data: web_sys::FormData) -> Result<(), String> {
-        gloo::net::http::Request::post(common::UPLOAD_PATH)
+    //FIX : should be available on wasm target only
+    pub async fn wasm_upload(&self, form_data: web_sys::FormData) -> Result<(), String> {
+        Request::post(common::UPLOAD_PATH)
             .body(form_data)
             .map_err(|x| x.to_string())?
             .send()
@@ -90,9 +91,8 @@ impl Delivery {
         Ok(())
     }
 
-    #[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
-    pub async fn upload(&self, _files: &[std::fs::File]) -> Result<(), String> {
-        //
+    //FIX : should be available on nonw wasm target only
+    pub async fn iced_upload(&self, _files: &[std::fs::File]) -> Result<(), String> {
         todo!()
     }
 }

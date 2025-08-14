@@ -13,6 +13,7 @@ use std::{net::IpAddr, path::PathBuf};
 use tokio::task::JoinHandle;
 
 use crate::Message;
+use crate::home::go_home_button;
 
 #[derive(Debug, Clone)]
 pub enum ServeMessage {
@@ -113,10 +114,11 @@ impl ServeMessage {
 
 impl ServeState {
     pub fn view(&self) -> Container<'_, Message> {
+        let home = go_home_button();
         let serve = self.serve_button();
         let tp = self.target_pick();
         let us = self.url_section();
-        let col = column![serve, tp, us,]
+        let col = column![home, serve, tp, us,]
             .spacing(30)
             .padding(20)
             .align_x(Center);

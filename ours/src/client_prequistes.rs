@@ -1,6 +1,6 @@
 use std::net::IpAddr;
 
-use crate::Message;
+use crate::{Message, home::go_home_button};
 use iced::{
     Border, Task, Theme,
     theme::Palette,
@@ -43,6 +43,7 @@ impl ClientPrequistesMessage {
 
 impl ClientPrequistesState {
     pub fn view(&self) -> Container<'_, Message> {
+        let home = go_home_button();
         let title = Text::new("choose client address");
         let ip_input = self.ip_input();
         let port_input = self.port_input();
@@ -55,7 +56,7 @@ impl ClientPrequistesState {
                 None
             });
 
-        let content = column![title, url_input, submit];
+        let content = column![home, title, url_input, submit];
         Container::new(content)
     }
 

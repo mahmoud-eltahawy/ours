@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::LazyLock};
+use std::path::PathBuf;
 
 use client::{ClientMessage, ClientState};
 use common::Unit;
@@ -60,10 +60,6 @@ enum Message {
     ToHome,
     None,
 }
-
-//FIX : Origin should be retrieved from user input
-pub static DELIVERY: LazyLock<Delivery> =
-    LazyLock::new(|| Delivery::new(Origin::random().to_string()));
 
 impl State {
     fn update(&mut self, message: Message) -> Task<Message> {
