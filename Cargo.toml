@@ -25,6 +25,9 @@ gloo = "0.11.0"
 [workspace.dependencies.delivery]
 path = "./delivery"
 
+[workspace.dependencies.assets]
+path = "./assets"
+
 [workspace.dependencies.server]
 path = "./server"
 
