@@ -82,37 +82,6 @@ pub const AUDIO_X: [&str; 20] = [
     "wma", "au", "gsm", "amr", "ra", "mmf", "cda",
 ];
 
-pub trait SortUnits {
-    fn sort_units(&mut self);
-}
-
-impl SortUnits for Vec<Unit> {
-    fn sort_units(&mut self) {
-        self.sort_by_key(|x| (x.kind.clone(), x.name()));
-    }
-}
-
-pub trait Retype {
-    fn retype(&mut self);
-}
-
-impl Retype for Vec<Unit> {
-    fn retype(&mut self) {
-        self.iter_mut().for_each(|unit| {
-            if unit.kind != UnitKind::File {
-                return;
-            }
-            if let Some(x) = unit.path.extension().and_then(|x| x.to_str()) {
-                if VIDEO_X.contains(&x) {
-                    unit.kind = UnitKind::Video;
-                } else if AUDIO_X.contains(&x) {
-                    unit.kind = UnitKind::Audio;
-                }
-            };
-        });
-    }
-}
-
 #[derive(Default, Clone, Debug)]
 pub struct Selected {
     pub units: Vec<Unit>,
@@ -163,7 +132,6 @@ impl Selected {
             self.remove_unit(unit);
         } else {
             self.units.push(unit.clone());
-            self.units.sort_units();
         }
     }
 

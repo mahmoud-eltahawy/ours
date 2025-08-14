@@ -1,6 +1,8 @@
 use std::path::PathBuf;
 
-use common::{CP_PATH, LS_PATH, MKDIR_PATH, MP4_PATH, MV_PATH, RM_PATH, Unit};
+use common::{
+    AUDIO_X, CP_PATH, LS_PATH, MKDIR_PATH, MP4_PATH, MV_PATH, RM_PATH, Unit, UnitKind, VIDEO_X,
+};
 use gloo::net::http::Request;
 
 #[derive(Debug, Clone)]
@@ -56,6 +58,11 @@ impl Delivery {
             .map_err(|x| x.to_string())?
             .json::<Vec<Unit>>()
             .await
+            .map(retype)
+            .map(|mut xs| {
+                xs.sort_by_key(|x| (x.kind.clone(), x.name()));
+                xs
+            })
             .map_err(|x| x.to_string())?;
         Ok(res)
     }
@@ -95,4 +102,29 @@ impl Delivery {
     pub async fn iced_upload(&self, _files: &[std::fs::File]) -> Result<(), String> {
         todo!()
     }
+}
+
+fn retype(xs: Vec<Unit>) -> Vec<Unit> {
+    xs.into_iter()
+        .map(|x| match x.kind {
+            common::UnitKind::File => {
+                let Unit { path, kind } = x;
+                let kind = match path.extension().and_then(|x| x.to_str()) {
+                    Some(x) => {
+                        if VIDEO_X.contains(&x) {
+                            UnitKind::Video
+                        } else if AUDIO_X.contains(&x) {
+                            UnitKind::Audio
+                        } else {
+                            kind
+                        }
+                    }
+                    None => kind,
+                };
+
+                Unit { path, kind }
+            }
+            _ => x,
+        })
+        .collect::<Vec<_>>()
 }

@@ -20,7 +20,7 @@ pub fn origin_with(rel: &str) -> String {
 }
 
 #[component]
-pub fn FilesBox(current_path: RwSignal<PathBuf>, units: Memo<Option<Vec<Unit>>>) -> impl IntoView {
+pub fn FilesBox(current_path: RwSignal<PathBuf>, units: Memo<Vec<Unit>>) -> impl IntoView {
     let query = use_query_map();
     let store: Store<GlobalState> = use_context().unwrap();
     let navigate = use_navigate();
@@ -68,7 +68,7 @@ pub fn FilesBox(current_path: RwSignal<PathBuf>, units: Memo<Option<Vec<Unit>>>)
                 <Mkdir current_path/>
             </li>
             <For
-                each=move || units.get().unwrap_or_default()
+                each=move || units.get()
                 key=|x| x.name()
                 let(unit)
             >

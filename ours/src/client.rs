@@ -3,7 +3,7 @@ use std::{
     path::PathBuf,
 };
 
-use common::{Retype, SortUnits, Unit};
+use common::Unit;
 use delivery::Delivery;
 use iced::{
     Length, Task,
@@ -41,10 +41,8 @@ impl ClientMessage {
             }
             ClientMessage::CurrentPathChanged {
                 current_path,
-                mut units,
+                units,
             } => {
-                units.retype();
-                units.sort_units();
                 state.units = units;
                 state.current_path = current_path;
                 Task::none()
@@ -62,9 +60,7 @@ impl ClientMessage {
                     Task::none()
                 }
             }
-            ClientMessage::GoneBack(mut units) => {
-                units.retype();
-                units.sort_units();
+            ClientMessage::GoneBack(units) => {
                 state.current_path.pop();
                 state.units = units;
                 Task::none()

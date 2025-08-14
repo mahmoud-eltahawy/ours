@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 use std::sync::LazyLock;
 
-use common::{GlobalState, GlobalStateStoreFields, SelectedState, SortUnits};
-use common::{Retype, Unit};
+use common::Unit;
+use common::{GlobalState, GlobalStateStoreFields, SelectedState};
 use delivery::Delivery;
 use files_box::FilesBox;
 use leptos::svg;
@@ -31,22 +31,13 @@ pub fn App() -> impl IntoView {
             Ok(v) => v,
             Err(err) => {
                 leptos::logging::error!("ls Error : {err}");
-                return None;
+                return Vec::new();
             }
         };
-        let result = ls
-            .map(|mut xs| {
-                xs.retype();
-                xs
-            })
-            .map(|mut xs| {
-                xs.sort_units();
-                xs
-            });
-        if result.is_some() {
-            result
+        if ls.is_some() {
+            ls.unwrap_or_default()
         } else {
-            other.cloned().flatten()
+            other.cloned().unwrap_or_default()
         }
     });
 
