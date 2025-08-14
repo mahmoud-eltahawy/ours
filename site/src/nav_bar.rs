@@ -144,19 +144,19 @@ where
     Active: Fn() -> bool + Send + Clone + 'static,
     OnClick: Fn() + Send + 'static,
 {
-    Effect::new({
+    let style = {
         let active = active.clone();
         move || {
             if active() {
-                icon.update(|x| x.fill = Some("green"));
+                "border-bottom: solid;border-left: dotted;border-right: dotted;"
             } else {
-                icon.update(|x| x.fill = Some("black"));
+                "border: hidden;"
             }
         }
-    });
+    };
 
     view! {
-        <button on:click=move |_| onclick() disabled=move || !active()>
+        <button class="m-4 p-2 border-700-lime" style=style on:click=move |_| onclick() disabled=move || !active()>
             <Icon icon/>
         </button>
     }

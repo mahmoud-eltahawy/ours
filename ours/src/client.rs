@@ -56,7 +56,7 @@ trait UnitViews {
 
 impl UnitViews for Unit {
     fn button(&self) -> Button<'_, Message> {
-        let handle = Handle::from_memory(self.icon());
+        let handle = Handle::from_memory(self.icon().data.bytes().collect::<Vec<_>>());
         let icon = Svg::new(handle).width(30.);
         let text = Text::new(self.name());
         let row = row![icon, text].spacing(4.);

@@ -67,13 +67,13 @@ pub fn FilesBox(current_path: RwSignal<PathBuf>, units: Memo<Option<Vec<Unit>>>)
             <li>
                 <Mkdir current_path/>
             </li>
-            {
-                move || units.get().map(|xs| {
-                    xs.into_iter().map(|x| {view! {
-                        <UnitComp unit=x />
-                    }}).collect_view()
-                })
-            }
+            <For
+                each=move || units.get().unwrap_or_default()
+                key=|x| x.name()
+                let(unit)
+            >
+                <UnitComp unit=unit />
+            </For>
         </ol>
     }
 }
@@ -221,17 +221,11 @@ fn UnitIcon(unit: Unit) -> impl IntoView {
         ></a>
     });
 
-    let icon_kind = match unit.kind {
-        UnitKind::Dirctory => icondata::AiFolderFilled,
-        UnitKind::Video => icondata::BiVideoRegular,
-        UnitKind::Audio => icondata::AiAudioFilled,
-        UnitKind::File => icondata::AiFileFilled,
-    };
-
+    let icon_kind = unit.icon();
     let icon = RwSignal::new(icon_kind.to_owned());
 
     view! {
-        <Tool icon=icon active=move || !store.select().read().is_selected(&unit) onclick=|| {}/>
+        <Tool icon=icon active=move || store.select().read().is_selected(&unit) onclick=|| {}/>
         {download_link}
     }
 }

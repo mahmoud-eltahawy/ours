@@ -1,4 +1,4 @@
-use assets::{AUDIO_ICON, FILE_ICON, FOLDER_ICON, VIDEO_ICON};
+use assets::{AUDIO_SVG, FILE_SVG, FOLDER_SVG, VIDEO_SVG};
 use leptos::prelude::document;
 pub use reactive_stores::Store;
 use serde::{Deserialize, Serialize};
@@ -46,6 +46,7 @@ pub struct Unit {
     pub path: PathBuf,
     pub kind: UnitKind,
 }
+use icondata_core::IconData;
 
 impl Unit {
     pub fn name(&self) -> String {
@@ -60,12 +61,12 @@ impl Unit {
             .click();
     }
 
-    pub fn icon(&self) -> &'static [u8] {
+    pub fn icon(&self) -> &'static IconData {
         match self.kind {
-            UnitKind::Dirctory => FOLDER_ICON,
-            UnitKind::File => FILE_ICON,
-            UnitKind::Video => VIDEO_ICON,
-            UnitKind::Audio => AUDIO_ICON,
+            UnitKind::Dirctory => &FOLDER_SVG,
+            UnitKind::File => &FILE_SVG,
+            UnitKind::Video => &VIDEO_SVG,
+            UnitKind::Audio => &AUDIO_SVG,
         }
     }
 }

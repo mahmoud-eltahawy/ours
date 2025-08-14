@@ -192,6 +192,9 @@ dependencies = [
 [[package]]
 name = "assets"
 version = "0.1.0"
+dependencies = [
+ "icondata_core",
+]
 
 [[package]]
 name = "async-broadcast"
@@ -826,6 +829,7 @@ name = "common"
 version = "0.1.0"
 dependencies = [
  "assets",
+ "icondata_core",
  "leptos",
  "reactive_stores",
  "reqwest",
