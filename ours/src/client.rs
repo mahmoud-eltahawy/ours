@@ -3,7 +3,7 @@ use std::net::{IpAddr, Ipv4Addr};
 use common::Unit;
 use delivery::Delivery;
 use iced::{
-    Length, Task,
+    Element, Length, Task,
     widget::{Button, Container, Text, column, scrollable},
 };
 
@@ -42,11 +42,20 @@ impl Default for ClientState {
 impl ClientState {
     pub fn view(&self) -> Container<'_, Message> {
         let home = go_home_button();
-        let mut col = column![home].spacing(10.);
-
-        for x in self.units.iter() {
-            col = col.push(Button::new(Text::new(x.name())));
-        }
+        let col = self
+            .units
+            .iter()
+            .fold(column![home].spacing(10.), |acc, x| acc.push(x.button()));
         Container::new(scrollable(col).width(Length::Fill))
+    }
+}
+
+trait UnitViews {
+    fn button(&self) -> Button<'_, Message>;
+}
+
+impl UnitViews for Unit {
+    fn button(&self) -> Button<'_, Message> {
+        Button::new(Text::new(self.name()))
     }
 }
