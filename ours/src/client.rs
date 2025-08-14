@@ -15,7 +15,10 @@ use crate::{Message, home::go_home_button, serve::Origin};
 #[derive(Debug, Clone)]
 pub enum ClientMessage {
     ChangeCurrentPath(PathBuf),
-    CurrentPathChanged(Vec<Unit>),
+    CurrentPathChanged {
+        current_path: PathBuf,
+        units: Vec<Unit>,
+    },
     None,
 }
 
@@ -23,17 +26,23 @@ impl ClientMessage {
     pub fn handle(self, state: &mut ClientState) -> Task<Message> {
         match self {
             ClientMessage::ChangeCurrentPath(path_buf) => {
-                state.current_path = path_buf.clone();
-                Task::perform(state.delivery.clone().ls(path_buf), |xs| {
+                Task::perform(state.delivery.clone().ls(path_buf.clone()), move |xs| {
                     if let Ok(xs) = xs {
-                        Message::Client(ClientMessage::CurrentPathChanged(xs))
+                        Message::Client(ClientMessage::CurrentPathChanged {
+                            units: xs,
+                            current_path: path_buf.clone(),
+                        })
                     } else {
                         Message::Client(ClientMessage::None)
                     }
                 })
             }
-            ClientMessage::CurrentPathChanged(units) => {
+            ClientMessage::CurrentPathChanged {
+                current_path,
+                units,
+            } => {
                 state.units = units;
+                state.current_path = current_path;
                 Task::none()
             }
             ClientMessage::None => Task::none(),
