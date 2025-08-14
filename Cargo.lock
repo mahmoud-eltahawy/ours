@@ -825,6 +825,7 @@ dependencies = [
 name = "common"
 version = "0.1.0"
 dependencies = [
+ "assets",
  "leptos",
  "reactive_stores",
  "reqwest",
@@ -4126,7 +4127,6 @@ dependencies = [
 name = "ours"
 version = "0.1.0"
 dependencies = [
- "assets",
  "common",
  "delivery",
  "get-port",

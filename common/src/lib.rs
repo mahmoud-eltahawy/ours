@@ -1,3 +1,4 @@
+use assets::{AUDIO_ICON, FILE_ICON, FOLDER_ICON, VIDEO_ICON};
 use leptos::prelude::document;
 pub use reactive_stores::Store;
 use serde::{Deserialize, Serialize};
@@ -57,6 +58,15 @@ impl Unit {
             .unwrap()
             .unchecked_into::<web_sys::HtmlAnchorElement>()
             .click();
+    }
+
+    pub fn icon(&self) -> &'static [u8] {
+        match self.kind {
+            UnitKind::Dirctory => FOLDER_ICON,
+            UnitKind::File => FILE_ICON,
+            UnitKind::Video => VIDEO_ICON,
+            UnitKind::Audio => AUDIO_ICON,
+        }
     }
 }
 

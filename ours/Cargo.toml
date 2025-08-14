@@ -12,4 +12,3 @@ rfd = "0.15.3"
 server.workspace = true
 delivery.workspace = true
 common.workspace = true
-assets.workspace = true

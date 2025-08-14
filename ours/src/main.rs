@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use client::{ClientMessage, ClientState};
-use common::Unit;
+use common::{Retype, SortUnits, Unit};
 use delivery::Delivery;
 use home::home_view;
 use iced::{Color, Task, daemon::Appearance, widget::Container};
@@ -88,7 +88,10 @@ impl State {
                     let delivery = Delivery::new(origin.to_string());
                     self.client.delivery = delivery.clone();
                     Task::perform(delivery.ls(PathBuf::new()), move |units| {
-                        Message::ToClient(units.unwrap_or_default())
+                        let mut units = units.unwrap_or_default();
+                        units.retype();
+                        units.sort_units();
+                        Message::ToClient(units)
                     })
                 } else {
                     Task::none()

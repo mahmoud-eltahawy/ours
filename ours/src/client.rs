@@ -1,6 +1,5 @@
 use std::net::{IpAddr, Ipv4Addr};
 
-use assets::{FILE_ICON, FOLDER_ICON};
 use common::Unit;
 use delivery::Delivery;
 use iced::{
@@ -57,11 +56,8 @@ trait UnitViews {
 
 impl UnitViews for Unit {
     fn button(&self) -> Button<'_, Message> {
-        let icon = match self.kind {
-            common::UnitKind::Dirctory => FOLDER_ICON,
-            _ => FILE_ICON,
-        };
-        let icon = Svg::new(Handle::from_memory(icon)).width(30.);
+        let handle = Handle::from_memory(self.icon());
+        let icon = Svg::new(handle).width(30.);
         let text = Text::new(self.name());
         let row = row![icon, text].spacing(4.);
         Button::new(row)
