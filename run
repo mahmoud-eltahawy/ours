@@ -1,6 +1,6 @@
 #!/usr/bin/env nu
  
-const server_port = 1024;
+let server_port = (port 8080);
 
 def "main web" [] {
   $server_port out> ./site/src/port.txt
@@ -9,7 +9,7 @@ def "main web" [] {
     cargo run -- ~/ $server_port
   }
   cd ../site/
-  trunk serve --port 8080 --open
+  trunk serve --port (port 1024) --open
 }
 
 def "main build" [] {

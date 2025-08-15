@@ -3,7 +3,7 @@ use axum_extra::response::{JavaScript, Wasm};
 
 use site_assets::{FAVICON, INDEX, JS, WASM};
 
-pub(crate) fn assets_router() -> Router {
+pub fn assets_router() -> Router {
     Router::new()
         .route("/", get(index))
         .route("/site.js", get(js))
