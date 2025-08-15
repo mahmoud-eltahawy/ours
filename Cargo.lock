@@ -5228,7 +5228,6 @@ dependencies = [
 name = "server"
 version = "0.1.0"
 dependencies = [
- "assets",
  "axum",
  "axum-extra",
  "common",
@@ -5236,6 +5235,7 @@ dependencies = [
  "get-port",
  "serde",
  "serde_json",
+ "site_assets",
  "tokio",
  "tower",
  "tower-http",
@@ -5381,6 +5381,10 @@ dependencies = [
  "wasm-bindgen-test",
  "web-sys",
 ]
+
+[[package]]
+name = "site_assets"
+version = "0.1.0"
 
 [[package]]
 name = "skrifa"

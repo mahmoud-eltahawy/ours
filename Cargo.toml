@@ -6,6 +6,7 @@ members = [
     "ours",
     "assets",
     "delivery",
+    "site_assets",
 ]
 resolver = "2"
 
@@ -27,6 +28,8 @@ path = "./delivery"
 
 [workspace.dependencies.assets]
 path = "./assets"
+[workspace.dependencies.site_assets]
+path = "./site_assets"
 
 [workspace.dependencies.server]
 path = "./server"

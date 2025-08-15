@@ -1,6 +1,6 @@
 debug/
 target/
-assets/temp
+./site_assets/gen/*
 
 node_modules
 dist

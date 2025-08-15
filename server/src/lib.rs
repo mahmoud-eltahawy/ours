@@ -12,6 +12,7 @@ use get_port::Ops;
 use tower_http::{cors::CorsLayer, services::ServeDir, timeout::TimeoutLayer};
 
 pub mod app_error;
+#[cfg(not(debug_assertions))]
 mod assets_router;
 mod cd;
 mod mp4;
@@ -65,6 +66,7 @@ impl Server {
             .route(MV_PATH, post(cd::mv))
             .route(RM_PATH, post(cd::rm))
             .route(LS_PATH, post(cd::ls))
+            //TODO : complete this
             .route("/wls", any(ws_ls))
             .route(MKDIR_PATH, post(cd::mkdir))
             .nest_service("/download", target_dir)
@@ -73,6 +75,7 @@ impl Server {
             .layer(CorsLayer::permissive())
             .layer(DefaultBodyLimit::disable());
 
+        #[cfg(not(debug_assertions))]
         let app = app.merge(assets_router::assets_router());
 
         let listener = tokio::net::TcpListener::bind(&addr).await?;

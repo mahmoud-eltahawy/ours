@@ -17,8 +17,15 @@ mod files_box;
 mod media_player;
 mod nav_bar;
 
-pub static DELIVERY: LazyLock<Delivery> =
-    LazyLock::new(|| Delivery::new(window().location().origin().unwrap()));
+pub static DELIVERY: LazyLock<Delivery> = LazyLock::new(|| {
+    Delivery::new({
+        #[cfg(debug_assertions)]
+        let origin = format!("http://127.0.0.1:{}", include_str!("port.txt"));
+        #[cfg(not(debug_assertions))]
+        let origin = window().location().origin().unwrap();
+        origin
+    })
+});
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -71,7 +78,6 @@ pub fn App() -> impl IntoView {
     }
 }
 
-/// The Icon component.
 #[component]
 pub fn Icon<I>(
     icon: I,

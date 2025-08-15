@@ -1,0 +1,30 @@
+#!/usr/bin/env nu
+ 
+const server_port = 1024;
+
+def "main web" [] {
+  $server_port out> ./site/src/port.txt
+  cd ours
+  job spawn {
+    cargo run -- ~/ $server_port
+  }
+  cd ../site/
+  trunk serve --port 8080 --open
+}
+
+def "main build" [] {
+  cd ./site
+  trunk build --release
+  cd ..
+  ls site_assets/gen | get name | par-each {|x| gzip $x} 
+  cd ours
+  cargo build --release
+  # rm ../assets/temp -rf
+}
+
+def "main install" [] {
+  main build 
+  cargo install --path ./ours
+}
+
+def main [] {}
