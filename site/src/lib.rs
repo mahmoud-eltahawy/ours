@@ -73,14 +73,17 @@ pub fn App() -> impl IntoView {
 
 /// The Icon component.
 #[component]
-pub fn Icon(
-    icon: RwSignal<icondata_core::IconData>,
+pub fn Icon<I>(
+    icon: I,
     // #[prop(optional)] style: Option<&'static str>,
     // #[prop(optional)] width: Option<&'static str>,
     // #[prop(optional)] height: Option<&'static str>,
-) -> impl IntoView {
+) -> impl IntoView
+where
+    I: Fn() -> icondata_core::IconData + Send + Clone + 'static,
+{
     move || {
-        let icon = icon.get();
+        let icon = icon();
         svg::svg()
             // .style(match (style, icon.style) {
             //     (Some(a), Some(b)) => Some(format!("{b} {a}")),

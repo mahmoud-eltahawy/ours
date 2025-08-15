@@ -37,5 +37,5 @@ pub fn Remove() -> impl IntoView {
         }
     });
 
-    view! { <LoadableTool active icon=RwSignal::new(icondata::AiDeleteFilled.to_owned()) onclick finished /> }
+    view! { <LoadableTool active icon=|| icondata::AiDeleteFilled.to_owned() onclick finished /> }
 }

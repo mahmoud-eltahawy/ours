@@ -84,6 +84,7 @@ pub const AUDIO_X: [&str; 20] = [
 
 #[derive(Default, Clone, Debug)]
 pub struct Selected {
+    pub on: bool,
     pub units: Vec<Unit>,
     pub state: SelectedState,
 }
@@ -92,6 +93,7 @@ impl Selected {
     pub fn clear(&mut self) {
         self.units.clear();
         self.none();
+        self.on = false;
     }
 
     pub fn as_paths(&self) -> Vec<PathBuf> {

@@ -45,5 +45,5 @@ pub fn ToMp4() -> impl IntoView {
         }
     });
 
-    view! { <LoadableTool active icon=RwSignal::new(icondata::BsFiletypeMp4.to_owned()) onclick finished /> }
+    view! { <LoadableTool active icon=|| icondata::BsFiletypeMp4.to_owned() onclick finished /> }
 }

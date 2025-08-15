@@ -105,7 +105,7 @@ fn Mkdir(current_path: RwSignal<PathBuf>) -> impl IntoView {
     view! {
         <Show when=when>
             <button>
-                <Icon icon=RwSignal::new(icondata::AiFolderFilled.to_owned()) />
+                <Icon icon=|| icondata::AiFolderFilled.to_owned() />
                 <input
                     class="p-2 border-2 border-black text-2xl"
                     on:keypress=enter
@@ -146,29 +146,28 @@ fn UnitComp(unit: Unit) -> impl IntoView {
     let navigate = use_navigate();
     let store = use_context::<Store<GlobalState>>().unwrap();
 
-    let ondblclick = {
-        let unit = unit.clone();
-        move |_| match &unit.kind {
-            UnitKind::Dirctory => {
-                if matches!(store.select().read().state, SelectedState::None) {
-                    store.select().write().clear();
-                }
-                navigate(&path_as_query(&unit.path), Default::default());
-            }
-            UnitKind::Video | UnitKind::Audio => {
-                *store.media_play().write() = Some(unit.clone());
-            }
-            UnitKind::File => {
-                unit.click_anchor();
-                store.select().write().remove_unit(&unit);
-            }
-        }
-    };
-
     let onclick = {
         let unit = unit.clone();
         move |_| {
-            store.select().write().toggle_unit_selection(&unit);
+            if store.select().read().on {
+                store.select().write().toggle_unit_selection(&unit);
+            } else {
+                match &unit.kind {
+                    UnitKind::Dirctory => {
+                        if matches!(store.select().read().state, SelectedState::None) {
+                            store.select().write().clear();
+                        }
+                        navigate(&path_as_query(&unit.path), Default::default());
+                    }
+                    UnitKind::Video | UnitKind::Audio => {
+                        *store.media_play().write() = Some(unit.clone());
+                    }
+                    UnitKind::File => {
+                        unit.click_anchor();
+                        store.select().write().remove_unit(&unit);
+                    }
+                }
+            };
         }
     };
 
@@ -180,10 +179,10 @@ fn UnitComp(unit: Unit) -> impl IntoView {
             let is_selected = select.is_selected(&unit);
             match &select.state {
                 SelectedState::Cut if is_selected => Either::Right(Either::Left(
-                    view! { <Icon icon=RwSignal::new(icondata::BiCutRegular.to_owned())  /> },
+                    view! { <Icon icon=|| icondata::BiCutRegular.to_owned()  /> },
                 )),
                 SelectedState::Copy if is_selected => Either::Right(Either::Right(
-                    view! { <Icon  icon=RwSignal::new(icondata::BiCopyRegular.to_owned())/> },
+                    view! { <Icon  icon=|| icondata::BiCopyRegular.to_owned()/> },
                 )),
                 _ => Either::Left(view! { <UnitIcon unit=unit.clone() /> }),
             }
@@ -193,7 +192,6 @@ fn UnitComp(unit: Unit) -> impl IntoView {
     view! {
         <li>
             <button
-                on:dblclick=ondblclick
                 on:click=onclick
                 class="grid grid-cols-2 hover:text-white hover:bg-black justify-items-left"
             >
@@ -222,10 +220,9 @@ fn UnitIcon(unit: Unit) -> impl IntoView {
     });
 
     let icon_kind = unit.icon();
-    let icon = RwSignal::new(icon_kind.to_owned());
 
     view! {
-        <Tool icon=icon active=move || store.select().read().is_selected(&unit) onclick=|| {}/>
+        <Tool icon=|| icon_kind.to_owned() active=move || store.select().read().is_selected(&unit) onclick=|| {}/>
         {download_link}
     }
 }
