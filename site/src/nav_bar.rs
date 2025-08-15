@@ -40,8 +40,8 @@ pub fn NavBar(current_path: RwSignal<PathBuf>) -> impl IntoView {
         >
             <More more />
             <div class="grid grid-cols-2 place-content-center" style=hidden>
-                <Home current_path/>
-                <Open/>
+                <Home current_path />
+                <Open />
                 <Selection />
                 <Download />
                 {move || {
@@ -60,7 +60,7 @@ pub fn NavBar(current_path: RwSignal<PathBuf>) -> impl IntoView {
 
 #[component]
 pub fn More(more: RwSignal<bool>) -> impl IntoView {
-    let on_click = move |_| {
+    let on_pointerdown = move |_| {
         more.update(|x| *x = !*x);
     };
     let icon = move || {
@@ -79,9 +79,9 @@ pub fn More(more: RwSignal<bool>) -> impl IntoView {
             class:fixed=more
             class:top-0=more
             class:right-0=more
-            on:click=on_click
+            on:pointerdown=on_pointerdown
         >
-            <Icon icon/>
+            <Icon icon />
         </button>
     }
 }
@@ -89,33 +89,41 @@ pub fn More(more: RwSignal<bool>) -> impl IntoView {
 #[component]
 pub fn AdminRequired(current_path: RwSignal<PathBuf>) -> impl IntoView {
     view! {
-        <Upload current_path/>
+        <Upload current_path />
         <Remove />
         <Mkdir />
-        <Paste current_path/>
-        <ToMp4  />
+        <Paste current_path />
+        <ToMp4 />
     }
 }
 
 #[component]
-fn LoadableTool<Active, OnClick, Finished, Icon>(
+fn LoadableTool<Active, Onpointerdown, Finished, Icon>(
     icon: Icon,
     active: Active,
-    onclick: OnClick,
+    onpointerdown: Onpointerdown,
     finished: Finished,
 ) -> impl IntoView
 where
     Active: Fn() -> bool + Send + Sync + Clone + Copy + 'static,
-    OnClick: Fn() + Send + Sync + Clone + 'static,
+    Onpointerdown: Fn() + Send + Sync + Clone + 'static,
     Finished: Fn() -> bool + Send + Sync + Clone + Copy + 'static,
     Icon: Fn() -> IconData + Send + Sync + Clone + Copy + 'static,
 {
     view! {
         <Show
             when=finished
-            fallback=move || view! { <Tool icon=|| icondata::CgSearchLoading.to_owned() active=||true onclick=|| {} /> }
+            fallback=move || {
+                view! {
+                    <Tool
+                        icon=|| icondata::CgSearchLoading.to_owned()
+                        active=|| true
+                        onpointerdown=|| {}
+                    />
+                }
+            }
         >
-            <Tool icon active onclick=onclick.clone() />
+            <Tool icon active onpointerdown=onpointerdown.clone() />
         </Show>
     }
 }
@@ -126,23 +134,25 @@ fn Home(current_path: RwSignal<PathBuf>) -> impl IntoView {
     let navigate = use_navigate();
     let active = move || current_path.read().file_name().is_some();
 
-    let onclick = move || {
+    let onpointerdown = move || {
         if let SelectedState::None = store.select().get().state {
             store.select().write().clear();
         }
         navigate("/", NavigateOptions::default())
     };
 
-    view! {
-        <Tool icon=|| icondata::BiHomeSmileRegular.to_owned() active onclick/>
-    }
+    view! { <Tool icon=|| icondata::BiHomeSmileRegular.to_owned() active onpointerdown /> }
 }
 
 #[component]
-pub fn Tool<Active, OnClick, Icon>(active: Active, onclick: OnClick, icon: Icon) -> impl IntoView
+pub fn Tool<Active, Onpointerdown, Icon>(
+    active: Active,
+    onpointerdown: Onpointerdown,
+    icon: Icon,
+) -> impl IntoView
 where
     Active: Fn() -> bool + Send + Clone + 'static,
-    OnClick: Fn() + Send + 'static,
+    Onpointerdown: Fn() + Send + 'static,
     Icon: Fn() -> assets::IconData + Send + Clone + 'static,
 {
     let style = {
@@ -157,8 +167,13 @@ where
     };
 
     view! {
-        <button class="m-4 p-2 border-700-lime" style=style on:click=move |_| onclick() disabled=move || !active()>
-            <Icon icon/>
+        <button
+            class="m-4 p-2 border-700-lime"
+            style=style
+            on:pointerdown=move |_| onpointerdown()
+            disabled=move || !active()
+        >
+            <Icon icon />
         </button>
     }
 }
@@ -175,7 +190,7 @@ fn Selection() -> impl IntoView {
         }
     };
 
-    let onclick = move || {
+    let onpointerdown = move || {
         if store.select().read().on {
             store.select().update(|x| x.clear());
         } else {
@@ -183,9 +198,7 @@ fn Selection() -> impl IntoView {
         }
     };
 
-    view! {
-        <Tool icon active=|| true onclick/>
-    }
+    view! { <Tool icon active=|| true onpointerdown /> }
 }
 
 #[component]
@@ -200,7 +213,7 @@ fn Open() -> impl IntoView {
         },
         _ => None,
     };
-    let onclick = move || {
+    let onpointerdown = move || {
         if let Some(target) = target() {
             navigate(&path_as_query(&target.path), Default::default());
             store.select().write().clear();
@@ -209,15 +222,13 @@ fn Open() -> impl IntoView {
 
     let active = move || target().is_some();
 
-    view! {
-        <Tool icon=|| icondata::TiFolderOpen.to_owned() active onclick/>
-    }
+    view! { <Tool icon=|| icondata::TiFolderOpen.to_owned() active onpointerdown /> }
 }
 
 #[component]
 fn Download() -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
-    let onclick = move || {
+    let onpointerdown = move || {
         store.select().get_untracked().download_selected();
         store.select().write().clear();
     };
@@ -227,28 +238,28 @@ fn Download() -> impl IntoView {
         !select.is_clear() && !select.has_dirs()
     };
 
-    view! { <Tool icon=|| icondata::BiCloudDownloadRegular.to_owned() active onclick /> }
+    view! { <Tool icon=|| icondata::BiCloudDownloadRegular.to_owned() active onpointerdown /> }
 }
 
 #[component]
 fn Admin() -> impl IntoView {
     let store = use_context::<Store<GlobalState>>().unwrap();
-    let onclick = move || {
+    let onpointerdown = move || {
         *store.password().write() = true;
     };
 
-    view! { <Tool icon=|| icondata::RiAdminUserFacesFill.to_owned() active=|| true onclick /> }
+    view! { <Tool icon=|| icondata::RiAdminUserFacesFill.to_owned() active=|| true onpointerdown /> }
 }
 
 #[component]
 fn Mkdir() -> impl IntoView {
     let store = use_context::<Store<GlobalState>>().unwrap();
 
-    let onclick = move || {
+    let onpointerdown = move || {
         *store.mkdir_state().write() = Some(String::new());
     };
 
     let active = move || store.select().read().is_clear();
 
-    view! { <Tool icon=|| icondata::AiFolderAddFilled.to_owned() active onclick /> }
+    view! { <Tool icon=|| icondata::AiFolderAddFilled.to_owned() active onpointerdown /> }
 }

@@ -11,7 +11,7 @@ use crate::{Unit, DELIVERY};
 pub fn Remove() -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let remove = Action::new_local(move |input: &Vec<Unit>| DELIVERY.rm(input.clone()));
-    let onclick = move || {
+    let onpointerdown = move || {
         let units = store.select().get_untracked().units;
         if let Ok(true) = window().confirm_with_message(&format!(
             "are you sure you want to delete {:#?}",
@@ -33,9 +33,9 @@ pub fn Remove() -> impl IntoView {
 
     let _ = use_event_listener(use_window(), ev::keydown, move |ev| {
         if ev.key().as_str() == "Delete" && active() {
-            onclick();
+            onpointerdown();
         }
     });
 
-    view! { <LoadableTool active icon=|| icondata::AiDeleteFilled.to_owned() onclick finished /> }
+    view! { <LoadableTool active icon=|| icondata::AiDeleteFilled.to_owned() onpointerdown finished /> }
 }

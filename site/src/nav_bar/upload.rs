@@ -43,7 +43,7 @@ pub fn Upload(current_path: RwSignal<PathBuf>) -> impl IntoView {
     };
     let input_ref: NodeRef<html::Input> = NodeRef::new();
 
-    let onclick = move || {
+    let onpointerdown = move || {
         input_ref.get().unwrap().click();
     };
 
@@ -56,7 +56,7 @@ pub fn Upload(current_path: RwSignal<PathBuf>) -> impl IntoView {
     let active = move || store.select().read().is_clear();
     let finished = move || !upload_action.pending().get();
     view! {
-        <LoadableTool icon=|| icondata::BiUploadRegular.to_owned() active onclick finished />
+        <LoadableTool icon=|| icondata::BiUploadRegular.to_owned() active onpointerdown finished />
         <input node_ref=input_ref on:change=on_change type="file" multiple hidden />
     }
 }

@@ -35,7 +35,7 @@ pub fn Paste(current_path: RwSignal<PathBuf>) -> impl IntoView {
         }
     });
 
-    let onclick = move || match store.select().get().state {
+    let onpointerdown = move || match store.select().get().state {
         SelectedState::Copy => {
             copy.dispatch(());
         }
@@ -52,14 +52,14 @@ pub fn Paste(current_path: RwSignal<PathBuf>) -> impl IntoView {
 
     let _ = use_event_listener(use_window(), ev::keydown, move |ev| {
         if ev.key().as_str() == "v" && ev.ctrl_key() && active() {
-            onclick();
+            onpointerdown();
         }
     });
 
     view! {
         <Copy finished=copy_finished />
         <Cut finished=cut_finished />
-        <LoadableTool active icon=|| icondata::BiPasteRegular.to_owned() onclick finished />
+        <LoadableTool active icon=|| icondata::BiPasteRegular.to_owned() onpointerdown finished />
     }
 }
 
@@ -75,19 +75,19 @@ where
         !select.is_clear() && !select.has_dirs()
     };
 
-    let onclick = move || {
+    let onpointerdown = move || {
         store.select().write().copy();
     };
 
     let _ = use_event_listener(use_window(), ev::keydown, {
         move |ev| {
             if ev.key().as_str() == "c" && ev.ctrl_key() && active() {
-                onclick();
+                onpointerdown();
             }
         }
     });
 
-    view! { <LoadableTool icon=|| icondata::AiCopyFilled.to_owned() active  onclick finished /> }
+    view! { <LoadableTool icon=|| icondata::AiCopyFilled.to_owned() active onpointerdown finished /> }
 }
 
 #[component]
@@ -102,7 +102,7 @@ where
         !select.is_clear() && !select.has_dirs()
     };
 
-    let onclick = {
+    let onpointerdown = {
         move || {
             store.select().write().cut();
         }
@@ -111,10 +111,10 @@ where
     let _ = use_event_listener(use_window(), ev::keydown, {
         move |ev| {
             if ev.key().as_str() == "x" && ev.ctrl_key() && active() {
-                onclick();
+                onpointerdown();
             }
         }
     });
 
-    view! { <LoadableTool active icon=|| icondata::BiCutRegular.to_owned() onclick finished /> }
+    view! { <LoadableTool active icon=|| icondata::BiCutRegular.to_owned() onpointerdown finished /> }
 }

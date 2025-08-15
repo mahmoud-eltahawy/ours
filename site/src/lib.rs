@@ -57,12 +57,12 @@ pub fn App() -> impl IntoView {
 
     view! {
         <Router>
-            <NavBar current_path/>
+            <NavBar current_path />
             <main>
                 <Routes fallback=|| "Page not found.">
                     <Route
                         path=StaticSegment("")
-                        view=move || view! { <FilesBox current_path units/> }
+                        view=move || view! { <FilesBox current_path units /> }
                     />
                 </Routes>
             </main>

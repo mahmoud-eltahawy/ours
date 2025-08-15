@@ -10,7 +10,7 @@ pub fn ToMp4() -> impl IntoView {
     let store = use_context::<Store<GlobalState>>().unwrap();
 
     let remux = Action::new_local(move |input: &Vec<PathBuf>| DELIVERY.mp4_remux(input.clone()));
-    let onclick = move || {
+    let onpointerdown = move || {
         let targets = store
             .select()
             .read()
@@ -45,5 +45,5 @@ pub fn ToMp4() -> impl IntoView {
         }
     });
 
-    view! { <LoadableTool active icon=|| icondata::BsFiletypeMp4.to_owned() onclick finished /> }
+    view! { <LoadableTool active icon=|| icondata::BsFiletypeMp4.to_owned() onpointerdown finished /> }
 }

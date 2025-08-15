@@ -61,17 +61,11 @@ pub fn FilesBox(current_path: RwSignal<PathBuf>, units: Memo<Vec<Unit>>) -> impl
     });
 
     view! {
-        <ol
-            class="w-full min-h-80 m-5 p-5 border-2 border-lime-500 rounded-lg"
-        >
+        <ol class="w-full min-h-80 m-5 p-5 border-2 border-lime-500 rounded-lg">
             <li>
-                <Mkdir current_path/>
+                <Mkdir current_path />
             </li>
-            <For
-                each=move || units.get()
-                key=|x| x.name()
-                let(unit)
-            >
+            <For each=move || units.get() key=|x| x.name() let(unit)>
                 <UnitComp unit=unit />
             </For>
         </ol>
@@ -146,7 +140,7 @@ fn UnitComp(unit: Unit) -> impl IntoView {
     let navigate = use_navigate();
     let store = use_context::<Store<GlobalState>>().unwrap();
 
-    let onclick = {
+    let onpointerdown = {
         let unit = unit.clone();
         move |_| {
             if store.select().read().on {
@@ -179,10 +173,10 @@ fn UnitComp(unit: Unit) -> impl IntoView {
             let is_selected = select.is_selected(&unit);
             match &select.state {
                 SelectedState::Cut if is_selected => Either::Right(Either::Left(
-                    view! { <Icon icon=|| icondata::BiCutRegular.to_owned()  /> },
+                    view! { <Icon icon=|| icondata::BiCutRegular.to_owned() /> },
                 )),
                 SelectedState::Copy if is_selected => Either::Right(Either::Right(
-                    view! { <Icon  icon=|| icondata::BiCopyRegular.to_owned()/> },
+                    view! { <Icon icon=|| icondata::BiCopyRegular.to_owned() /> },
                 )),
                 _ => Either::Left(view! { <UnitIcon unit=unit.clone() /> }),
             }
@@ -192,7 +186,7 @@ fn UnitComp(unit: Unit) -> impl IntoView {
     view! {
         <li>
             <button
-                on:click=onclick
+                on:pointerdown=onpointerdown
                 class="grid grid-cols-2 hover:text-white hover:bg-black justify-items-left"
             >
                 {icon}
@@ -210,19 +204,16 @@ fn UnitIcon(unit: Unit) -> impl IntoView {
         "/download/{}",
         unit.path.to_str().unwrap_or_default()
     ));
-    let download_link = (unit.kind != UnitKind::Dirctory).then_some(view! {
-        <a
-            id=unit.name()
-            download=unit.name()
-            href={href}
-            hidden
-        ></a>
-    });
+    let download_link = (unit.kind != UnitKind::Dirctory).then_some(view! { <a id=unit.name() download=unit.name() href=href hidden></a> });
 
     let icon_kind = unit.icon();
 
     view! {
-        <Tool icon=|| icon_kind.to_owned() active=move || store.select().read().is_selected(&unit) onclick=|| {}/>
+        <Tool
+            icon=|| icon_kind.to_owned()
+            active=move || store.select().read().is_selected(&unit)
+            onpointerdown=|| {}
+        />
         {download_link}
     }
 }

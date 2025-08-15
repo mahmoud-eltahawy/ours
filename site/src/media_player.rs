@@ -1,7 +1,7 @@
 use common::Store;
 use leptos::{html::Div, prelude::*};
 use leptos_use::{
-    UseDraggableOptions, UseDraggableReturn, core::Position, use_draggable_with_options,
+    core::Position, use_draggable_with_options, UseDraggableOptions, UseDraggableReturn,
 };
 
 use crate::Unit;
@@ -59,7 +59,7 @@ fn CloseButton() -> impl IntoView {
 
     view! {
         <button
-            on:click=close
+            on:pointerdown=close
             class="bg-white rounded-md p-2 inline-flex items-center justify-center text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-hidden focus:ring-2 focus:ring-inset focus:ring-indigo-500"
         >
             <CloseIcon />
@@ -94,13 +94,13 @@ fn Player(unit: Unit) -> impl IntoView {
     let src = format!("/download/{}", unit.path.to_str().unwrap());
     view! {
         <video
-           id="my-player"
-           preload="auto"
-           class="rounded-lg cursor-default video-js"
-           autoplay
-           controls
+            id="my-player"
+            preload="auto"
+            class="rounded-lg cursor-default video-js"
+            autoplay
+            controls
         >
-            <source src=src type="video/mp4"/>
+            <source src=src type="video/mp4" />
             "Your browser does not support the video tag."
         </video>
     }
