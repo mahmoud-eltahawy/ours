@@ -80,7 +80,7 @@ pub fn Icon<I>(
     // #[prop(optional)] height: Option<&'static str>,
 ) -> impl IntoView
 where
-    I: Fn() -> icondata_core::IconData + Send + Clone + 'static,
+    I: Fn() -> assets::IconData + Send + Clone + 'static,
 {
     move || {
         let icon = icon();

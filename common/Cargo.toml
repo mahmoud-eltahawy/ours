@@ -10,4 +10,3 @@ web-sys = { workspace = true,features = ["File","FileList"]}
 leptos.workspace = true
 reqwest = { workspace = true , features = ["json"] }
 assets.workspace = true
-icondata_core.workspace = true

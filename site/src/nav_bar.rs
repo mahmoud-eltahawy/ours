@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
 use crate::{files_box::path_as_query, Icon};
+use assets::IconData;
 use common::{GlobalState, GlobalStateStoreFields, SelectedState, Store};
-use icondata_core::IconData;
 use leptos::{either::either, prelude::*};
 use leptos_router::{hooks::use_navigate, NavigateOptions};
 use mp4::ToMp4;
@@ -143,7 +143,7 @@ pub fn Tool<Active, OnClick, Icon>(active: Active, onclick: OnClick, icon: Icon)
 where
     Active: Fn() -> bool + Send + Clone + 'static,
     OnClick: Fn() + Send + 'static,
-    Icon: Fn() -> icondata_core::IconData + Send + Clone + 'static,
+    Icon: Fn() -> assets::IconData + Send + Clone + 'static,
 {
     let style = {
         let active = active.clone();

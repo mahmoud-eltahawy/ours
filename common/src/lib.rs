@@ -1,4 +1,4 @@
-use assets::{AUDIO_SVG, FILE_SVG, FOLDER_SVG, VIDEO_SVG};
+use assets::{AUDIO_SVG, FILE_SVG, FOLDER_SVG, IconData, VIDEO_SVG};
 use leptos::prelude::document;
 pub use reactive_stores::Store;
 use serde::{Deserialize, Serialize};
@@ -46,7 +46,6 @@ pub struct Unit {
     pub path: PathBuf,
     pub kind: UnitKind,
 }
-use icondata_core::IconData;
 
 impl Unit {
     pub fn name(&self) -> String {

@@ -1,4 +1,4 @@
-use icondata_core::IconData;
+pub use icondata_core::IconData;
 
 // generated after site build
 pub const INDEX: &[u8] = include_bytes!("../temp/index.html.gz");
