@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{env::args, path::PathBuf};
 
 use client::{ClientMessage, ClientState};
 use common::Unit;
@@ -7,20 +7,44 @@ use home::home_view;
 use iced::{Color, Task, daemon::Appearance, widget::Container};
 use serve::{Origin, ServeMessage, ServeState};
 
-use crate::client_prequistes::{ClientPrequistesMessage, ClientPrequistesState};
+use crate::{
+    client_prequistes::{ClientPrequistesMessage, ClientPrequistesState},
+    serve::serve,
+};
 
 mod client;
 mod client_prequistes;
 mod home;
 mod serve;
 
-pub fn main() -> iced::Result {
-    iced::application("ours", State::update, State::view)
-        .style(|_, _| Appearance {
-            background_color: Color::BLACK,
-            text_color: Color::WHITE,
-        })
-        .run_with(|| (State::default(), Task::none()))
+#[tokio::main]
+pub async fn main() {
+    let mut args = args();
+    args.next();
+    match &args.collect::<Vec<_>>()[..] {
+        [target, port] => {
+            let target = target.parse::<PathBuf>().expect("target should be a path");
+            let port = port.parse::<u16>().expect("port should be a u16 number");
+            let Origin { ip, .. } = Origin::random();
+            println!("serving at {ip}:{port}");
+            serve(target, port).await;
+        }
+        [target] => {
+            let target = target.parse::<PathBuf>().expect("target should be a path");
+            let Origin { ip, port } = Origin::random();
+            println!("serving at {ip}:{port}");
+            serve(target, port).await;
+        }
+        _ => {
+            iced::application("ours", State::update, State::view)
+                .style(|_, _| Appearance {
+                    background_color: Color::BLACK,
+                    text_color: Color::WHITE,
+                })
+                .run_with(|| (State::default(), Task::none()))
+                .unwrap();
+        }
+    };
 }
 
 struct State {
