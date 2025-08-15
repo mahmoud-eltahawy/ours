@@ -11,14 +11,14 @@ pub fn Paste(current_path: RwSignal<PathBuf>) -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let copy = Action::new_local({
         move |_: &()| {
-            DELIVERY.cp(
+            DELIVERY.clone().cp(
                 store.select().read_untracked().as_paths(),
                 current_path.get_untracked(),
             )
         }
     });
     let cut = Action::new_local(move |_: &()| {
-        DELIVERY.mv(
+        DELIVERY.clone().mv(
             store.select().read_untracked().as_paths(),
             current_path.get_untracked(),
         )

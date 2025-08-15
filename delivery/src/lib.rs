@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use common::{
     AUDIO_X, CP_PATH, LS_PATH, MKDIR_PATH, MP4_PATH, MV_PATH, RM_PATH, Unit, UnitKind, VIDEO_X,
@@ -7,19 +7,21 @@ use gloo::net::http::Request;
 
 #[derive(Debug, Clone)]
 pub struct Delivery {
-    origin: String,
+    origin: Arc<str>,
 }
 
 impl Delivery {
     pub fn new(origin: String) -> Self {
-        Self { origin }
+        Self {
+            origin: Arc::from(origin),
+        }
     }
 
-    fn url_path(&self, path: &str) -> String {
+    fn url_path(self, path: &str) -> String {
         format!("{}{}", self.origin, path)
     }
 
-    pub async fn mp4_remux(&self, targets: Vec<PathBuf>) -> Result<(), String> {
+    pub async fn mp4_remux(self, targets: Vec<PathBuf>) -> Result<(), String> {
         reqwest::Client::new()
             .post(self.url_path(MP4_PATH))
             .json(&targets)
@@ -29,7 +31,7 @@ impl Delivery {
         Ok(())
     }
 
-    pub async fn cp(&self, targets: Vec<PathBuf>, to: PathBuf) -> Result<(), String> {
+    pub async fn cp(self, targets: Vec<PathBuf>, to: PathBuf) -> Result<(), String> {
         reqwest::Client::new()
             .post(self.url_path(CP_PATH))
             .json(&(targets, to))
@@ -39,7 +41,7 @@ impl Delivery {
         Ok(())
     }
 
-    pub async fn mv(&self, targets: Vec<PathBuf>, to: PathBuf) -> Result<(), String> {
+    pub async fn mv(self, targets: Vec<PathBuf>, to: PathBuf) -> Result<(), String> {
         reqwest::Client::new()
             .post(self.url_path(MV_PATH))
             .json(&(targets, to))
@@ -67,7 +69,7 @@ impl Delivery {
         Ok(res)
     }
 
-    pub async fn mkdir(&self, target: PathBuf) -> Result<(), String> {
+    pub async fn mkdir(self, target: PathBuf) -> Result<(), String> {
         let _ = reqwest::Client::new()
             .post(self.url_path(MKDIR_PATH))
             .json(&target)
@@ -77,7 +79,7 @@ impl Delivery {
         Ok(())
     }
 
-    pub async fn rm(&self, bases: Vec<Unit>) -> Result<(), String> {
+    pub async fn rm(self, bases: Vec<Unit>) -> Result<(), String> {
         reqwest::Client::new()
             .post(self.url_path(RM_PATH))
             .json(&bases)

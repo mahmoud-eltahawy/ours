@@ -3,10 +3,10 @@ use iced::widget::{Button, Container, Text, column};
 use crate::Message;
 
 pub fn home_view<'a>() -> Container<'a, Message> {
+    let title = Text::new("Home");
     let serve = Button::new("to serve").on_press(Message::ToServe);
     let client = Button::new("to client").on_press(Message::GetClientPrequsits);
 
-    let title = Text::new("mode");
     let content = column![title, serve, client];
     Container::new(content)
 }

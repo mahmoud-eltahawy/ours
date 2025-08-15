@@ -10,7 +10,7 @@ use crate::{Unit, DELIVERY};
 #[component]
 pub fn Remove() -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
-    let remove = Action::new_local(move |input: &Vec<Unit>| DELIVERY.rm(input.clone()));
+    let remove = Action::new_local(move |input: &Vec<Unit>| DELIVERY.clone().rm(input.clone()));
     let onpointerdown = move || {
         let units = store.select().get_untracked().units;
         if let Ok(true) = window().confirm_with_message(&format!(

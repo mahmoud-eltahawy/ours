@@ -78,7 +78,7 @@ fn Mkdir(current_path: RwSignal<PathBuf>) -> impl IntoView {
     let mkdir_state = store.mkdir_state();
     let value = RwSignal::new(String::new());
 
-    let mkdir = Action::new_local(move |input: &PathBuf| DELIVERY.mkdir(input.clone()));
+    let mkdir = Action::new_local(move |input: &PathBuf| DELIVERY.clone().mkdir(input.clone()));
     let enter = move |ev: KeyboardEvent| {
         if ev.key() == "Enter" && mkdir_state.get().is_some() {
             let path = current_path.get_untracked();
@@ -204,7 +204,8 @@ fn UnitIcon(unit: Unit) -> impl IntoView {
         "/download/{}",
         unit.path.to_str().unwrap_or_default()
     ));
-    let download_link = (unit.kind != UnitKind::Dirctory).then_some(view! { <a id=unit.name() download=unit.name() href=href hidden></a> });
+    let download_link = (unit.kind != UnitKind::Dirctory)
+        .then_some(view! { <a id=unit.name() download=unit.name() href=href hidden></a> });
 
     let icon_kind = unit.icon();
 
