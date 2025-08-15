@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use crate::{files_box::path_as_query, Icon};
-use assets::IconData;
+use assets::{IconData, CLOSE_SVG, COLLAPSE_SVG, EXPAND_SVG, SELECT_SVG};
 use common::{GlobalState, GlobalStateStoreFields, SelectedState, Store};
 use leptos::{either::either, prelude::*};
 use leptos_router::{hooks::use_navigate, NavigateOptions};
@@ -64,12 +64,8 @@ pub fn More(more: RwSignal<bool>) -> impl IntoView {
         more.update(|x| *x = !*x);
     };
     let icon = move || {
-        let mut icon = icondata::BiExpandRegular.to_owned();
-        icon.fill = if more.get() {
-            Some("green")
-        } else {
-            Some("black")
-        };
+        let mut icon = if more.get() { EXPAND_SVG } else { COLLAPSE_SVG };
+        icon.fill = Some("black");
         icon
     };
 
@@ -184,9 +180,9 @@ fn Selection() -> impl IntoView {
 
     let icon = move || {
         if store.select().read().on {
-            icondata::VsClearAll.to_owned()
+            CLOSE_SVG
         } else {
-            icondata::VsListSelection.to_owned()
+            SELECT_SVG
         }
     };
 

@@ -1,8 +1,7 @@
 #!/usr/bin/env nu
  
-let server_port = (port 8080);
-
 def "main web" [] {
+  let server_port = (port 8080);
   $server_port out> ./site/src/port.txt
   cd ours
   job spawn {
@@ -24,7 +23,6 @@ def "main build" [] {
   ls site_assets/gen | get name | par-each {|x| gzip $x} 
   cd ours
   cargo build --release
-  # rm ../assets/temp -rf
 }
 
 def "main install" [] {
