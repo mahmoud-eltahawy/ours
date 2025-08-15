@@ -140,7 +140,7 @@ impl Selected {
         self.units.contains(unit)
     }
 
-    pub fn download_selected(self) {
+    pub fn wasm_download_selected(self) {
         for unit in self.units.into_iter() {
             unit.click_anchor();
         }

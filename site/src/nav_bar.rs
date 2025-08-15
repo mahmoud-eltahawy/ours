@@ -225,7 +225,7 @@ fn Open() -> impl IntoView {
 fn Download() -> impl IntoView {
     let store: Store<GlobalState> = use_context().unwrap();
     let onpointerdown = move || {
-        store.select().get_untracked().download_selected();
+        store.select().get_untracked().wasm_download_selected();
         store.select().write().clear();
     };
 
