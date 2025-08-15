@@ -28,7 +28,7 @@ no_sri = true
 
 [watch]
 # Paths to watch. The `build.target`'s parent folder is watched by default.
-watch = []
+watch = ["../assets/static"]
 # Paths to ignore.
 ignore = []
 
