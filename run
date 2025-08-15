@@ -12,6 +12,11 @@ def "main web" [] {
   trunk serve --port (port 1024) --open
 }
 
+def "main desk" [] {
+  cd ours/
+  cargo run
+}
+
 def "main build" [] {
   cd ./site
   trunk build --release
