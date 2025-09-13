@@ -1,9 +1,15 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
+use async_recursion::async_recursion;
 use common::{
     AUDIO_X, CP_PATH, LS_PATH, MKDIR_PATH, MP4_PATH, MV_PATH, RM_PATH, Unit, UnitKind, VIDEO_X,
 };
 use gloo::net::http::Request;
+use reqwest::get;
+use tokio::io::AsyncWriteExt;
 
 #[derive(Debug, Clone)]
 pub struct Delivery {
@@ -100,10 +106,56 @@ impl Delivery {
         Ok(())
     }
 
-    //FIX : should be available on nonw wasm target only
+    //FIX : should be available on non wasm target only
     pub async fn iced_upload(&self, _files: &[std::fs::File]) -> Result<(), String> {
         todo!()
     }
+
+    pub async fn download(self, units: Vec<Unit>, pwd: PathBuf) -> Result<(), String> {
+        for unit in units.iter() {
+            match unit.kind {
+                UnitKind::Dirctory => {
+                    self.clone().download_directory(unit, &pwd).await?;
+                }
+                _ => {
+                    download_file(self.origin.clone(), unit, &pwd).await?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    #[async_recursion]
+    async fn download_directory(&self, unit: &Unit, pwd: &Path) -> Result<(), String> {
+        let new_units = self.clone().ls(unit.path.clone()).await?;
+        let pwd = pwd.join(unit.name());
+        tokio::fs::create_dir(&pwd)
+            .await
+            .map_err(|x| x.to_string())?;
+        for unit in new_units.iter() {
+            match unit.kind {
+                UnitKind::Dirctory => self.clone().download_directory(unit, &pwd).await?,
+                _ => download_file(self.origin.clone(), unit, &pwd).await?,
+            }
+        }
+        Ok(())
+    }
+}
+
+async fn download_file(origin: Arc<str>, unit: &Unit, pwd: &Path) -> Result<(), String> {
+    let url = format!(
+        "{}/download/{}",
+        origin,
+        unit.path.to_str().unwrap_or_default()
+    );
+    let file_path = pwd.join(unit.name());
+    let response = get(url).await.map_err(|x| x.to_string())?;
+    let mut file = tokio::fs::File::create(file_path)
+        .await
+        .map_err(|x| x.to_string())?;
+    let content = response.bytes().await.map_err(|x| x.to_string())?;
+    file.write_all(&content).await.map_err(|x| x.to_string())?;
+    Ok(())
 }
 
 fn retype(xs: Vec<Unit>) -> Vec<Unit> {

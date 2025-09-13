@@ -829,7 +829,9 @@ name = "common"
 version = "0.1.0"
 dependencies = [
  "assets",
+ "get-port",
  "leptos",
+ "local-ip-address",
  "reactive_stores",
  "reqwest",
  "serde",
@@ -1217,9 +1219,11 @@ dependencies = [
 name = "delivery"
 version = "0.1.0"
 dependencies = [
+ "async-recursion",
  "common",
  "gloo",
  "reqwest",
+ "tokio",
  "web-sys",
 ]
 

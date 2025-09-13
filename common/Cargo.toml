@@ -10,3 +10,5 @@ web-sys = { workspace = true,features = ["File","FileList"]}
 leptos.workspace = true
 reqwest = { workspace = true , features = ["json"] }
 assets.workspace = true
+get-port = "4.0.0"
+local-ip-address = "0.6.3"

@@ -1,8 +1,10 @@
 use assets::{AUDIO_SVG, FILE_SVG, FOLDER_SVG, IconData, VIDEO_SVG};
+use get_port::Ops;
 use leptos::prelude::document;
+use local_ip_address::local_ip;
 pub use reactive_stores::Store;
 use serde::{Deserialize, Serialize};
-use std::{fmt::Display, path::PathBuf};
+use std::{fmt::Display, net::IpAddr, path::PathBuf};
 use web_sys::wasm_bindgen::JsCast;
 
 pub const LS_PATH: &str = "/ls";
@@ -12,6 +14,30 @@ pub const UPLOAD_PATH: &str = "/upload";
 pub const CP_PATH: &str = "/cp";
 pub const MV_PATH: &str = "/mv";
 pub const RM_PATH: &str = "/rm";
+
+#[derive(Debug, Clone)]
+pub struct Origin {
+    pub ip: IpAddr,
+    pub port: u16,
+}
+
+impl Display for Origin {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self { ip, port } = self;
+        write!(f, "http://{ip}:{port}")
+    }
+}
+
+impl Origin {
+    pub fn new(ip: IpAddr, port: u16) -> Self {
+        Self { ip, port }
+    }
+    pub fn random() -> Self {
+        let ip = local_ip().unwrap();
+        let port = get_port::tcp::TcpPort::any(&ip.to_string()).unwrap();
+        Self { ip, port }
+    }
+}
 
 #[derive(Default, Clone, Debug)]
 pub enum SelectedState {

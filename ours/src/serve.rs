@@ -1,15 +1,13 @@
-use get_port::Ops;
+use common::Origin;
 use iced::widget::qr_code::Data;
 use iced::{
     Background, Border, Center, Color, Shadow, Task, Vector,
     border::Radius,
     widget::{Button, Column, Container, Row, button::Style, column, qr_code, row, text},
 };
-use local_ip_address::linux::local_ip;
 use rfd::AsyncFileDialog;
 use std::env::home_dir;
-use std::fmt::Display;
-use std::{net::IpAddr, path::PathBuf};
+use std::path::PathBuf;
 use tokio::task::JoinHandle;
 
 use crate::Message;
@@ -30,31 +28,8 @@ pub struct ServeState {
     pub working_process: Option<JoinHandle<()>>,
 }
 
-#[derive(Debug, Clone)]
-pub struct Origin {
-    pub ip: IpAddr,
-    pub port: u16,
-}
-
-impl Display for Origin {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let Self { ip, port } = self;
-        write!(f, "http://{ip}:{port}")
-    }
-}
-
-impl Origin {
-    pub fn new(ip: IpAddr, port: u16) -> Self {
-        Self { ip, port }
-    }
-    pub fn random() -> Self {
-        let ip = local_ip().unwrap();
-        let port = get_port::tcp::TcpPort::any(&ip.to_string()).unwrap();
-        Self { ip, port }
-    }
-    fn qr_data(&self) -> Data {
-        Data::new(self.to_string().into_bytes()).unwrap()
-    }
+fn qr_data(origin: &Origin) -> Data {
+    Data::new(origin.to_string().into_bytes()).unwrap()
 }
 
 impl Default for ServeState {
@@ -62,7 +37,7 @@ impl Default for ServeState {
         let origin = Origin::random();
         Self {
             target_path: home_dir().unwrap_or_default(),
-            url: origin.qr_data(),
+            url: qr_data(&origin),
             origin,
             working_process: None,
         }

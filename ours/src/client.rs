@@ -1,5 +1,5 @@
 use assets::{CLOSE_SVG, IconData, SELECT_SVG};
-use common::{Selected, Unit};
+use common::{Origin, Selected, Unit};
 use delivery::Delivery;
 use iced::{
     Border, Color, Length, Task,
@@ -9,11 +9,12 @@ use iced::{
     },
 };
 use std::{
+    env::home_dir,
     net::{IpAddr, Ipv4Addr},
     path::PathBuf,
 };
 
-use crate::{Message, home::go_home_button, serve::Origin};
+use crate::{Message, home::go_home_button};
 
 #[derive(Debug, Clone)]
 pub enum ClientMessage {
@@ -26,6 +27,7 @@ pub enum ClientMessage {
     GoneBack(Vec<Unit>),
     ToggleSelectMode,
     Select(Unit),
+    DownloadSelected,
     None,
 }
 
@@ -82,6 +84,16 @@ impl ClientMessage {
                 state.select.toggle_unit_selection(&unit);
                 Task::none()
             }
+            ClientMessage::DownloadSelected => Task::perform(
+                state.delivery.clone().download(
+                    state.select.units.clone(),
+                    home_dir().map(|x| x.join("Downloads")).unwrap(),
+                ),
+                move |x| {
+                    println!("{:#?}", x);
+                    Message::Client(ClientMessage::None)
+                },
+            ),
             ClientMessage::None => Task::none(),
         }
     }
@@ -135,7 +147,9 @@ impl ClientState {
             &SELECT_SVG
         }))
         .on_press(Message::Client(ClientMessage::ToggleSelectMode));
-        column![selector, back, home].spacing(5.)
+        let download =
+            Button::new("download").on_press(Message::Client(ClientMessage::DownloadSelected));
+        column![selector, back, home, download].spacing(5.)
     }
 }
 
