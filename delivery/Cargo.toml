@@ -9,4 +9,3 @@ common.workspace = true
 gloo.workspace = true
 tokio = { workspace = true , features = ["fs"] }
 web-sys.workspace = true
-async-recursion = "1.1.1"

@@ -85,7 +85,9 @@ enum Message {
     ErrorHappned(String),
     None,
 }
+
 pub async fn error_message(message: String) -> rfd::MessageDialogResult {
+    println!("Error : {}", message);
     rfd::AsyncMessageDialog::new()
         .set_level(rfd::MessageLevel::Error)
         .set_title("ours error")

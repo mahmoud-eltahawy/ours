@@ -1,6 +1,7 @@
 use assets::{CLOSE_SVG, IconData, SELECT_SVG};
-use common::{Origin, Selected, Unit};
-use delivery::Delivery;
+use async_recursion::async_recursion;
+use common::{Origin, Selected, Unit, UnitKind};
+use delivery::{Delivery, download_file};
 use iced::{
     Border, Color, Length, Task,
     theme::Palette,
@@ -11,7 +12,7 @@ use iced::{
 use std::{
     env::home_dir,
     net::{IpAddr, Ipv4Addr},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 use crate::{Message, home::go_home_button};
@@ -27,7 +28,8 @@ pub enum ClientMessage {
     GoneBack(Vec<Unit>),
     ToggleSelectMode,
     Select(Unit),
-    DownloadSelected,
+    PrepareDownloading,
+    StartDownloading(Vec<Download>),
     DownloadDone,
 }
 
@@ -84,36 +86,147 @@ impl ClientMessage {
                 state.select.toggle_unit_selection(&unit);
                 Task::none()
             }
-            ClientMessage::DownloadSelected => {
+            ClientMessage::PrepareDownloading => {
                 let units = state.select.units.clone();
                 state.select.clear();
-                state.downloading = true;
+                state.downloads.state = DownloadingState::Prepareing {
+                    units: units.clone(),
+                };
                 Task::perform(
-                    state
-                        .delivery
-                        .clone()
-                        .download(units, home_dir().map(|x| x.join("Downloads")).unwrap()),
+                    prepare_downloads(
+                        state.delivery.clone(),
+                        units,
+                        state.downloads.download_dir.clone(),
+                    ),
                     move |x| match x {
-                        Ok(_) => Message::Client(ClientMessage::DownloadDone),
-                        Err(err) => Message::ErrorHappned(err.to_string()),
+                        Ok(downloads) => {
+                            Message::Client(ClientMessage::StartDownloading(downloads))
+                        }
+                        Err(err) => Message::ErrorHappned(format!(
+                            "error : {err:#?} happened\n while preparing for downloading"
+                        )),
                     },
                 )
             }
+            ClientMessage::StartDownloading(download_tasks) => {
+                let origin = state.delivery.origin.clone();
+                let (tasks, handles): (Vec<_>, Vec<_>) = download_tasks
+                    .clone()
+                    .iter()
+                    .map(move |x| {
+                        Task::future(download_file(
+                            origin.clone(),
+                            x.server_path.clone(),
+                            x.host_path.clone(),
+                        ))
+                        .abortable()
+                    })
+                    .unzip();
+                let (task, handle) = Task::batch(tasks).abortable();
+                state.downloads.state = DownloadingState::Downloading {
+                    main_handle: handle,
+                    tasks_handles: handles,
+                    tasks: download_tasks,
+                };
+                task.map(|x| match x {
+                    Ok(_) => Message::Client(ClientMessage::DownloadDone),
+                    Err(err) => Message::ErrorHappned(format!(
+                        "error : {err:#?} happened \nwhile downloading"
+                    )),
+                })
+            }
             ClientMessage::DownloadDone => {
-                state.downloading = false;
+                state.downloads.clear();
                 Task::none()
             }
         }
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
+pub struct Download {
+    server_path: PathBuf,
+    host_path: PathBuf,
+    handle: Option<iced::task::Handle>,
+}
+
+#[async_recursion]
+async fn prepare_downloads(
+    delivery: Delivery,
+    units: Vec<Unit>,
+    download_dir: PathBuf,
+) -> Result<Vec<Download>, String> {
+    let mut res = Vec::new();
+    for unit in units.into_iter() {
+        match unit.kind {
+            UnitKind::Dirctory => {
+                res.extend(prepare_directory(delivery.clone(), unit, &download_dir).await?);
+            }
+            _ => {
+                res.push(prepare_file(unit.path, &download_dir));
+            }
+        }
+    }
+    Ok(res)
+}
+
+fn prepare_file(unit_path: PathBuf, pwd: &Path) -> Download {
+    let host_path = pwd.join(unit_path.file_name().unwrap().to_str().unwrap());
+    Download {
+        host_path,
+        server_path: unit_path,
+        handle: None,
+    }
+}
+
+pub async fn prepare_directory(
+    delivery: Delivery,
+    unit: Unit,
+    pwd: &Path,
+) -> Result<Vec<Download>, String> {
+    let inner_units = delivery.clone().ls(unit.path.clone()).await?;
+    let pwd = pwd.join(unit.name());
+    tokio::fs::create_dir(&pwd)
+        .await
+        .map_err(|x| x.to_string())?;
+    prepare_downloads(delivery.clone(), inner_units, pwd).await
+}
+
 pub struct ClientState {
     pub delivery: Delivery,
     pub units: Vec<Unit>,
     pub current_path: PathBuf,
     pub select: Selected,
-    pub downloading: bool,
+    downloads: Downloads,
+}
+
+struct Downloads {
+    state: DownloadingState,
+    download_dir: PathBuf,
+}
+
+enum DownloadingState {
+    Prepareing {
+        units: Vec<Unit>,
+    },
+    Downloading {
+        main_handle: iced::task::Handle,
+        tasks_handles: Vec<iced::task::Handle>,
+        tasks: Vec<Download>,
+    },
+    Done,
+}
+
+impl Downloads {
+    fn new() -> Self {
+        Self {
+            state: DownloadingState::Done,
+            download_dir: home_dir().map(|x| x.join("Downloads")).unwrap(),
+        }
+    }
+    fn clear(&mut self) {
+        self.state = DownloadingState::Done;
+    }
 }
 
 impl Default for ClientState {
@@ -129,7 +242,7 @@ impl Default for ClientState {
             units: Vec::new(),
             current_path: PathBuf::new(),
             select: Selected::default(),
-            downloading: false,
+            downloads: Downloads::new(),
         }
     }
 }
@@ -157,12 +270,12 @@ impl ClientState {
             &SELECT_SVG
         }))
         .on_press(Message::Client(ClientMessage::ToggleSelectMode));
-        let download = Button::new(if self.downloading {
-            "downloading"
-        } else {
-            "download"
+        let download = Button::new(match self.downloads.state {
+            DownloadingState::Prepareing { .. } => "preparing downloads",
+            DownloadingState::Downloading { .. } => "downloading",
+            DownloadingState::Done => "download",
         })
-        .on_press(Message::Client(ClientMessage::DownloadSelected));
+        .on_press(Message::Client(ClientMessage::PrepareDownloading));
         column![selector, back, home, download].spacing(5.)
     }
 }

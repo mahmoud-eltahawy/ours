@@ -1219,7 +1219,6 @@ dependencies = [
 name = "delivery"
 version = "0.1.0"
 dependencies = [
- "async-recursion",
  "common",
  "gloo",
  "reqwest",
@@ -4135,6 +4134,7 @@ name = "ours"
 version = "0.1.0"
 dependencies = [
  "assets",
+ "async-recursion",
  "common",
  "delivery",
  "get-port",
