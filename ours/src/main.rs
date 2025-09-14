@@ -82,7 +82,16 @@ enum Message {
     ToServe,
     ToClient(Vec<Unit>),
     ToHome,
+    ErrorHappned(String),
     None,
+}
+pub async fn error_message(message: String) -> rfd::MessageDialogResult {
+    rfd::AsyncMessageDialog::new()
+        .set_level(rfd::MessageLevel::Error)
+        .set_title("ours error")
+        .set_description(message)
+        .show()
+        .await
 }
 
 impl State {
@@ -111,9 +120,9 @@ impl State {
                     let origin = Origin::new(ip, self.client_prequistes.port);
                     let delivery = Delivery::new(origin.to_string());
                     self.client.delivery = delivery.clone();
-                    Task::perform(delivery.ls(PathBuf::new()), move |units| {
-                        let units = units.unwrap_or_default();
-                        Message::ToClient(units)
+                    Task::perform(delivery.ls(PathBuf::new()), move |units| match units {
+                        Ok(units) => Message::ToClient(units),
+                        Err(err) => Message::ErrorHappned(err.to_string()),
                     })
                 } else {
                     Task::none()
@@ -123,6 +132,9 @@ impl State {
                 self.client.units = units;
                 *page = Page::Client;
                 Task::none()
+            }
+            (Message::ErrorHappned(message), _) => {
+                Task::perform(error_message(message), |_| Message::None)
             }
             (Message::None, _) => Task::none(),
             _ => unreachable!(),

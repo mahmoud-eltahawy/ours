@@ -28,7 +28,7 @@ pub enum ClientMessage {
     ToggleSelectMode,
     Select(Unit),
     DownloadSelected,
-    None,
+    DownloadDone,
 }
 
 impl ClientMessage {
@@ -42,7 +42,7 @@ impl ClientMessage {
                             current_path: path_buf.clone(),
                         })
                     } else {
-                        Message::Client(ClientMessage::None)
+                        Message::None
                     }
                 })
             }
@@ -60,7 +60,7 @@ impl ClientMessage {
                         if let Ok(xs) = xs {
                             Message::Client(ClientMessage::GoneBack(xs))
                         } else {
-                            Message::Client(ClientMessage::None)
+                            Message::None
                         }
                     })
                 } else {
@@ -84,17 +84,25 @@ impl ClientMessage {
                 state.select.toggle_unit_selection(&unit);
                 Task::none()
             }
-            ClientMessage::DownloadSelected => Task::perform(
-                state.delivery.clone().download(
-                    state.select.units.clone(),
-                    home_dir().map(|x| x.join("Downloads")).unwrap(),
-                ),
-                move |x| {
-                    println!("{:#?}", x);
-                    Message::Client(ClientMessage::None)
-                },
-            ),
-            ClientMessage::None => Task::none(),
+            ClientMessage::DownloadSelected => {
+                let units = state.select.units.clone();
+                state.select.clear();
+                state.downloading = true;
+                Task::perform(
+                    state
+                        .delivery
+                        .clone()
+                        .download(units, home_dir().map(|x| x.join("Downloads")).unwrap()),
+                    move |x| match x {
+                        Ok(_) => Message::Client(ClientMessage::DownloadDone),
+                        Err(err) => Message::ErrorHappned(err.to_string()),
+                    },
+                )
+            }
+            ClientMessage::DownloadDone => {
+                state.downloading = false;
+                Task::none()
+            }
         }
     }
 }
@@ -105,6 +113,7 @@ pub struct ClientState {
     pub units: Vec<Unit>,
     pub current_path: PathBuf,
     pub select: Selected,
+    pub downloading: bool,
 }
 
 impl Default for ClientState {
@@ -120,6 +129,7 @@ impl Default for ClientState {
             units: Vec::new(),
             current_path: PathBuf::new(),
             select: Selected::default(),
+            downloading: false,
         }
     }
 }
@@ -134,8 +144,8 @@ impl ClientState {
                 acc.push(x.button(&self.select))
             });
         let units = scrollable(units).width(Length::Fill);
-        let all = column![tools, units].spacing(14.);
-        Container::new(scrollable(all).width(Length::Fill))
+        let all = column![tools, units].spacing(14.).width(Length::Fill);
+        Container::new(all)
     }
 
     fn tools_bar(&self) -> Column<'_, Message> {
@@ -147,8 +157,12 @@ impl ClientState {
             &SELECT_SVG
         }))
         .on_press(Message::Client(ClientMessage::ToggleSelectMode));
-        let download =
-            Button::new("download").on_press(Message::Client(ClientMessage::DownloadSelected));
+        let download = Button::new(if self.downloading {
+            "downloading"
+        } else {
+            "download"
+        })
+        .on_press(Message::Client(ClientMessage::DownloadSelected));
         column![selector, back, home, download].spacing(5.)
     }
 }
