@@ -147,7 +147,6 @@ impl ClientMessage {
 pub struct Download {
     server_path: PathBuf,
     host_path: PathBuf,
-    handle: Option<iced::task::Handle>,
 }
 
 #[async_recursion]
@@ -171,11 +170,9 @@ async fn prepare_downloads(
 }
 
 fn prepare_file(unit_path: PathBuf, pwd: &Path) -> Download {
-    let host_path = pwd.join(unit_path.file_name().unwrap().to_str().unwrap());
     Download {
-        host_path,
+        host_path: pwd.join(unit_path.file_name().unwrap().to_str().unwrap()),
         server_path: unit_path,
-        handle: None,
     }
 }
 
