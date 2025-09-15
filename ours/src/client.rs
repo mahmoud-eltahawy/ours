@@ -33,7 +33,6 @@ pub enum ClientMessage {
     DownloadWindowOpened(window::Id),
     CloseDownloadWindow(window::Id),
     DownloadWindowClosed,
-    PrepareDownloading,
     StartDownloading(Vec<Download>),
     DownloadDone,
 }
@@ -91,7 +90,12 @@ impl ClientMessage {
                 state.select.toggle_unit_selection(&unit);
                 Task::none()
             }
-            ClientMessage::PrepareDownloading => {
+            ClientMessage::OpenDownloadWindow => {
+                let (_, task) = window::open(window::Settings::default());
+                task.map(|id| Message::Client(ClientMessage::DownloadWindowOpened(id)))
+            }
+            ClientMessage::DownloadWindowOpened(id) => {
+                state.download_window = Some(id);
                 let units = state.select.units.clone();
                 state.select.clear();
                 state.downloads.state = DownloadingState::Prepareing {
@@ -112,6 +116,14 @@ impl ClientMessage {
                         )),
                     },
                 )
+            }
+            ClientMessage::CloseDownloadWindow(id) => {
+                let task = window::close(id);
+                task.map(|_: window::Id| Message::Client(ClientMessage::DownloadWindowClosed))
+            }
+            ClientMessage::DownloadWindowClosed => {
+                state.download_window = None;
+                Task::none()
             }
             ClientMessage::StartDownloading(download_tasks) => {
                 let origin = state.delivery.origin.clone();
@@ -142,22 +154,6 @@ impl ClientMessage {
             }
             ClientMessage::DownloadDone => {
                 state.downloads.clear();
-                Task::none()
-            }
-            ClientMessage::OpenDownloadWindow => {
-                let (_, task) = window::open(window::Settings::default());
-                task.map(|id| Message::Client(ClientMessage::DownloadWindowOpened(id)))
-            }
-            ClientMessage::DownloadWindowOpened(id) => {
-                state.download_window = Some(id);
-                Task::none()
-            }
-            ClientMessage::CloseDownloadWindow(id) => {
-                let task = window::close(id);
-                task.map(|_: window::Id| Message::Client(ClientMessage::DownloadWindowClosed))
-            }
-            ClientMessage::DownloadWindowClosed => {
-                state.download_window = None;
                 Task::none()
             }
         }
@@ -224,12 +220,6 @@ pub struct Downloads {
     download_dir: PathBuf,
 }
 
-impl Downloads {
-    pub fn view(&self) -> Container<'_, Message> {
-        Container::new(Text::new("downloads"))
-    }
-}
-
 enum DownloadingState {
     Prepareing {
         units: Vec<Unit>,
@@ -251,6 +241,37 @@ impl Downloads {
     }
     fn clear(&mut self) {
         self.state = DownloadingState::Done;
+    }
+
+    fn view(&self) -> Container<'_, Message> {
+        match &self.state {
+            DownloadingState::Prepareing { units } => Container::new(Column::from_vec(
+                units
+                    .iter()
+                    .map(|x| Text::new(format!("building structures of directory {x:#?}")).into())
+                    .collect::<Vec<_>>(),
+            )),
+            DownloadingState::Downloading {
+                main_handle: _,
+                tasks_handles,
+                tasks,
+            } => Container::new({
+                let cancel = Button::new("cancel downloads");
+                let downloads = Text::new("downloads");
+                let buttons = tasks_handles
+                    .iter()
+                    .zip(tasks)
+                    .map(|(_handle, download)| {
+                        Button::new(Text::new(format!(
+                            "downloading file {:#?}",
+                            download.host_path
+                        )))
+                    })
+                    .fold(Column::new(), |acc, x| acc.push(x));
+                column![downloads, cancel, buttons]
+            }),
+            DownloadingState::Done => Container::new(Text::new("done")),
+        }
     }
 }
 
