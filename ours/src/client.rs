@@ -8,6 +8,7 @@ use iced::{
     widget::{
         Button, Column, Container, Svg, Text, button::Style, column, row, scrollable, svg::Handle,
     },
+    window,
 };
 use std::{
     env::home_dir,
@@ -28,6 +29,10 @@ pub enum ClientMessage {
     GoneBack(Vec<Unit>),
     ToggleSelectMode,
     Select(Unit),
+    OpenDownloadWindow,
+    DownloadWindowOpened(window::Id),
+    CloseDownloadWindow(window::Id),
+    DownloadWindowClosed,
     PrepareDownloading,
     StartDownloading(Vec<Download>),
     DownloadDone,
@@ -139,6 +144,22 @@ impl ClientMessage {
                 state.downloads.clear();
                 Task::none()
             }
+            ClientMessage::OpenDownloadWindow => {
+                let (_, task) = window::open(window::Settings::default());
+                task.map(|id| Message::Client(ClientMessage::DownloadWindowOpened(id)))
+            }
+            ClientMessage::DownloadWindowOpened(id) => {
+                state.download_window = Some(id);
+                Task::none()
+            }
+            ClientMessage::CloseDownloadWindow(id) => {
+                let task = window::close(id);
+                task.map(|_: window::Id| Message::Client(ClientMessage::DownloadWindowClosed))
+            }
+            ClientMessage::DownloadWindowClosed => {
+                state.download_window = None;
+                Task::none()
+            }
         }
     }
 }
@@ -194,12 +215,19 @@ pub struct ClientState {
     pub units: Vec<Unit>,
     pub current_path: PathBuf,
     pub select: Selected,
-    downloads: Downloads,
+    pub download_window: Option<window::Id>,
+    pub downloads: Downloads,
 }
 
-struct Downloads {
+pub struct Downloads {
     state: DownloadingState,
     download_dir: PathBuf,
+}
+
+impl Downloads {
+    pub fn view(&self) -> Container<'_, Message> {
+        Container::new(Text::new("downloads"))
+    }
 }
 
 enum DownloadingState {
@@ -215,7 +243,7 @@ enum DownloadingState {
 }
 
 impl Downloads {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             state: DownloadingState::Done,
             download_dir: home_dir().map(|x| x.join("Downloads")).unwrap(),
@@ -240,12 +268,20 @@ impl Default for ClientState {
             current_path: PathBuf::new(),
             select: Selected::default(),
             downloads: Downloads::new(),
+            download_window: None,
         }
     }
 }
 
 impl ClientState {
-    pub fn view(&self) -> Container<'_, Message> {
+    pub fn view(&self, window_id: window::Id) -> Container<'_, Message> {
+        if self.download_window.is_some_and(|x| x == window_id) {
+            return self.downloads.view();
+        }
+        self.main_window()
+    }
+
+    fn main_window(&self) -> Container<'_, Message> {
         let tools = self.tools_bar();
         let units = self
             .units
@@ -267,12 +303,14 @@ impl ClientState {
             &SELECT_SVG
         }))
         .on_press(Message::Client(ClientMessage::ToggleSelectMode));
-        let download = Button::new(match self.downloads.state {
-            DownloadingState::Prepareing { .. } => "preparing downloads",
-            DownloadingState::Downloading { .. } => "downloading",
-            DownloadingState::Done => "download",
+        let download = Button::new(match self.download_window {
+            Some(_) => "close download window",
+            None => "open download window",
         })
-        .on_press(Message::Client(ClientMessage::PrepareDownloading));
+        .on_press(match self.download_window {
+            Some(id) => Message::Client(ClientMessage::CloseDownloadWindow(id)),
+            None => Message::Client(ClientMessage::OpenDownloadWindow),
+        });
         column![selector, back, home, download].spacing(5.)
     }
 }

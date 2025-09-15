@@ -4,7 +4,12 @@ use client::{ClientMessage, ClientState};
 use common::{Origin, Unit};
 use delivery::Delivery;
 use home::home_view;
-use iced::{Color, Task, daemon::Appearance, widget::Container};
+use iced::{
+    Color, Task,
+    daemon::Appearance,
+    widget::Container,
+    window::{self, Settings},
+};
 use serve::{ServeMessage, ServeState};
 
 use crate::{
@@ -36,12 +41,13 @@ pub async fn main() {
             serve(target, port).await;
         }
         _ => {
-            iced::application("ours", State::update, State::view)
+            let (_, task) = window::open(Settings::default());
+            iced::daemon("ours", State::update, State::view)
                 .style(|_, _| Appearance {
                     background_color: Color::BLACK,
                     text_color: Color::WHITE,
                 })
-                .run_with(|| (State::default(), Task::none()))
+                .run_with(|| (State::default(), task.map(|_| Message::None)))
                 .unwrap();
         }
     };
@@ -143,10 +149,10 @@ impl State {
         }
     }
 
-    fn view(&self) -> Container<'_, Message> {
+    fn view(&self, window_id: window::Id) -> Container<'_, Message> {
         match self.page {
             Page::Serve => self.serve.view(),
-            Page::Client => self.client.view(),
+            Page::Client => self.client.view(window_id),
             Page::ClientPrequistes => self.client_prequistes.view(),
             Page::Home => home_view(),
         }
