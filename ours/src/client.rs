@@ -90,6 +90,7 @@ impl ClientMessage {
 
 #[derive(Clone, Debug)]
 pub struct Download {
+    id: u64,
     server_path: PathBuf,
     host_path: PathBuf,
 }

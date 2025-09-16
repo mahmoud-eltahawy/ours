@@ -4,8 +4,6 @@ use common::{
     AUDIO_X, CP_PATH, LS_PATH, MKDIR_PATH, MP4_PATH, MV_PATH, RM_PATH, Unit, UnitKind, VIDEO_X,
 };
 use gloo::net::http::Request;
-use reqwest::get;
-use tokio::io::AsyncWriteExt;
 
 #[derive(Debug, Clone)]
 pub struct Delivery {
@@ -106,28 +104,6 @@ impl Delivery {
     pub async fn iced_upload(&self, _files: &[std::fs::File]) -> Result<(), String> {
         todo!()
     }
-}
-
-pub async fn download_file(
-    origin: Arc<str>,
-    server_path: PathBuf,
-    host_path: PathBuf,
-) -> Result<(), String> {
-    println!("file {:#?} started downloading", host_path);
-    let end = format!("file {:#?} finished downloading", host_path);
-    let url = format!(
-        "{}/download/{}",
-        origin,
-        server_path.to_str().unwrap_or_default()
-    );
-    let response = get(url).await.map_err(|x| x.to_string())?;
-    let mut file = tokio::fs::File::create(host_path)
-        .await
-        .map_err(|x| x.to_string())?;
-    let content = response.bytes().await.map_err(|x| x.to_string())?;
-    file.write_all(&content).await.map_err(|x| x.to_string())?;
-    println!("{}", end);
-    Ok(())
 }
 
 fn retype(xs: Vec<Unit>) -> Vec<Unit> {
