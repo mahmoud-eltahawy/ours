@@ -142,7 +142,7 @@ impl ClientMessage {
             }
             ClientMessage::StartDownloading(download_tasks) => {
                 let origin = state.delivery.origin.clone();
-                let (tasks, handles): (Vec<_>, Vec<_>) = download_tasks
+                let (mut tasks, handles): (Vec<_>, Vec<_>) = download_tasks
                     .clone()
                     .iter()
                     .map(move |x| {
@@ -154,12 +154,15 @@ impl ClientMessage {
                         .abortable()
                     })
                     .unzip();
-                let tasks = group_tasks(tasks);
-                let (task, handle) = tasks
-                    .into_iter()
-                    .map(Task::batch)
-                    .fold(Task::none(), |acc, x| acc.chain(x))
-                    .abortable();
+                let (task, handle) = if let Some(last) = tasks.pop() {
+                    tasks.reverse();
+                    tasks
+                        .into_iter()
+                        .fold(last, |acc, x| acc.chain(x))
+                        .abortable()
+                } else {
+                    Task::none().abortable()
+                };
                 state.downloads.state = DownloadingState::Downloading {
                     main_handle: handle,
                     tasks_handles: handles,
@@ -178,23 +181,6 @@ impl ClientMessage {
             }
         }
     }
-}
-
-fn group_tasks(tasks: Vec<Task<Result<(), String>>>) -> Vec<Vec<Task<Result<(), String>>>> {
-    let mut result = Vec::new();
-    let mut len = 0;
-    const LEN: usize = 3;
-    let mut group = Vec::with_capacity(LEN);
-    for task in tasks.into_iter() {
-        if len < LEN {
-            group.push(task);
-        } else {
-            result.push(group);
-            group = Vec::with_capacity(LEN);
-            len = 0;
-        }
-    }
-    result
 }
 
 #[derive(Clone, Debug)]

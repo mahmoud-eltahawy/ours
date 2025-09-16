@@ -113,6 +113,8 @@ pub async fn download_file(
     server_path: PathBuf,
     host_path: PathBuf,
 ) -> Result<(), String> {
+    println!("file {:#?} started downloading", host_path);
+    let end = format!("file {:#?} finished downloading", host_path);
     let url = format!(
         "{}/download/{}",
         origin,
@@ -124,6 +126,7 @@ pub async fn download_file(
         .map_err(|x| x.to_string())?;
     let content = response.bytes().await.map_err(|x| x.to_string())?;
     file.write_all(&content).await.map_err(|x| x.to_string())?;
+    println!("{}", end);
     Ok(())
 }
 
