@@ -338,21 +338,29 @@ impl ClientState {
     fn tools_bar(&self) -> Column<'_, Message> {
         let home = go_home_button();
         let back = self.back_button();
-        let selector = Button::new(svg_from_icon_data(if self.select.on {
-            &CLOSE_SVG
-        } else {
-            &SELECT_SVG
-        }))
-        .on_press(Message::Client(ClientMessage::ToggleSelectMode));
-        let download = Button::new(match self.download_window {
+        let selector = self.select_button();
+        let download = self.download_button();
+        column![selector, back, home, download].spacing(5.)
+    }
+
+    fn download_button(&self) -> Button<'_, Message> {
+        Button::new(match self.download_window {
             Some(_) => "close download window",
             None => "open download window",
         })
         .on_press(match self.download_window {
             Some(id) => Message::Client(ClientMessage::CloseDownloadWindow(id)),
             None => Message::Client(ClientMessage::OpenDownloadWindow),
-        });
-        column![selector, back, home, download].spacing(5.)
+        })
+    }
+
+    fn select_button(&self) -> Button<'_, Message> {
+        Button::new(svg_from_icon_data(if self.select.on {
+            &CLOSE_SVG
+        } else {
+            &SELECT_SVG
+        }))
+        .on_press(Message::Client(ClientMessage::ToggleSelectMode))
     }
     fn back_button(&self) -> Button<'_, Message> {
         Button::new("back").on_press(Message::Client(ClientMessage::GoBack))
