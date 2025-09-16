@@ -1,7 +1,6 @@
 use assets::{CLOSE_SVG, IconData, SELECT_SVG};
-use async_recursion::async_recursion;
-use common::{Origin, Selected, Unit, UnitKind};
-use delivery::{Delivery, download_file};
+use common::{Origin, Selected, Unit};
+use delivery::Delivery;
 use iced::{
     Border, Color, Length, Task,
     theme::Palette,
@@ -11,12 +10,13 @@ use iced::{
     window,
 };
 use std::{
-    env::home_dir,
     net::{IpAddr, Ipv4Addr},
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
 
-use crate::{Message, home::go_home_button};
+pub mod download;
+
+use crate::{Message, client::download::DownloadMessage, home::go_home_button};
 
 #[derive(Debug, Clone)]
 pub enum ClientMessage {
@@ -29,12 +29,6 @@ pub enum ClientMessage {
     GoneBack(Vec<Unit>),
     ToggleSelectMode,
     Select(Unit),
-    OpenDownloadWindow,
-    DownloadWindowOpened(window::Id),
-    CloseDownloadWindow(window::Id),
-    DownloadWindowClosed,
-    StartDownloading(Vec<Download>),
-    DownloadDone,
 }
 
 impl ClientMessage {
@@ -90,95 +84,6 @@ impl ClientMessage {
                 state.select.toggle_unit_selection(&unit);
                 Task::none()
             }
-            ClientMessage::OpenDownloadWindow => {
-                let (_, task) = window::open(window::Settings::default());
-                task.map(|id| Message::Client(ClientMessage::DownloadWindowOpened(id)))
-            }
-            ClientMessage::DownloadWindowOpened(id) => {
-                state.download_window = Some(id);
-                let units = state.select.units.clone();
-                state.select.clear();
-                state.downloads.state = DownloadingState::Prepareing {
-                    units: units.clone(),
-                };
-                Task::perform(
-                    prepare_downloads(
-                        state.delivery.clone(),
-                        units,
-                        state.downloads.download_dir.clone(),
-                    ),
-                    move |x| match x {
-                        Ok(downloads) => {
-                            Message::Client(ClientMessage::StartDownloading(downloads))
-                        }
-                        Err(err) => Message::ErrorHappned(format!(
-                            "error : {err:#?} happened\n while preparing for downloading"
-                        )),
-                    },
-                )
-            }
-            ClientMessage::CloseDownloadWindow(id) => {
-                let task = window::close(id);
-                task.map(|_: window::Id| Message::Client(ClientMessage::DownloadWindowClosed))
-            }
-            ClientMessage::DownloadWindowClosed => {
-                state.download_window = None;
-                if let DownloadingState::Downloading {
-                    main_handle,
-                    tasks_handles,
-                    ..
-                } = &state.downloads.state
-                {
-                    if !main_handle.is_aborted() {
-                        main_handle.abort();
-                    }
-                    for handle in tasks_handles.iter() {
-                        if !handle.is_aborted() {
-                            handle.abort();
-                        }
-                    }
-                }
-                Task::none()
-            }
-            ClientMessage::StartDownloading(download_tasks) => {
-                let origin = state.delivery.origin.clone();
-                let (mut tasks, handles): (Vec<_>, Vec<_>) = download_tasks
-                    .clone()
-                    .iter()
-                    .map(move |x| {
-                        Task::future(download_file(
-                            origin.clone(),
-                            x.server_path.clone(),
-                            x.host_path.clone(),
-                        ))
-                        .abortable()
-                    })
-                    .unzip();
-                let (task, handle) = if let Some(last) = tasks.pop() {
-                    tasks.reverse();
-                    tasks
-                        .into_iter()
-                        .fold(last, |acc, x| acc.chain(x))
-                        .abortable()
-                } else {
-                    Task::none().abortable()
-                };
-                state.downloads.state = DownloadingState::Downloading {
-                    main_handle: handle,
-                    tasks_handles: handles,
-                    tasks: download_tasks,
-                };
-                task.map(|x| match x {
-                    Ok(_) => Message::Client(ClientMessage::DownloadDone),
-                    Err(err) => Message::ErrorHappned(format!(
-                        "error : {err:#?} happened \nwhile downloading"
-                    )),
-                })
-            }
-            ClientMessage::DownloadDone => {
-                state.downloads.clear();
-                Task::none()
-            }
         }
     }
 }
@@ -189,113 +94,13 @@ pub struct Download {
     host_path: PathBuf,
 }
 
-#[async_recursion]
-async fn prepare_downloads(
-    delivery: Delivery,
-    units: Vec<Unit>,
-    download_dir: PathBuf,
-) -> Result<Vec<Download>, String> {
-    let mut res = Vec::new();
-    for unit in units.into_iter() {
-        match unit.kind {
-            UnitKind::Dirctory => {
-                res.extend(prepare_directory(delivery.clone(), unit, &download_dir).await?);
-            }
-            _ => {
-                res.push(prepare_file(unit.path, &download_dir));
-            }
-        }
-    }
-    Ok(res)
-}
-
-fn prepare_file(unit_path: PathBuf, pwd: &Path) -> Download {
-    Download {
-        host_path: pwd.join(unit_path.file_name().unwrap().to_str().unwrap()),
-        server_path: unit_path,
-    }
-}
-
-pub async fn prepare_directory(
-    delivery: Delivery,
-    unit: Unit,
-    pwd: &Path,
-) -> Result<Vec<Download>, String> {
-    let inner_units = delivery.clone().ls(unit.path.clone()).await?;
-    let pwd = pwd.join(unit.name());
-    tokio::fs::create_dir(&pwd)
-        .await
-        .map_err(|x| x.to_string())?;
-    prepare_downloads(delivery.clone(), inner_units, pwd).await
-}
-
 pub struct ClientState {
     pub delivery: Delivery,
     pub units: Vec<Unit>,
     pub current_path: PathBuf,
     pub select: Selected,
     pub download_window: Option<window::Id>,
-    pub downloads: Downloads,
-}
-
-pub struct Downloads {
-    state: DownloadingState,
-    download_dir: PathBuf,
-}
-
-enum DownloadingState {
-    Prepareing {
-        units: Vec<Unit>,
-    },
-    Downloading {
-        main_handle: iced::task::Handle,
-        tasks_handles: Vec<iced::task::Handle>,
-        tasks: Vec<Download>,
-    },
-    Done,
-}
-
-impl Downloads {
-    pub fn new() -> Self {
-        Self {
-            state: DownloadingState::Done,
-            download_dir: home_dir().map(|x| x.join("Downloads")).unwrap(),
-        }
-    }
-    fn clear(&mut self) {
-        self.state = DownloadingState::Done;
-    }
-
-    pub fn view(&self) -> Container<'_, Message> {
-        match &self.state {
-            DownloadingState::Prepareing { units } => Container::new(Column::from_vec(
-                units
-                    .iter()
-                    .map(|x| Text::new(format!("building structures of directory {x:#?}")).into())
-                    .collect::<Vec<_>>(),
-            )),
-            DownloadingState::Downloading {
-                main_handle: _,
-                tasks_handles,
-                tasks,
-            } => Container::new({
-                let cancel = Button::new("cancel downloads");
-                let downloads = Text::new("downloads");
-                let buttons = tasks_handles
-                    .iter()
-                    .zip(tasks)
-                    .map(|(_handle, download)| {
-                        Button::new(Text::new(format!(
-                            "downloading file {:#?}",
-                            download.host_path
-                        )))
-                    })
-                    .fold(Column::new(), |acc, x| acc.push(x));
-                column![downloads, cancel, buttons]
-            }),
-            DownloadingState::Done => Container::new(Text::new("done")),
-        }
-    }
+    pub downloads: download::Downloads,
 }
 
 impl Default for ClientState {
@@ -311,7 +116,7 @@ impl Default for ClientState {
             units: Vec::new(),
             current_path: PathBuf::new(),
             select: Selected::default(),
-            downloads: Downloads::new(),
+            downloads: download::Downloads::new(),
             download_window: None,
         }
     }
@@ -349,8 +154,8 @@ impl ClientState {
             None => "open download window",
         })
         .on_press(match self.download_window {
-            Some(id) => Message::Client(ClientMessage::CloseDownloadWindow(id)),
-            None => Message::Client(ClientMessage::OpenDownloadWindow),
+            Some(id) => Message::Download(DownloadMessage::CloseDownloadWindow(id)),
+            None => Message::Download(DownloadMessage::OpenDownloadWindow),
         })
     }
 

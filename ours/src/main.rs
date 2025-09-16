@@ -5,7 +5,7 @@ use common::{Origin, Unit};
 use delivery::Delivery;
 use home::home_view;
 use iced::{
-    Color, Task,
+    Color, Subscription, Task,
     theme::Style,
     widget::Container,
     window::{self, Settings},
@@ -13,6 +13,7 @@ use iced::{
 use serve::{ServeMessage, ServeState};
 
 use crate::{
+    client::download::DownloadMessage,
     client_prequistes::{ClientPrequistesMessage, ClientPrequistesState},
     serve::serve,
 };
@@ -40,6 +41,7 @@ pub fn main() {
             tokio::task::spawn_blocking(move || serve(target, port));
         }
         _ => iced::daemon(State::new, State::update, State::view)
+            .subscription(State::subscription)
             .title(State::title)
             .style(|_, _| Style {
                 background_color: Color::BLACK,
@@ -82,6 +84,7 @@ enum Message {
     Serve(ServeMessage),
     Client(ClientMessage),
     ClientPrequistes(ClientPrequistesMessage),
+    Download(DownloadMessage),
     GetClientPrequsits,
     SubmitClientPrequsits,
     ToServe,
@@ -89,6 +92,7 @@ enum Message {
     ToHome,
     ErrorHappned(String),
     MainWindowOpened(window::Id),
+    WindowClosed(window::Id),
     None,
 }
 
@@ -122,9 +126,9 @@ impl State {
             Message::ClientPrequistes(message) => message.handle(&mut self.client_prequistes),
             Message::ToServe => {
                 self.page = Page::Serve;
-                // self.serve = ServeState::default();
                 Task::none()
             }
+            Message::Download(download_message) => download_message.handle(&mut self.client),
             Message::ToClient(units) => {
                 self.client.units = units;
                 self.page = Page::Client;
@@ -155,6 +159,15 @@ impl State {
                 Task::perform(error_message(message), |_| Message::None)
             }
             Message::None => Task::none(),
+            Message::WindowClosed(id) => {
+                if self.main_window_id.is_some_and(|x| x == id) {
+                    self.main_window_id = None;
+                }
+                if self.client.download_window.is_some_and(|x| x == id) {
+                    self.client.download_window = None;
+                }
+                Task::none()
+            }
         }
     }
 
@@ -172,5 +185,9 @@ impl State {
         }
         println!("loading...");
         Container::new("void")
+    }
+
+    fn subscription(&self) -> Subscription<Message> {
+        window::close_events().map(Message::WindowClosed)
     }
 }
