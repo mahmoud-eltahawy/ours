@@ -7,7 +7,7 @@ use iced::{
     Task,
     futures::StreamExt,
     task::Handle,
-    widget::{Button, Column, Container, Text, column},
+    widget::{Button, Column, Container, Text, column, scrollable},
     window,
 };
 use reqwest::get;
@@ -22,10 +22,16 @@ use std::{
 use tokio::io::AsyncWriteExt;
 
 pub struct Downloads {
-    pub state: DownloadingState,
-    pub download_dir: PathBuf,
-    pub downloading: HashMap<u64, Downloading>,
-    pub finished: Vec<PathBuf>,
+    state: DownloadingState,
+    download_dir: PathBuf,
+    downloading: HashMap<u64, Downloading>,
+    finished: Vec<PathBuf>,
+    failed: HashMap<u64, FailedDownload>,
+}
+
+struct FailedDownload {
+    download: Downloading,
+    error: Error,
 }
 
 pub struct Downloading {
@@ -47,36 +53,62 @@ impl Downloads {
             download_dir: home_dir().map(|x| x.join("Downloads")).unwrap(),
             downloading: HashMap::new(),
             finished: Vec::new(),
+            failed: HashMap::new(),
         }
-    }
-    pub fn clear(&mut self) {
-        self.state = DownloadingState::Done;
     }
 
     pub fn view(&self) -> Container<'_, Message> {
         let cancel = Button::new("cancel all downloads");
 
-        let title = Text::new("downloading files");
-        let buttons = self
-            .downloading
+        let downloading = self.downloading();
+        let finished = self.finished();
+        let failed = self.failed();
+        Container::new(column![cancel, downloading, finished, failed].spacing(40.))
+    }
+
+    fn failed(&self) -> scrollable::Scrollable<'_, Message> {
+        let title = Text::new("failed downloads");
+        let lines = self
+            .failed
             .values()
-            .map(|download| {
-                Button::new(Text::new(format!(
-                    "downloading file {:#?} with progress {}",
-                    download.host_path, download.progress
-                )))
+            .map(|x| {
+                format!(
+                    "download {:#?},failed because of {:#?}",
+                    x.download.host_path, x.error
+                )
             })
-            .fold(Column::new(), |acc, x| acc.push(x))
-            .spacing(5.);
-        let downloading = column![title, buttons];
+            .map(Text::new)
+            .fold(Column::new(), |acc, x| acc.push(x));
+        scrollable(column![title, lines])
+    }
+
+    fn finished(&self) -> scrollable::Scrollable<'_, Message> {
         let title = Text::new("finished downloads");
         let lines = self
             .finished
             .iter()
-            .map(|x| Text::new(format!("{x:#?}")))
+            .map(|x| format!("{x:#?}"))
+            .map(Text::new)
             .fold(Column::new(), |acc, x| acc.push(x));
-        let finished = column![title, lines];
-        Container::new(column![cancel, downloading, finished])
+        scrollable(column![title, lines])
+    }
+
+    fn downloading(&self) -> scrollable::Scrollable<'_, Message> {
+        let title = Text::new("downloading files");
+        let buttons = self
+            .downloading
+            .values()
+            .map(|x| {
+                format!(
+                    "downloading file {:#?} with progress {}",
+                    x.host_path, x.progress
+                )
+            })
+            .map(Text::new)
+            .map(Button::new)
+            .fold(Column::new(), |acc, x| acc.push(x))
+            .spacing(5.);
+        scrollable(column![title, buttons])
     }
 }
 
@@ -89,13 +121,15 @@ pub enum DownloadMessage {
     StartDownloading(Vec<Download>),
     Progressing(Progress),
     DownloadDone(u64),
+    DownloadFailed(Error, u64),
 }
 use iced::task::{Straw, sipper};
 
 #[derive(Debug, Clone)]
 enum Update {
     Downloading(Progress),
-    Finished(Result<u64, Error>),
+    Finished(u64),
+    Failed(Error, u64),
 }
 
 pub fn download_file(
@@ -229,29 +263,34 @@ impl DownloadMessage {
                     .into_iter()
                     .map(move |x| {
                         let host_path = x.host_path.clone();
-                        let host_path2 = x.host_path;
                         let (task, handle) = Task::sip(
                             download_file(origin.clone(), x.server_path.clone(), host_path.clone()),
                             Update::Downloading,
-                            move |y| Update::Finished(y.map(|_| hash_path(&host_path))),
+                            move |y| match y {
+                                Ok(_) => Update::Finished(x.id),
+                                Err(err) => Update::Failed(err, x.id),
+                            },
                         )
                         .abortable();
-                        let d = Downloading {
-                            handle,
-                            progress: 0.,
-                            host_path: host_path2.clone(),
-                        };
-                        (task, d)
+                        (
+                            task,
+                            Downloading {
+                                handle,
+                                progress: 0.,
+                                host_path,
+                            },
+                        )
                     })
                     .unzip();
-                let (task, handle) = if let Some(last) = tasks.pop() {
-                    tasks.reverse();
-                    tasks
-                        .into_iter()
-                        .fold(last, |acc, x| acc.chain(x))
-                        .abortable()
-                } else {
-                    Task::none().abortable()
+                let (task, handle) = match tasks.pop() {
+                    Some(last) => {
+                        tasks.reverse();
+                        tasks
+                            .into_iter()
+                            .fold(last, |acc, x| acc.chain(x))
+                            .abortable()
+                    }
+                    None => Task::none().abortable(),
                 };
                 state.downloads.downloading = downloading
                     .into_iter()
@@ -264,13 +303,22 @@ impl DownloadMessage {
                     Update::Downloading(progress) => {
                         Message::Download(DownloadMessage::Progressing(progress))
                     }
-                    Update::Finished(Err(err)) => Message::ErrorHappned(format!("{:#?}", err)),
-                    Update::Finished(Ok(id)) => Message::Download(Self::DownloadDone(id)),
+                    Update::Finished(id) => Message::Download(Self::DownloadDone(id)),
+                    Update::Failed(err, id) => Message::Download(Self::DownloadFailed(err, id)),
                 })
             }
             DownloadMessage::DownloadDone(id) => {
                 if let Some(x) = state.downloads.downloading.remove(&id) {
                     state.downloads.finished.push(x.host_path.clone());
+                }
+                Task::none()
+            }
+            DownloadMessage::DownloadFailed(error, id) => {
+                if let Some(download) = state.downloads.downloading.remove(&id) {
+                    state
+                        .downloads
+                        .failed
+                        .insert(id, FailedDownload { download, error });
                 }
                 Task::none()
             }
@@ -320,9 +368,7 @@ pub async fn prepare_directory(
 ) -> Result<Vec<Download>, String> {
     let inner_units = delivery.clone().ls(unit.path.clone()).await?;
     let pwd = pwd.join(unit.name());
-    tokio::fs::create_dir(&pwd)
-        .await
-        .map_err(|x| x.to_string())?;
+    let _ = tokio::fs::create_dir_all(&pwd).await;
     prepare_downloads(delivery.clone(), inner_units, pwd).await
 }
 
