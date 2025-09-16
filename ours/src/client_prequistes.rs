@@ -77,6 +77,7 @@ impl ClientPrequistesState {
                     primary,
                     success,
                     danger,
+                    warning: _,
                 } = theme.palette();
                 let style = Style {
                     background: iced::Background::Color(background),

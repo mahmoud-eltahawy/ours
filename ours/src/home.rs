@@ -7,7 +7,7 @@ pub fn home_view<'a>() -> Container<'a, Message> {
     let serve = Button::new("to serve").on_press(Message::ToServe);
     let client = Button::new("to client").on_press(Message::GetClientPrequsits);
 
-    let content = column![title, serve, client];
+    let content = column![title, serve, client].spacing(20.);
     Container::new(content)
 }
 

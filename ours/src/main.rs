@@ -6,7 +6,7 @@ use delivery::Delivery;
 use home::home_view;
 use iced::{
     Color, Task,
-    daemon::Appearance,
+    theme::Style,
     widget::Container,
     window::{self, Settings},
 };
@@ -22,8 +22,7 @@ mod client_prequistes;
 mod home;
 mod serve;
 
-#[tokio::main]
-pub async fn main() {
+pub fn main() {
     let mut args = args();
     args.next();
     match &args.collect::<Vec<_>>()[..] {
@@ -32,24 +31,22 @@ pub async fn main() {
             let port = port.parse::<u16>().expect("port should be a u16 number");
             let Origin { ip, .. } = Origin::random();
             println!("serving at {ip}:{port}");
-            serve(target, port).await;
+            tokio::task::spawn_blocking(move || serve(target, port));
         }
         [target] => {
             let target = target.parse::<PathBuf>().expect("target should be a path");
             let Origin { ip, port } = Origin::random();
             println!("serving at {ip}:{port}");
-            serve(target, port).await;
+            tokio::task::spawn_blocking(move || serve(target, port));
         }
-        _ => {
-            let (_, task) = window::open(Settings::default());
-            iced::daemon("ours", State::update, State::view)
-                .style(|_, _| Appearance {
-                    background_color: Color::BLACK,
-                    text_color: Color::WHITE,
-                })
-                .run_with(|| (State::default(), task.map(|_| Message::None)))
-                .unwrap();
-        }
+        _ => iced::daemon(State::new, State::update, State::view)
+            .title(State::title)
+            .style(|_, _| Style {
+                background_color: Color::BLACK,
+                text_color: Color::WHITE,
+            })
+            .run()
+            .unwrap(),
     };
 }
 
@@ -103,6 +100,14 @@ pub async fn error_message(message: String) -> rfd::MessageDialogResult {
 }
 
 impl State {
+    fn new() -> (Self, Task<Message>) {
+        let (_, task) = window::open(Settings::default());
+        (State::default(), task.map(|_| Message::None))
+    }
+
+    fn title(&self, _: window::Id) -> String {
+        "ours".to_string()
+    }
     fn update(&mut self, message: Message) -> Task<Message> {
         match (message, &mut self.page) {
             (Message::Serve(message), Page::Serve) => message.handle(&mut self.serve),

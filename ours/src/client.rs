@@ -123,6 +123,21 @@ impl ClientMessage {
             }
             ClientMessage::DownloadWindowClosed => {
                 state.download_window = None;
+                if let DownloadingState::Downloading {
+                    main_handle,
+                    tasks_handles,
+                    ..
+                } = &state.downloads.state
+                {
+                    if !main_handle.is_aborted() {
+                        main_handle.abort();
+                    }
+                    for handle in tasks_handles.iter() {
+                        if !handle.is_aborted() {
+                            handle.abort();
+                        }
+                    }
+                }
                 Task::none()
             }
             ClientMessage::StartDownloading(download_tasks) => {
@@ -139,7 +154,12 @@ impl ClientMessage {
                         .abortable()
                     })
                     .unzip();
-                let (task, handle) = Task::batch(tasks).abortable();
+                let tasks = group_tasks(tasks);
+                let (task, handle) = tasks
+                    .into_iter()
+                    .map(Task::batch)
+                    .fold(Task::none(), |acc, x| acc.chain(x))
+                    .abortable();
                 state.downloads.state = DownloadingState::Downloading {
                     main_handle: handle,
                     tasks_handles: handles,
@@ -158,6 +178,23 @@ impl ClientMessage {
             }
         }
     }
+}
+
+fn group_tasks(tasks: Vec<Task<Result<(), String>>>) -> Vec<Vec<Task<Result<(), String>>>> {
+    let mut result = Vec::new();
+    let mut len = 0;
+    const LEN: usize = 3;
+    let mut group = Vec::with_capacity(LEN);
+    for task in tasks.into_iter() {
+        if len < LEN {
+            group.push(task);
+        } else {
+            result.push(group);
+            group = Vec::with_capacity(LEN);
+            len = 0;
+        }
+    }
+    result
 }
 
 #[derive(Clone, Debug)]

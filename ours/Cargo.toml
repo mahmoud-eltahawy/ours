@@ -5,7 +5,7 @@ edition.workspace = true
 
 [dependencies]
 tokio = {workspace = true, features = ["process"]}
-iced = {version ="0.13.1", features = ["tokio","qr_code","svg"] }
+iced = {git = "https://github.com/iced-rs/iced.git", features = ["tokio","qr_code","svg"] }
 get-port = "4.0.0"
 local-ip-address = "0.6.3"
 rfd = "0.15.3"
