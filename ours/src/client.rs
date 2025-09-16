@@ -266,7 +266,7 @@ impl Downloads {
         self.state = DownloadingState::Done;
     }
 
-    fn view(&self) -> Container<'_, Message> {
+    pub fn view(&self) -> Container<'_, Message> {
         match &self.state {
             DownloadingState::Prepareing { units } => Container::new(Column::from_vec(
                 units
@@ -318,29 +318,26 @@ impl Default for ClientState {
 }
 
 impl ClientState {
-    pub fn view(&self, window_id: window::Id) -> Container<'_, Message> {
-        if self.download_window.is_some_and(|x| x == window_id) {
-            return self.downloads.view();
-        }
-        self.main_window()
+    pub fn view(&self) -> Container<'_, Message> {
+        let tools = self.tools_bar();
+        let units = self.units();
+        let all = column![tools, units].spacing(14.).width(Length::Fill);
+        Container::new(all)
     }
 
-    fn main_window(&self) -> Container<'_, Message> {
-        let tools = self.tools_bar();
+    fn units(&self) -> scrollable::Scrollable<'_, Message> {
         let units = self
             .units
             .iter()
             .fold(Column::new().spacing(10.), |acc, x| {
                 acc.push(x.button(&self.select))
             });
-        let units = scrollable(units).width(Length::Fill);
-        let all = column![tools, units].spacing(14.).width(Length::Fill);
-        Container::new(all)
+        scrollable(units).width(Length::Fill)
     }
 
     fn tools_bar(&self) -> Column<'_, Message> {
         let home = go_home_button();
-        let back = Button::new("back").on_press(Message::Client(ClientMessage::GoBack));
+        let back = self.back_button();
         let selector = Button::new(svg_from_icon_data(if self.select.on {
             &CLOSE_SVG
         } else {
@@ -356,6 +353,9 @@ impl ClientState {
             None => Message::Client(ClientMessage::OpenDownloadWindow),
         });
         column![selector, back, home, download].spacing(5.)
+    }
+    fn back_button(&self) -> Button<'_, Message> {
+        Button::new("back").on_press(Message::Client(ClientMessage::GoBack))
     }
 }
 

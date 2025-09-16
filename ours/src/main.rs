@@ -55,11 +55,13 @@ struct State {
     client: ClientState,
     client_prequistes: ClientPrequistesState,
     page: Page,
+    main_window_id: Option<window::Id>,
 }
 
 impl Default for State {
     fn default() -> Self {
         Self {
+            main_window_id: None,
             page: Page::Home,
             serve: ServeState::default(),
             client: ClientState::default(),
@@ -86,6 +88,7 @@ enum Message {
     ToClient(Vec<Unit>),
     ToHome,
     ErrorHappned(String),
+    MainWindowOpened(window::Id),
     None,
 }
 
@@ -102,33 +105,40 @@ pub async fn error_message(message: String) -> rfd::MessageDialogResult {
 impl State {
     fn new() -> (Self, Task<Message>) {
         let (_, task) = window::open(Settings::default());
-        (State::default(), task.map(|_| Message::None))
+        (State::default(), task.map(Message::MainWindowOpened))
     }
 
     fn title(&self, _: window::Id) -> String {
         "ours".to_string()
     }
     fn update(&mut self, message: Message) -> Task<Message> {
-        match (message, &mut self.page) {
-            (Message::Serve(message), Page::Serve) => message.handle(&mut self.serve),
-            (Message::Client(message), Page::Client) => message.handle(&mut self.client),
-            (Message::ClientPrequistes(message), Page::ClientPrequistes) => {
-                message.handle(&mut self.client_prequistes)
-            }
-            (Message::ToServe, page) => {
-                *page = Page::Serve;
-                self.serve = ServeState::default();
+        match message {
+            Message::MainWindowOpened(id) => {
+                self.main_window_id = Some(id);
                 Task::none()
             }
-            (Message::GetClientPrequsits, _) => {
+            Message::Serve(serve_message) => serve_message.handle(&mut self.serve),
+            Message::Client(client_message) => client_message.handle(&mut self.client),
+            Message::ClientPrequistes(message) => message.handle(&mut self.client_prequistes),
+            Message::ToServe => {
+                self.page = Page::Serve;
+                // self.serve = ServeState::default();
+                Task::none()
+            }
+            Message::ToClient(units) => {
+                self.client.units = units;
+                self.page = Page::Client;
+                Task::none()
+            }
+            Message::ToHome => {
+                self.page = Page::Home;
+                Task::none()
+            }
+            Message::GetClientPrequsits => {
                 self.page = Page::ClientPrequistes;
                 Task::none()
             }
-            (Message::ToHome, page) => {
-                *page = Page::Home;
-                Task::none()
-            }
-            (Message::SubmitClientPrequsits, _) => {
+            Message::SubmitClientPrequsits => {
                 if let Some(ip) = self.client_prequistes.valid_ip {
                     let origin = Origin::new(ip, self.client_prequistes.port);
                     let delivery = Delivery::new(origin.to_string());
@@ -141,25 +151,26 @@ impl State {
                     Task::none()
                 }
             }
-            (Message::ToClient(units), page) => {
-                self.client.units = units;
-                *page = Page::Client;
-                Task::none()
-            }
-            (Message::ErrorHappned(message), _) => {
+            Message::ErrorHappned(message) => {
                 Task::perform(error_message(message), |_| Message::None)
             }
-            (Message::None, _) => Task::none(),
-            _ => unreachable!(),
+            Message::None => Task::none(),
         }
     }
 
     fn view(&self, window_id: window::Id) -> Container<'_, Message> {
-        match self.page {
-            Page::Serve => self.serve.view(),
-            Page::Client => self.client.view(window_id),
-            Page::ClientPrequistes => self.client_prequistes.view(),
-            Page::Home => home_view(),
+        if self.client.download_window.is_some_and(|x| x == window_id) {
+            return self.client.downloads.view();
         }
+        if self.main_window_id.is_some_and(|x| x == window_id) {
+            return match self.page {
+                Page::Serve => self.serve.view(),
+                Page::Client => self.client.view(),
+                Page::ClientPrequistes => self.client_prequistes.view(),
+                Page::Home => home_view(),
+            };
+        }
+        println!("loading...");
+        Container::new("void")
     }
 }
