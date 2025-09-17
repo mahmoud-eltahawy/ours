@@ -188,6 +188,15 @@ impl ClientState {
         } else {
             &SELECT_SVG
         }))
+        .style(|_, _| Style {
+            background: Some(iced::Background::Color(Color::BLACK)),
+            border: Border {
+                color: Color::WHITE,
+                width: 2.,
+                radius: Radius::new(2.),
+            },
+            ..Default::default()
+        })
         .on_press(Message::Client(ClientMessage::ToggleSelectMode))
     }
     fn back_button(&self) -> Button<'_, Message> {
