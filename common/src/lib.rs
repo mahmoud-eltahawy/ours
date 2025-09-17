@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::{fmt::Display, net::IpAddr, path::PathBuf};
 use web_sys::wasm_bindgen::JsCast;
 
+pub const OS: &str = "/os";
 pub const LS_PATH: &str = "/ls";
 pub const MKDIR_PATH: &str = "/mkdir";
 pub const MP4_PATH: &str = "/to/mp4";

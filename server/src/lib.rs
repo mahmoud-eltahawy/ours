@@ -2,13 +2,13 @@ use std::{env::args, net::SocketAddr, path::PathBuf, sync::LazyLock, time::Durat
 
 use app_error::{ServerError, ServerResult};
 use axum::{
-    Router,
+    Json, Router,
     extract::DefaultBodyLimit,
     http::{HeaderMap, StatusCode},
     routing::{get, post},
 };
 // use cd::ws_ls;
-use common::{CP_PATH, LS_PATH, MKDIR_PATH, MP4_PATH, MV_PATH, RM_PATH, UPLOAD_PATH};
+use common::{CP_PATH, LS_PATH, MKDIR_PATH, MP4_PATH, MV_PATH, OS, RM_PATH, UPLOAD_PATH};
 use get_port::Ops;
 use tower_http::{cors::CorsLayer, services::ServeDir, timeout::TimeoutLayer};
 
@@ -77,6 +77,7 @@ impl Server {
             .route(MV_PATH, post(cd::mv))
             .route(RM_PATH, post(cd::rm))
             .route(LS_PATH, post(cd::ls))
+            .route(OS, get(os))
             .route(&self_name, get(self_executable))
             //TODO : complete this
             // .route("/wls", any(ws_ls))
@@ -115,4 +116,8 @@ async fn self_executable(headers: HeaderMap) -> (StatusCode, Vec<u8>) {
     };
 
     (StatusCode::OK, contents)
+}
+
+async fn os() -> Json<&'static str> {
+    Json(std::env::consts::OS)
 }
