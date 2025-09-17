@@ -8,7 +8,7 @@ use axum::{
     routing::{get, post},
 };
 // use cd::ws_ls;
-use common::{CP_PATH, LS_PATH, MKDIR_PATH, MP4_PATH, MV_PATH, OS, RM_PATH, UPLOAD_PATH};
+use common::{CP_PATH, LS_PATH, MKDIR_PATH, MP4_PATH, MV_PATH, NAME, OS, RM_PATH, UPLOAD_PATH};
 use get_port::Ops;
 use tower_http::{cors::CorsLayer, services::ServeDir, timeout::TimeoutLayer};
 
@@ -34,6 +34,11 @@ static SELF_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
         .next()
         .and_then(|x| x.parse::<PathBuf>().ok())
         .unwrap()
+});
+static APP_NAME: LazyLock<String> = LazyLock::new(|| {
+    let name = format!("/{}", SELF_PATH.file_name().unwrap().to_str().unwrap());
+    println!("serving self at {name}");
+    name
 });
 
 impl Server {
@@ -67,9 +72,6 @@ impl Server {
 
         let target_dir = ServeDir::new(&target);
 
-        let self_name = format!("/{}", SELF_PATH.file_name().unwrap().to_str().unwrap());
-        println!("serving self at {self_name}");
-
         let app = Router::new()
             .route(MP4_PATH, post(mp4::mp4_remux))
             .route(UPLOAD_PATH, post(cd::upload))
@@ -78,7 +80,8 @@ impl Server {
             .route(RM_PATH, post(cd::rm))
             .route(LS_PATH, post(cd::ls))
             .route(OS, get(os))
-            .route(&self_name, get(self_executable))
+            .route(NAME, get(name))
+            .route(&APP_NAME, get(self_executable))
             //TODO : complete this
             // .route("/wls", any(ws_ls))
             .route(MKDIR_PATH, post(cd::mkdir))
@@ -120,4 +123,8 @@ async fn self_executable(headers: HeaderMap) -> (StatusCode, Vec<u8>) {
 
 async fn os() -> Json<&'static str> {
     Json(std::env::consts::OS)
+}
+
+async fn name() -> Json<&'static str> {
+    Json(&APP_NAME)
 }
