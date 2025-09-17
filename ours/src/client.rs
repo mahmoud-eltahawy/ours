@@ -1,4 +1,4 @@
-use assets::{CLOSE_SVG, DOWNLOAD_SVG, IconData, SELECT_SVG};
+use assets::{CLOSE_SVG, DOWNLOAD_SVG, HOME_SVG, IconData, SELECT_SVG};
 use common::{Origin, Selected, Unit};
 use delivery::Delivery;
 use iced::{
@@ -197,7 +197,7 @@ impl ClientState {
         if self.current_path == PathBuf::new() {
             go_home_button()
         } else {
-            Button::new("home").on_press(Message::Client(ClientMessage::ChangeCurrentPath(
+            svg_button(&HOME_SVG).on_press(Message::Client(ClientMessage::ChangeCurrentPath(
                 PathBuf::new(),
             )))
         }

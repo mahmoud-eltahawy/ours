@@ -1,9 +1,10 @@
+use assets::HOME_SVG;
 use iced::{
     Color,
     widget::{Button, Container, Text, button::Style, column},
 };
 
-use crate::Message;
+use crate::{Message, client::svg_from_icon_data};
 
 pub fn home_view<'a>() -> Container<'a, Message> {
     let title = Text::new("Home");
@@ -15,7 +16,7 @@ pub fn home_view<'a>() -> Container<'a, Message> {
 }
 
 pub fn go_home_button<'a>() -> Button<'a, Message> {
-    Button::new("home")
+    Button::new(svg_from_icon_data(&HOME_SVG))
         .on_press(Message::ToHome)
         .style(move |_, _| Style {
             background: Some(iced::Background::Color(Color::from_rgb(1., 0., 0.))),

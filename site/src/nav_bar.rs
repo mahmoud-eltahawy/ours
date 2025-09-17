@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use crate::{files_box::path_as_query, Icon};
-use assets::{IconData, CLOSE_SVG, COLLAPSE_SVG, DOWNLOAD_SVG, EXPAND_SVG, SELECT_SVG};
+use assets::{IconData, CLOSE_SVG, COLLAPSE_SVG, DOWNLOAD_SVG, EXPAND_SVG, HOME_SVG, SELECT_SVG};
 use common::{GlobalState, GlobalStateStoreFields, SelectedState, Store};
 use leptos::{either::either, prelude::*};
 use leptos_router::{hooks::use_navigate, NavigateOptions};
@@ -137,7 +137,9 @@ fn Home(current_path: RwSignal<PathBuf>) -> impl IntoView {
         navigate("/", NavigateOptions::default())
     };
 
-    view! { <Tool icon=|| icondata::BiHomeSmileRegular.to_owned() active onpointerdown /> }
+    let icon = || HOME_SVG;
+
+    view! { <Tool icon=icon active onpointerdown /> }
 }
 
 #[component]
