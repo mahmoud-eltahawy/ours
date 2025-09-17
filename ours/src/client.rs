@@ -4,6 +4,7 @@ use delivery::Delivery;
 use iced::{
     Border, Color, Length, Task,
     border::Radius,
+    mouse::Interaction,
     widget::{
         Button, Container, MouseArea, Row, Svg, Text, button::Style, column, mouse_area, row,
         scrollable, svg::Handle,
@@ -244,6 +245,7 @@ impl UnitViews for Unit {
                 ..Default::default()
             }
         }))
+        .interaction(Interaction::Pointer)
         .on_release(Message::Client(ClientMessage::UnitClick(self.clone())))
         .on_double_click(Message::Client(ClientMessage::UnitDoubleClick(
             self.clone(),
