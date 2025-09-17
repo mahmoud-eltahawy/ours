@@ -7,7 +7,7 @@ use iced::{
     Task,
     futures::StreamExt,
     task::Handle,
-    widget::{Button, Column, Container, Text, column, scrollable},
+    widget::{Button, Column, Container, Text, column, progress_bar, scrollable},
     window,
 };
 use reqwest::get;
@@ -99,13 +99,14 @@ impl Downloads {
             .downloading
             .values()
             .map(|x| {
-                format!(
-                    "downloading file {:#?} with progress {}",
-                    x.host_path, x.progress
-                )
+                column![
+                    Text::new(format!(
+                        "downloading file {:#?} with progress {}",
+                        x.host_path, x.progress
+                    )),
+                    progress_bar(0.0..=100.0, x.progress)
+                ]
             })
-            .map(Text::new)
-            .map(Button::new)
             .fold(Column::new(), |acc, x| acc.push(x))
             .spacing(5.);
         scrollable(column![title, buttons])
