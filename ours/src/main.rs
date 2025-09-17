@@ -165,6 +165,7 @@ impl State {
                 }
                 if self.client.download_window.is_some_and(|x| x == id) {
                     self.client.download_window = None;
+                    self.client.downloads.clear();
                 }
                 Task::none()
             }

@@ -57,6 +57,10 @@ impl Downloads {
         }
     }
 
+    pub fn clear(&mut self) {
+        *self = Self::new();
+    }
+
     pub fn view(&self) -> Container<'_, Message> {
         let cancel = Button::new("cancel all downloads");
 
