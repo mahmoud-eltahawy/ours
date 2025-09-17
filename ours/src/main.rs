@@ -11,6 +11,7 @@ use iced::{
     window::{self, Settings},
 };
 use serve::{ServeMessage, ServeState};
+use tokio::runtime::Runtime;
 
 use crate::{
     client::download::DownloadMessage,
@@ -26,19 +27,25 @@ mod serve;
 pub fn main() {
     let mut args = args();
     args.next();
+
+    let rt = Runtime::new().unwrap();
     match &args.collect::<Vec<_>>()[..] {
         [target, port] => {
             let target = target.parse::<PathBuf>().expect("target should be a path");
             let port = port.parse::<u16>().expect("port should be a u16 number");
             let Origin { ip, .. } = Origin::random();
             println!("serving at {ip}:{port}");
-            tokio::task::spawn_blocking(move || serve(target, port));
+            rt.block_on(async move {
+                serve(target, port).await;
+            })
         }
         [target] => {
             let target = target.parse::<PathBuf>().expect("target should be a path");
             let Origin { ip, port } = Origin::random();
             println!("serving at {ip}:{port}");
-            tokio::task::spawn_blocking(move || serve(target, port));
+            rt.block_on(async move {
+                serve(target, port).await;
+            })
         }
         _ => iced::daemon(State::new, State::update, State::view)
             .subscription(State::subscription)

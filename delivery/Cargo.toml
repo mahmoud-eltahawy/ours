@@ -7,5 +7,8 @@ edition.workspace = true
 reqwest = { workspace = true , features = ["json","multipart"] }
 common.workspace = true
 gloo.workspace = true
-tokio = { workspace = true , features = ["fs"] }
+tokio = { workspace = true , features = ["fs"] ,optional = true}
 web-sys.workspace = true
+
+[features]
+native = ["dep:tokio"]

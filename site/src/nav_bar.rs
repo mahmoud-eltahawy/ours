@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use crate::{files_box::path_as_query, Icon};
-use assets::{IconData, CLOSE_SVG, COLLAPSE_SVG, EXPAND_SVG, SELECT_SVG};
+use assets::{IconData, CLOSE_SVG, COLLAPSE_SVG, DOWNLOAD_SVG, EXPAND_SVG, SELECT_SVG};
 use common::{GlobalState, GlobalStateStoreFields, SelectedState, Store};
 use leptos::{either::either, prelude::*};
 use leptos_router::{hooks::use_navigate, NavigateOptions};
@@ -234,7 +234,7 @@ fn Download() -> impl IntoView {
         !select.is_clear() && !select.has_dirs()
     };
 
-    view! { <Tool icon=|| icondata::BiCloudDownloadRegular.to_owned() active onpointerdown /> }
+    view! { <Tool icon=|| DOWNLOAD_SVG active onpointerdown /> }
 }
 
 #[component]

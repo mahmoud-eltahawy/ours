@@ -14,15 +14,16 @@ console_log = "1"
 log = "0.4"
 console_error_panic_hook = "0.1"
 
-common.workspace = true
-delivery.workspace = true
 leptos-use = "0.16"
 web-sys = { version = "0.3", features = ["Document", "Window","File","FileList"] }
-serde_json.workspace = true
 send_wrapper = "0.6.0"
-serde.workspace = true
-reqwest = { workspace = true , features = ["json","multipart"] }
 icondata = "0.5.0"
+
+serde_json.workspace = true
+common.workspace = true
+delivery.workspace = true
+serde.workspace = true
+# reqwest = { workspace = true , features = ["json","multipart"] }
 gloo.workspace = true
 assets.workspace = true
 
