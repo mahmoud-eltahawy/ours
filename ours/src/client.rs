@@ -3,9 +3,10 @@ use common::{Origin, Selected, Unit};
 use delivery::Delivery;
 use iced::{
     Border, Color, Length, Task,
+    border::Radius,
     theme::Palette,
     widget::{
-        Button, Column, Container, Svg, Text, button::Style, column, row, scrollable, svg::Handle,
+        Button, Container, Row, Svg, Text, button::Style, column, row, scrollable, svg::Handle,
     },
     window,
 };
@@ -16,7 +17,7 @@ use std::{
 
 pub mod download;
 
-use crate::{Message, client::download::DownloadMessage, home::go_home_button};
+use crate::{Message, client::download::DownloadMessage};
 
 #[derive(Debug, Clone)]
 pub enum ClientMessage {
@@ -127,26 +128,47 @@ impl ClientState {
     pub fn view(&self) -> Container<'_, Message> {
         let tools = self.tools_bar();
         let units = self.units();
-        let all = column![tools, units].spacing(14.).width(Length::Fill);
-        Container::new(all)
+        let all = column![tools, units].spacing(10.).width(Length::Fill);
+        Container::new(all).padding(10.).center_x(Length::Fill)
     }
 
     fn units(&self) -> scrollable::Scrollable<'_, Message> {
         let units = self
             .units
             .iter()
-            .fold(Column::new().spacing(10.), |acc, x| {
+            .fold(Row::new().spacing(10.), |acc, x| {
                 acc.push(x.button(&self.select))
-            });
+            })
+            .wrap();
+        let units = Container::new(units)
+            .style(|_| iced::widget::container::Style {
+                border: Border {
+                    color: Color::WHITE,
+                    width: 2.,
+                    radius: Radius::new(20),
+                },
+                ..Default::default()
+            })
+            .padding(10.);
         scrollable(units).width(Length::Fill)
     }
 
-    fn tools_bar(&self) -> Column<'_, Message> {
-        let home = go_home_button();
+    fn tools_bar(&self) -> Container<'_, Message> {
+        let home = self.home_button();
         let back = self.back_button();
         let selector = self.select_button();
         let download = self.download_button();
-        column![selector, back, home, download].spacing(5.)
+        Container::new(row![selector, back, home, download].spacing(5.).wrap())
+            .style(|_| iced::widget::container::Style {
+                border: Border {
+                    color: Color::WHITE,
+                    width: 2.,
+                    radius: Radius::new(20),
+                },
+                ..Default::default()
+            })
+            .center_x(Length::Fill)
+            .padding(12.)
     }
 
     fn download_button(&self) -> Button<'_, Message> {
@@ -170,6 +192,22 @@ impl ClientState {
     }
     fn back_button(&self) -> Button<'_, Message> {
         Button::new("back").on_press(Message::Client(ClientMessage::GoBack))
+    }
+    fn home_button(&self) -> Button<'_, Message> {
+        let (message, color) = if self.current_path == PathBuf::new() {
+            (Message::ToHome, Color::from_rgb(1., 0., 0.))
+        } else {
+            (
+                Message::Client(ClientMessage::ChangeCurrentPath(PathBuf::new())),
+                Color::from_rgb(0., 1., 0.),
+            )
+        };
+        Button::new("home")
+            .style(move |_, _| Style {
+                background: Some(iced::Background::Color(color)),
+                ..Default::default()
+            })
+            .on_press(message)
     }
 }
 
