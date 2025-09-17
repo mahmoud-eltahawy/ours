@@ -1,4 +1,5 @@
 use common::Origin;
+use iced::Length;
 use iced::widget::qr_code::Data;
 use iced::{
     Background, Border, Center, Color, Shadow, Task, Vector,
@@ -97,7 +98,7 @@ impl ServeState {
             .spacing(30)
             .padding(20)
             .align_x(Center);
-        Container::new(col)
+        Container::new(col).center_x(Length::Fill)
     }
 
     fn is_working(&self) -> bool {

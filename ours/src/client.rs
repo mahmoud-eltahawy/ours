@@ -222,22 +222,15 @@ impl UnitViews for Unit {
                 };
                 Message::Client(message)
             })
-            .style(|theme, _| {
+            .style(|_, _| {
                 let selected = selected.is_selected(self);
-                let Palette {
-                    text,
-                    background,
-                    danger,
-                    ..
-                } = theme.palette();
                 Style {
                     border: Border {
-                        color: if selected { danger } else { Color::BLACK },
-                        width: if selected { 5. } else { 0. },
-                        ..Default::default()
+                        color: if selected { Color::WHITE } else { Color::BLACK },
+                        width: 5.,
+                        radius: Radius::new(5.),
                     },
-                    text_color: text,
-                    background: Some(iced::Background::Color(background)),
+                    text_color: Color::WHITE,
                     ..Default::default()
                 }
             })

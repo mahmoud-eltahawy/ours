@@ -5,7 +5,7 @@ use common::{Origin, Unit};
 use delivery::Delivery;
 use home::home_view;
 use iced::{
-    Color, Subscription, Task,
+    Color, Subscription, Task, exit,
     theme::Style,
     widget::Container,
     window::{self, Settings},
@@ -162,6 +162,7 @@ impl State {
             Message::WindowClosed(id) => {
                 if self.main_window_id.is_some_and(|x| x == id) {
                     self.main_window_id = None;
+                    return exit();
                 }
                 if self.client.download_window.is_some_and(|x| x == id) {
                     self.client.download_window = None;
