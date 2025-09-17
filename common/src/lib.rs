@@ -162,6 +162,14 @@ impl Selected {
         }
     }
 
+    pub fn toggle_unit_alone_selection(&mut self, unit: &Unit) {
+        if self.units.contains(unit) {
+            self.units.clear();
+        } else {
+            self.units = vec![unit.clone()];
+        }
+    }
+
     pub fn is_selected(&self, unit: &Unit) -> bool {
         self.units.contains(unit)
     }

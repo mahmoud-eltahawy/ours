@@ -5,7 +5,8 @@ use iced::{
     Border, Color, Length, Task,
     border::Radius,
     widget::{
-        Button, Container, Row, Svg, Text, button::Style, column, row, scrollable, svg::Handle,
+        Button, Container, MouseArea, Row, Svg, Text, button::Style, column, mouse_area, row,
+        scrollable, svg::Handle,
     },
     window,
 };
@@ -28,8 +29,8 @@ pub enum ClientMessage {
     GoBack,
     GoneBack(Vec<Unit>),
     ToggleSelectMode,
-    Select(Unit),
-    OpenFile(Unit),
+    UnitDoubleClick(Unit),
+    UnitClick(Unit),
 }
 
 impl ClientMessage {
@@ -81,12 +82,30 @@ impl ClientMessage {
                 }
                 Task::none()
             }
-            ClientMessage::Select(unit) => {
-                state.select.toggle_unit_selection(&unit);
-                Task::none()
-            }
-            ClientMessage::OpenFile(unit) => {
-                println!("opening file {unit:#?} is not supported yet");
+            ClientMessage::UnitDoubleClick(unit) => match unit.kind {
+                common::UnitKind::Dirctory => {
+                    Task::perform(state.delivery.clone().ls(unit.path.clone()), move |xs| {
+                        if let Ok(xs) = xs {
+                            Message::Client(ClientMessage::CurrentPathChanged {
+                                units: xs,
+                                current_path: unit.path.clone(),
+                            })
+                        } else {
+                            Message::None
+                        }
+                    })
+                }
+                _ => {
+                    println!("opening file {unit:#?} is not supported yet");
+                    Task::none()
+                }
+            },
+            ClientMessage::UnitClick(unit) => {
+                if state.select.on {
+                    state.select.toggle_unit_selection(&unit);
+                } else {
+                    state.select.toggle_unit_alone_selection(&unit);
+                }
                 Task::none()
             }
         }
@@ -205,40 +224,30 @@ impl ClientState {
 }
 
 trait UnitViews {
-    fn button<'a>(&'a self, selected: &'a Selected) -> Button<'a, Message>;
+    fn button<'a>(&'a self, selected: &'a Selected) -> MouseArea<'a, Message>;
 }
 
 impl UnitViews for Unit {
-    fn button<'a>(&'a self, selected: &'a Selected) -> Button<'a, Message> {
+    fn button<'a>(&'a self, selected: &'a Selected) -> MouseArea<'a, Message> {
         let svg = svg_from_icon_data(self.icon());
         let text = Text::new(self.name());
         let row = row![svg, text].spacing(4.);
-        Button::new(row)
-            .on_press({
-                let message = if selected.on {
-                    ClientMessage::Select(self.clone())
-                } else {
-                    match self.kind {
-                        common::UnitKind::Dirctory => {
-                            ClientMessage::ChangeCurrentPath(self.path.clone())
-                        }
-                        _ => ClientMessage::OpenFile(self.clone()),
-                    }
-                };
-                Message::Client(message)
-            })
-            .style(|_, _| {
-                let selected = selected.is_selected(self);
-                Style {
-                    border: Border {
-                        color: if selected { Color::WHITE } else { Color::BLACK },
-                        width: 5.,
-                        radius: Radius::new(5.),
-                    },
-                    text_color: Color::WHITE,
-                    ..Default::default()
-                }
-            })
+        mouse_area(Button::new(row).style(|_, _| {
+            let selected = selected.is_selected(self);
+            Style {
+                border: Border {
+                    color: if selected { Color::WHITE } else { Color::BLACK },
+                    width: 5.,
+                    radius: Radius::new(5.),
+                },
+                text_color: Color::WHITE,
+                ..Default::default()
+            }
+        }))
+        .on_release(Message::Client(ClientMessage::UnitClick(self.clone())))
+        .on_double_click(Message::Client(ClientMessage::UnitDoubleClick(
+            self.clone(),
+        )))
     }
 }
 
