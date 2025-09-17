@@ -233,8 +233,9 @@ fn Download() -> impl IntoView {
         let select = store.select().read();
         !select.is_clear() && !select.has_dirs()
     };
+    let icon = || DOWNLOAD_SVG;
 
-    view! { <Tool icon=|| DOWNLOAD_SVG active onpointerdown /> }
+    view! { <Tool icon=icon active onpointerdown /> }
 }
 
 #[component]
