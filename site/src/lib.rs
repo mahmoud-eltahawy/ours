@@ -79,24 +79,13 @@ pub fn App() -> impl IntoView {
 }
 
 #[component]
-pub fn Icon<I>(
-    icon: I,
-    // #[prop(optional)] style: Option<&'static str>,
-    // #[prop(optional)] width: Option<&'static str>,
-    // #[prop(optional)] height: Option<&'static str>,
-) -> impl IntoView
+pub fn Icon<I>(icon: I) -> impl IntoView
 where
     I: Fn() -> assets::IconData + Send + Clone + 'static,
 {
     move || {
         let icon = icon();
         svg::svg()
-            // .style(match (style, icon.style) {
-            //     (Some(a), Some(b)) => Some(format!("{b} {a}")),
-            //     (Some(a), None) => Some(a.to_string()),
-            //     (None, Some(b)) => Some(b.to_string()),
-            //     _ => None,
-            // })
             .style(icon.style)
             .attr("x", icon.x)
             .attr("y", icon.y)

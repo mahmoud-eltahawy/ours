@@ -179,7 +179,6 @@ pub struct GlobalState {
     media_play: Option<Unit>,
     units_refetch_tick: bool,
     mkdir_state: Option<String>,
-    password: bool,
 }
 
 impl GlobalState {

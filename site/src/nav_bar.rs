@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use crate::{files_box::path_as_query, Icon};
 use assets::{IconData, CLOSE_SVG, COLLAPSE_SVG, DOWNLOAD_SVG, EXPAND_SVG, HOME_SVG, SELECT_SVG};
 use common::{GlobalState, GlobalStateStoreFields, SelectedState, Store};
-use leptos::{either::either, prelude::*};
+use leptos::prelude::*;
 use leptos_router::{hooks::use_navigate, NavigateOptions};
 use mp4::ToMp4;
 use paste::Paste;
@@ -17,7 +17,6 @@ pub mod upload;
 
 #[component]
 pub fn NavBar(current_path: RwSignal<PathBuf>) -> impl IntoView {
-    let store: Store<GlobalState> = use_context().unwrap();
     let more = RwSignal::new(true);
     let hidden = move || {
         if more.get() {
@@ -44,15 +43,11 @@ pub fn NavBar(current_path: RwSignal<PathBuf>) -> impl IntoView {
                 <Open />
                 <Selection />
                 <Download />
-                {move || {
-                    either!(
-                        store.password().get(),
-                            true => view! {
-                                <AdminRequired current_path/>
-                            },
-                            false => view! {<Admin/>},
-                    )
-                }}
+                <Upload current_path />
+                <Remove />
+                <Mkdir />
+                <Paste current_path />
+                <ToMp4 />
             </div>
         </nav>
     }
@@ -79,17 +74,6 @@ pub fn More(more: RwSignal<bool>) -> impl IntoView {
         >
             <Icon icon />
         </button>
-    }
-}
-
-#[component]
-pub fn AdminRequired(current_path: RwSignal<PathBuf>) -> impl IntoView {
-    view! {
-        <Upload current_path />
-        <Remove />
-        <Mkdir />
-        <Paste current_path />
-        <ToMp4 />
     }
 }
 
@@ -238,16 +222,6 @@ fn Download() -> impl IntoView {
     let icon = || DOWNLOAD_SVG;
 
     view! { <Tool icon=icon active onpointerdown /> }
-}
-
-#[component]
-fn Admin() -> impl IntoView {
-    let store = use_context::<Store<GlobalState>>().unwrap();
-    let onpointerdown = move || {
-        *store.password().write() = true;
-    };
-
-    view! { <Tool icon=|| icondata::RiAdminUserFacesFill.to_owned() active=|| true onpointerdown /> }
 }
 
 #[component]

@@ -31,6 +31,6 @@ pub const DEFAULT_ICON: icondata_core::IconData = icondata_core::IconData {
     stroke_linejoin: None,
     stroke_width: None,
     stroke: None,
-    fill: None,
+    fill: Some("black"),
     data: "",
 };
