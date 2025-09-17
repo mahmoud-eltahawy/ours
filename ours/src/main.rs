@@ -28,35 +28,41 @@ pub fn main() {
     let mut args = args();
     args.next();
 
-    let rt = Runtime::new().unwrap();
-    match &args.collect::<Vec<_>>()[..] {
+    let args = match &args.collect::<Vec<_>>()[..] {
         [target, port] => {
             let target = target.parse::<PathBuf>().expect("target should be a path");
             let port = port.parse::<u16>().expect("port should be a u16 number");
             let Origin { ip, .. } = Origin::random();
-            println!("serving at {ip}:{port}");
-            rt.block_on(async move {
-                serve(target, port).await;
-            })
+            Some((target, ip, port))
         }
         [target] => {
             let target = target.parse::<PathBuf>().expect("target should be a path");
             let Origin { ip, port } = Origin::random();
-            println!("serving at {ip}:{port}");
+            Some((target, ip, port))
+        }
+        _ => None,
+    };
+
+    match args {
+        Some((target, ip, port)) => {
+            let rt = Runtime::new().unwrap();
+            println!("serving {target:#?} at {ip}:{port}");
             rt.block_on(async move {
                 serve(target, port).await;
             })
         }
-        _ => iced::daemon(State::new, State::update, State::view)
-            .subscription(State::subscription)
-            .title(State::title)
-            .style(|_, _| Style {
-                background_color: Color::BLACK,
-                text_color: Color::WHITE,
-            })
-            .run()
-            .unwrap(),
-    };
+        None => {
+            iced::daemon(State::new, State::update, State::view)
+                .subscription(State::subscription)
+                .title(State::title)
+                .style(|_, _| Style {
+                    background_color: Color::BLACK,
+                    text_color: Color::WHITE,
+                })
+                .run()
+                .unwrap();
+        }
+    }
 }
 
 struct State {
