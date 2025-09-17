@@ -6,7 +6,7 @@ use axum::{
     extract::DefaultBodyLimit,
     routing::{any, post},
 };
-use cd::ws_ls;
+// use cd::ws_ls;
 use common::{CP_PATH, LS_PATH, MKDIR_PATH, MP4_PATH, MV_PATH, RM_PATH, UPLOAD_PATH};
 use get_port::Ops;
 use tower_http::{cors::CorsLayer, services::ServeDir, timeout::TimeoutLayer};
@@ -67,7 +67,7 @@ impl Server {
             .route(RM_PATH, post(cd::rm))
             .route(LS_PATH, post(cd::ls))
             //TODO : complete this
-            .route("/wls", any(ws_ls))
+            // .route("/wls", any(ws_ls))
             .route(MKDIR_PATH, post(cd::mkdir))
             .nest_service("/download", target_dir)
             .with_state(Context { target_dir: target })

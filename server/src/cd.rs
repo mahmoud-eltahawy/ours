@@ -14,7 +14,6 @@ use common::{Unit, UnitKind, VIDEO_X};
 use std::ffi::OsStr;
 use std::io;
 use std::net::SocketAddr;
-use std::os::unix::ffi::OsStrExt;
 use std::{
     path::{Path, PathBuf},
     str::FromStr,
@@ -132,46 +131,46 @@ pub async fn upload(
     Ok(())
 }
 
-pub async fn ws_ls(
-    ws: WebSocketUpgrade,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
-    State(Context { target_dir }): State<Context>,
-) -> Response {
-    println!("connected to addr : {addr:#?}");
-    ws.on_upgrade(|socket| ws_ls_handler(socket, target_dir))
-}
+// pub async fn ws_ls(
+//     ws: WebSocketUpgrade,
+//     ConnectInfo(addr): ConnectInfo<SocketAddr>,
+//     State(Context { target_dir }): State<Context>,
+// ) -> Response {
+//     println!("connected to addr : {addr:#?}");
+//     ws.on_upgrade(|socket| ws_ls_handler(socket, target_dir))
+// }
 
-async fn ws_ls_handler(socket: WebSocket, target_dir: PathBuf) {
-    let (mut sender, mut receiver) = socket.split();
+// async fn ws_ls_handler(socket: WebSocket, target_dir: PathBuf) {
+//     let (mut sender, mut receiver) = socket.split();
 
-    loop {
-        if let Some(msg) = receiver.next().await.and_then(|x| x.ok()) {
-            match msg {
-                Message::Binary(bytes) => {
-                    let b = OsStr::from_bytes(&bytes);
-                    let base = Path::new(&b);
-                    match get_dir_units(&target_dir, base).await {
-                        Ok(units) => {
-                            let _ = sender
-                                .send(Message::Binary(serde_json::json!(units).to_string().into()))
-                                .await;
-                        }
-                        Err(err) => {
-                            println!("can not get units : {err:#?}");
-                        }
-                    };
-                }
-                Message::Close(_) => {
-                    if let Err(e) = sender.send(Message::Close(None)).await {
-                        println!("Error while closing connection : {e:#?}")
-                    };
-                    break;
-                }
-                _ => (),
-            }
-        };
-    }
-}
+//     loop {
+//         if let Some(msg) = receiver.next().await.and_then(|x| x.ok()) {
+//             match msg {
+//                 Message::Binary(bytes) => {
+//                     let b = OsStr::from_bytes(&bytes);
+//                     let base = Path::new(&b);
+//                     match get_dir_units(&target_dir, base).await {
+//                         Ok(units) => {
+//                             let _ = sender
+//                                 .send(Message::Binary(serde_json::json!(units).to_string().into()))
+//                                 .await;
+//                         }
+//                         Err(err) => {
+//                             println!("can not get units : {err:#?}");
+//                         }
+//                     };
+//                 }
+//                 Message::Close(_) => {
+//                     if let Err(e) = sender.send(Message::Close(None)).await {
+//                         println!("Error while closing connection : {e:#?}")
+//                     };
+//                     break;
+//                 }
+//                 _ => (),
+//             }
+//         };
+//     }
+// }
 
 async fn get_dir_units(target_dir: &PathBuf, base: &Path) -> io::Result<Vec<Unit>> {
     let root = target_dir.join(base);

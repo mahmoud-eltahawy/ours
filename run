@@ -17,13 +17,17 @@ def "main desk" [] {
   cargo run
 }
 
-def "main build" [] {
+def "main build" [target? : string] {
+  mut args = "" 
+  if $target != null {
+    $args = $"--target=($target)"
+  }
   cd ./site
   trunk build --release
   cd ..
   ls site_assets/gen | get name | par-each {|x| gzip $x} 
   cd ours
-  cargo build --release
+  cargo build $args --release
 }
 
 def "main install" [] {
