@@ -32,21 +32,6 @@ pub fn App() -> impl IntoView {
     let store = GlobalState::new_store();
     let current_path = RwSignal::new(PathBuf::new());
     let ls_result = LocalResource::new(move || DELIVERY.clone().ls(current_path.get()));
-    let host_os = LocalResource::new(move || DELIVERY.clone().get_host_os());
-    let app_name = LocalResource::new(move || DELIVERY.clone().get_app_name());
-
-    let show_download_link = Memo::new(move |_| {
-        let ua = use_window()
-            .navigator()
-            .and_then(|x| x.user_agent().ok())
-            .map(|x| x.to_lowercase());
-        let name = app_name.get().and_then(|x| x.ok());
-        let os = host_os.get().and_then(|x| x.ok());
-        match (ua, os) {
-            (Some(ua), Some(os)) if ua.contains(&os) => name,
-            _ => None,
-        }
-    });
 
     let units = Memo::new(move |other| {
         let ls = match ls_result.get().transpose() {
@@ -77,22 +62,11 @@ pub fn App() -> impl IntoView {
         }
     });
 
-    let link = move || {
-        show_download_link
-            .get()
-            .map(|x| DELIVERY.clone().url_path(&x))
-    };
-    let text = "forget this shitty web app and download the native one by clicking ";
     view! {
         <Router>
             <NavBar current_path />
             <main>
-                <ShowLet some={link} let:link>
-                    <div
-                        class="text-3xl text-red-500"
-                    >{text} <a class="text-4xl text-red-700" href={link}>here</a></div>
-                </ShowLet>
-                <h1></h1>
+                <NativeAppLink/>
                 <Routes fallback=|| "Page not found.">
                     <Route
                         path=StaticSegment("")
@@ -102,6 +76,43 @@ pub fn App() -> impl IntoView {
             </main>
             <MediaPlayer />
         </Router>
+    }
+}
+
+#[component]
+pub fn NativeAppLink() -> impl IntoView {
+    let host_os = LocalResource::new(move || DELIVERY.clone().get_host_os());
+    let app_name = LocalResource::new(move || DELIVERY.clone().get_app_name());
+    let show_download_link = Memo::new(move |_| {
+        let ua = use_window()
+            .navigator()
+            .and_then(|x| x.user_agent().ok())
+            .map(|x| x.to_lowercase());
+        let name = app_name.get().and_then(|x| x.ok());
+        let os = host_os.get().and_then(|x| x.ok());
+        match (ua, os) {
+            (Some(ua), Some(os)) if ua.contains(&os) => name,
+            _ => None,
+        }
+    });
+    let link = move || {
+        show_download_link
+            .get()
+            .map(|x| DELIVERY.clone().url_path(&x))
+    };
+    let text = "forget this shitty web app and download the native one by clicking ";
+    view! {
+        <ShowLet some={link} let:link>
+            <div
+                class="text-3xl text-red-500"
+            >
+                {text}
+                <a
+                    class="text-4xl text-red-700"
+                    href={link}
+                >here</a>
+            </div>
+        </ShowLet>
     }
 }
 
