@@ -1,10 +1,11 @@
-use std::{net::SocketAddr, path::PathBuf, time::Duration};
+use std::{env::args, net::SocketAddr, path::PathBuf, sync::LazyLock, time::Duration};
 
 use app_error::{ServerError, ServerResult};
 use axum::{
     Router,
     extract::DefaultBodyLimit,
-    routing::{any, post},
+    http::{HeaderMap, StatusCode},
+    routing::{get, post},
 };
 // use cd::ws_ls;
 use common::{CP_PATH, LS_PATH, MKDIR_PATH, MP4_PATH, MV_PATH, RM_PATH, UPLOAD_PATH};
@@ -27,6 +28,13 @@ pub struct Server {
     port: Option<u16>,
     timeout: Duration,
 }
+
+static SELF_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
+    args()
+        .next()
+        .and_then(|x| x.parse::<PathBuf>().ok())
+        .unwrap()
+});
 
 impl Server {
     pub fn new(target: PathBuf) -> Self {
@@ -59,6 +67,9 @@ impl Server {
 
         let target_dir = ServeDir::new(&target);
 
+        let self_name = format!("/{}", SELF_PATH.file_name().unwrap().to_str().unwrap());
+        println!("serving self at {self_name}");
+
         let app = Router::new()
             .route(MP4_PATH, post(mp4::mp4_remux))
             .route(UPLOAD_PATH, post(cd::upload))
@@ -66,6 +77,7 @@ impl Server {
             .route(MV_PATH, post(cd::mv))
             .route(RM_PATH, post(cd::rm))
             .route(LS_PATH, post(cd::ls))
+            .route(&self_name, get(self_executable))
             //TODO : complete this
             // .route("/wls", any(ws_ls))
             .route(MKDIR_PATH, post(cd::mkdir))
@@ -86,4 +98,21 @@ impl Server {
         .await?;
         Ok(())
     }
+}
+
+async fn self_executable(headers: HeaderMap) -> (StatusCode, Vec<u8>) {
+    let ua = headers.get("User-Agent").take_if(|user_agent| {
+        user_agent
+            .to_str()
+            .is_ok_and(|x| x.to_lowercase().contains(std::env::consts::OS))
+    });
+    if ua.is_none() {
+        return (StatusCode::BAD_REQUEST, vec![]);
+    }
+
+    let Ok(contents) = tokio::fs::read(&*SELF_PATH).await else {
+        return (StatusCode::INTERNAL_SERVER_ERROR, vec![]);
+    };
+
+    (StatusCode::OK, contents)
 }
