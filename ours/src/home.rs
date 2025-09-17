@@ -1,4 +1,7 @@
-use iced::widget::{Button, Container, Text, column};
+use iced::{
+    Color,
+    widget::{Button, Container, Text, button::Style, column},
+};
 
 use crate::Message;
 
@@ -12,5 +15,10 @@ pub fn home_view<'a>() -> Container<'a, Message> {
 }
 
 pub fn go_home_button<'a>() -> Button<'a, Message> {
-    Button::new("home").on_press(Message::ToHome)
+    Button::new("home")
+        .on_press(Message::ToHome)
+        .style(move |_, _| Style {
+            background: Some(iced::Background::Color(Color::from_rgb(1., 0., 0.))),
+            ..Default::default()
+        })
 }

@@ -17,7 +17,7 @@ use std::{
 
 pub mod download;
 
-use crate::{Message, client::download::DownloadMessage};
+use crate::{Message, client::download::DownloadMessage, home::go_home_button};
 
 #[derive(Debug, Clone)]
 pub enum ClientMessage {
@@ -194,20 +194,13 @@ impl ClientState {
         Button::new("back").on_press(Message::Client(ClientMessage::GoBack))
     }
     fn home_button(&self) -> Button<'_, Message> {
-        let (message, color) = if self.current_path == PathBuf::new() {
-            (Message::ToHome, Color::from_rgb(1., 0., 0.))
+        if self.current_path == PathBuf::new() {
+            go_home_button()
         } else {
-            (
-                Message::Client(ClientMessage::ChangeCurrentPath(PathBuf::new())),
-                Color::from_rgb(0., 1., 0.),
-            )
-        };
-        Button::new("home")
-            .style(move |_, _| Style {
-                background: Some(iced::Background::Color(color)),
-                ..Default::default()
-            })
-            .on_press(message)
+            Button::new("home").on_press(Message::Client(ClientMessage::ChangeCurrentPath(
+                PathBuf::new(),
+            )))
+        }
     }
 }
 
