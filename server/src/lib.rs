@@ -55,7 +55,7 @@ impl Server {
         let Some(port) = port else {
             return Err(ServerError::NonePort);
         };
-        let addr = SocketAddr::from(([0, 0, 0, 0], port));
+        let addr = SocketAddr::from(([0; 4], port));
 
         let target_dir = ServeDir::new(&target);
 

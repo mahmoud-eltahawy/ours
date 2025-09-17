@@ -18,16 +18,16 @@ def "main desk" [] {
 }
 
 def "main build" [target? : string] {
-  mut args = "" 
+  mut args = []
   if $target != null {
-    $args = $"--target=($target)"
-  }
+     $args = [$"--target=($target)"]
+  } 
   cd ./site
   trunk build --release
   cd ..
   ls site_assets/gen | get name | par-each {|x| gzip $x} 
   cd ours
-  cargo build $args --release
+  cargo build ...($args) --release
 }
 
 def "main install" [] {
