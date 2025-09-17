@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 use std::sync::LazyLock;
 
+use common::Unit;
 use common::{GlobalState, GlobalStateStoreFields, SelectedState};
-use common::{Unit, OS};
 use delivery::Delivery;
 use files_box::FilesBox;
 use leptos::svg;
@@ -82,12 +82,15 @@ pub fn App() -> impl IntoView {
             .get()
             .map(|x| DELIVERY.clone().url_path(&x))
     };
+    let text = "forget this shitty web app and download the native one by clicking ";
     view! {
         <Router>
             <NavBar current_path />
             <main>
                 <ShowLet some={link} let:link>
-                    <div>forget this shitty web app and download the native one by clicking <a href={link}>here</a></div>
+                    <div
+                        class="text-3xl text-red-500"
+                    >{text} <a class="text-4xl text-red-700" href={link}>here</a></div>
                 </ShowLet>
                 <h1></h1>
                 <Routes fallback=|| "Page not found.">
