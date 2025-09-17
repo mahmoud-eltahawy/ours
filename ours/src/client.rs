@@ -4,7 +4,6 @@ use delivery::Delivery;
 use iced::{
     Border, Color, Length, Task,
     border::Radius,
-    theme::Palette,
     widget::{
         Button, Container, Row, Svg, Text, button::Style, column, row, scrollable, svg::Handle,
     },
@@ -30,6 +29,7 @@ pub enum ClientMessage {
     GoneBack(Vec<Unit>),
     ToggleSelectMode,
     Select(Unit),
+    OpenFile(Unit),
 }
 
 impl ClientMessage {
@@ -83,6 +83,10 @@ impl ClientMessage {
             }
             ClientMessage::Select(unit) => {
                 state.select.toggle_unit_selection(&unit);
+                Task::none()
+            }
+            ClientMessage::OpenFile(unit) => {
+                println!("opening file {unit:#?} is not supported yet");
                 Task::none()
             }
         }
@@ -214,7 +218,12 @@ impl UnitViews for Unit {
                 let message = if selected.on {
                     ClientMessage::Select(self.clone())
                 } else {
-                    ClientMessage::ChangeCurrentPath(self.path.clone())
+                    match self.kind {
+                        common::UnitKind::Dirctory => {
+                            ClientMessage::ChangeCurrentPath(self.path.clone())
+                        }
+                        _ => ClientMessage::OpenFile(self.clone()),
+                    }
                 };
                 Message::Client(message)
             })
