@@ -1,4 +1,4 @@
-use assets::{CLOSE_SVG, IconData, SELECT_SVG};
+use assets::{CLOSE_SVG, DOWNLOAD_SVG, IconData, SELECT_SVG};
 use common::{Origin, Selected, Unit};
 use delivery::Delivery;
 use iced::{
@@ -172,30 +172,17 @@ impl ClientState {
     }
 
     fn download_button(&self) -> Button<'_, Message> {
-        Button::new(match self.download_window {
-            Some(_) => "close download window",
-            None => "open download window",
-        })
-        .on_press(match self.download_window {
+        svg_button(&DOWNLOAD_SVG).on_press(match self.download_window {
             Some(id) => Message::Download(DownloadMessage::CloseDownloadWindow(id)),
             None => Message::Download(DownloadMessage::OpenDownloadWindow),
         })
     }
 
     fn select_button(&self) -> Button<'_, Message> {
-        Button::new(svg_from_icon_data(if self.select.on {
+        svg_button(if self.select.on {
             &CLOSE_SVG
         } else {
             &SELECT_SVG
-        }))
-        .style(|_, _| Style {
-            background: Some(iced::Background::Color(Color::BLACK)),
-            border: Border {
-                color: Color::WHITE,
-                width: 2.,
-                radius: Radius::new(2.),
-            },
-            ..Default::default()
         })
         .on_press(Message::Client(ClientMessage::ToggleSelectMode))
     }
@@ -253,4 +240,18 @@ pub fn svg_from_icon_data(icon: &IconData) -> Svg<'_> {
             color: Some(Color::from_rgb(127. / 255., 34. / 255., 254. / 255.)),
         })
         .width(30.)
+}
+
+fn svg_button<'a>(icon: &'a IconData) -> Button<'a, Message> {
+    Button::new(svg_from_icon_data(icon))
+        .style(|_, _| Style {
+            background: Some(iced::Background::Color(Color::BLACK)),
+            border: Border {
+                color: Color::WHITE,
+                width: 2.,
+                radius: Radius::new(2.),
+            },
+            ..Default::default()
+        })
+        .padding(7.)
 }

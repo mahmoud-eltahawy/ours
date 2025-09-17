@@ -17,6 +17,7 @@ load!(SELECT_SVG, "../static/select.svg");
 load!(CLOSE_SVG, "../static/close.svg");
 load!(EXPAND_SVG, "../static/expand.svg");
 load!(COLLAPSE_SVG, "../static/collapse.svg");
+load!(DOWNLOAD_SVG, "../static/download.svg");
 
 pub const DEFAULT_ICON: icondata_core::IconData = icondata_core::IconData {
     style: None,
