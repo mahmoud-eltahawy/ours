@@ -365,16 +365,7 @@ impl DownloadMessage {
                         )
                     })
                     .unzip();
-                let (task, handle) = match tasks.pop() {
-                    Some(last) => {
-                        tasks.reverse();
-                        tasks
-                            .into_iter()
-                            .fold(last, |acc, x| acc.chain(x))
-                            .abortable()
-                    }
-                    None => Task::none().abortable(),
-                };
+                let (task, handle) = Task::batch(tasks).abortable();
                 state.downloads.downloading = downloading
                     .into_iter()
                     .map(|x| (hash_path(&x.host_path), x))
