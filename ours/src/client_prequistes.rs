@@ -84,16 +84,23 @@ impl ClientPrequistesState {
     }
 
     fn port_input(&self) -> text_input::TextInput<'_, Message> {
-        text_input::TextInput::new("insert port", &self.port.to_string())
-            .size(30.)
-            .padding(10.)
-            .align_x(Alignment::Center)
-            .style(|_, _| STYLE_INPUT)
-            .on_input(|x| {
-                Message::ClientPrequistes(ClientPrequistesMessage::NewPort(
-                    x.parse::<u16>().unwrap_or_default(),
-                ))
-            })
+        text_input::TextInput::new(
+            "insert port",
+            &if self.port != 0 {
+                self.port.to_string()
+            } else {
+                "".to_string()
+            },
+        )
+        .size(30.)
+        .padding(10.)
+        .align_x(Alignment::Center)
+        .style(|_, _| STYLE_INPUT)
+        .on_input(|x| {
+            Message::ClientPrequistes(ClientPrequistesMessage::NewPort(
+                x.parse::<u16>().unwrap_or_default(),
+            ))
+        })
     }
 
     fn ip_input(&self) -> text_input::TextInput<'_, Message> {
