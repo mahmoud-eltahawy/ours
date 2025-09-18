@@ -8,7 +8,7 @@ use iced::{
     border::Radius,
     futures::StreamExt,
     task::Handle,
-    widget::{Button, Column, Container, Text, column, progress_bar, scrollable},
+    widget::{Button, Column, Container, Text, column, progress_bar, row, scrollable},
     window,
 };
 use reqwest::get;
@@ -26,7 +26,7 @@ use tokio::{io::AsyncWriteExt, time::sleep};
 pub struct Downloads {
     state: DownloadingState,
     download_dir: PathBuf,
-    downloading: HashMap<u64, Downloading>,
+    pub downloading: HashMap<u64, Downloading>,
     finished: Vec<PathBuf>,
     failed: HashMap<u64, FailedDownload>,
 }
@@ -36,6 +36,7 @@ struct FailedDownload {
     error: Error,
 }
 
+#[derive(Clone)]
 pub struct Downloading {
     handle: Handle,
     size: u64,
@@ -65,7 +66,8 @@ impl Downloads {
     }
 
     pub fn view(&self) -> Element<'_, Message> {
-        let cancel = Button::new("cancel all downloads");
+        let cancel = Button::new("cancel all downloads")
+            .on_press(Message::Download(DownloadMessage::AbortDownloads));
 
         let downloading = self.downloading();
         let finished = self.finished();
@@ -74,7 +76,6 @@ impl Downloads {
     }
 
     fn failed(&self) -> scrollable::Scrollable<'_, Message> {
-        let title = Text::new("failed downloads");
         let lines = self
             .failed
             .values()
@@ -86,28 +87,38 @@ impl Downloads {
             })
             .map(Text::new)
             .fold(Column::new(), |acc, x| acc.push(x));
+        let title = self
+            .failed
+            .is_empty()
+            .then_some(Text::new("failed downloads").size(50.).center());
         scrollable(column![title, lines])
     }
 
     fn finished(&self) -> scrollable::Scrollable<'_, Message> {
-        let title = Text::new("finished downloads");
         let lines = self
             .finished
             .iter()
             .map(|x| format!("{x:#?}"))
             .map(Text::new)
             .fold(Column::new(), |acc, x| acc.push(x));
+        let title = self
+            .finished
+            .is_empty()
+            .then_some(Text::new("finished downloads").size(50.).center());
         scrollable(column![title, lines])
     }
 
     fn downloading(&self) -> scrollable::Scrollable<'_, Message> {
-        let title = Text::new("downloading files");
         let buttons = self
             .downloading
             .values()
             .map(download_bar)
             .fold(Column::new(), |acc, x| acc.push(x))
             .spacing(5.);
+        let title = self
+            .downloading
+            .is_empty()
+            .then_some(Text::new("downloading files").size(50.).center());
         scrollable(column![title, buttons])
     }
 }
@@ -154,7 +165,13 @@ fn download_bar(x: &Downloading) -> Column<'_, Message> {
         )
     };
     let title = Text::new(text).size(20.).center();
-    column![title, bar]
+    let cancel = Text::new("cancel").size(20.).center();
+    let cancel = Button::new(cancel).on_press(Message::Download(DownloadMessage::AbortDownload(
+        hash_path(&x.host_path),
+        x.handle.clone(),
+    )));
+    let head = row![title, cancel].spacing(10.);
+    column![head, bar]
         .align_x(Alignment::Center)
         .spacing(3.)
         .padding(20.)
@@ -186,6 +203,8 @@ pub enum DownloadMessage {
     Progressing(Progress),
     DownloadDone(u64),
     DownloadFailed(Error, u64),
+    AbortDownloads,
+    AbortDownload(u64, Handle),
 }
 use iced::task::{Straw, sipper};
 
@@ -282,6 +301,7 @@ pub enum Error {
     RequestFailed(Arc<reqwest::Error>),
     WritingBytesFailed(Arc<io::Error>),
     NoContentLength,
+    AbortedByUser,
 }
 
 impl From<reqwest::Error> for Error {
@@ -341,7 +361,7 @@ impl DownloadMessage {
             }
             DownloadMessage::StartDownloading(downloads) => {
                 let origin = state.delivery.origin.clone();
-                let (mut tasks, downloading): (Vec<_>, Vec<_>) = downloads
+                let (tasks, downloading): (Vec<_>, Vec<_>) = downloads
                     .into_iter()
                     .map(move |x| {
                         let host_path = x.host_path.clone();
@@ -405,6 +425,38 @@ impl DownloadMessage {
                 };
                 Task::none()
             }
+            DownloadMessage::AbortDownloads => {
+                if let DownloadingState::Downloading { main_handle } = &state.downloads.state {
+                    main_handle.abort();
+                }
+                state
+                    .downloads
+                    .failed
+                    .extend(state.downloads.downloading.values().map(|x| {
+                        (
+                            hash_path(&x.host_path),
+                            FailedDownload {
+                                download: x.clone(),
+                                error: Error::AbortedByUser,
+                            },
+                        )
+                    }));
+                state.downloads.downloading.clear();
+                Task::none()
+            }
+            DownloadMessage::AbortDownload(id, handle) => {
+                if let Some(x) = state.downloads.downloading.remove(&id) {
+                    state.downloads.failed.insert(
+                        id,
+                        FailedDownload {
+                            download: x,
+                            error: Error::AbortedByUser,
+                        },
+                    );
+                };
+                handle.abort();
+                Task::none()
+            }
         }
     }
 }
@@ -448,63 +500,3 @@ pub async fn prepare_directory(
     let _ = tokio::fs::create_dir_all(&pwd).await;
     prepare_downloads(delivery.clone(), inner_units, pwd).await
 }
-
-// struct VirtualFolder {
-//     path: PathBuf,
-//     files: Vec<UnitPaths>,
-//     folders: Vec<VirtualFolder>,
-// }
-
-// struct UnitPaths {
-//     server_path: PathBuf,
-//     host_path: PathBuf,
-// }
-
-// impl VirtualFolder {
-//     fn new_empty(path: PathBuf) -> Self {
-//         Self {
-//             path,
-//             files: Vec::new(),
-//             folders: Vec::new(),
-//         }
-//     }
-
-//     fn push(&mut self, unit: Unit) {
-//         let host_path = self.path.join(unit.name());
-//         let Unit { path, kind } = unit;
-//         match kind {
-//             UnitKind::Dirctory => self.folders.push(VirtualFolder::new_empty(host_path)),
-//             _ => self.files.push(UnitPaths {
-//                 server_path: path,
-//                 host_path,
-//             }),
-//         }
-//     }
-//     fn extend(&mut self, units: Vec<Unit>) {
-//         for unit in units.into_iter() {
-//             self.push(unit);
-//         }
-//     }
-
-//     fn downloads_folder(units: Vec<Unit>) -> Self {
-//         let path = home_dir().map(|x| x.join("Downloads")).unwrap();
-//         let mut res = Self::new_empty(path);
-//         res.extend(units);
-//         res
-//     }
-//     // fn files_downloads_futures(
-//     //     &self,
-//     //     delivery: Delivery,
-//     // ) -> Vec<impl Future<Output = Result<(), String>>> {
-//     //     self.files
-//     //         .iter()
-//     //         .map(|file| {
-//     //             download_file(
-//     //                 delivery.origin.clone(),
-//     //                 file.server_path.clone(),
-//     //                 file.host_path.clone(),
-//     //             )
-//     //         })
-//     //         .collect()
-//     // }
-// }
