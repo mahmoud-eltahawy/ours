@@ -87,10 +87,8 @@ impl Downloads {
             })
             .map(Text::new)
             .fold(Column::new(), |acc, x| acc.push(x));
-        let title = self
-            .failed
-            .is_empty()
-            .then_some(Text::new("failed downloads").size(50.).center());
+        let title =
+            (!self.failed.is_empty()).then_some(Text::new("failed downloads").size(50.).center());
         scrollable(column![title, lines])
     }
 
@@ -101,9 +99,7 @@ impl Downloads {
             .map(|x| format!("{x:#?}"))
             .map(Text::new)
             .fold(Column::new(), |acc, x| acc.push(x));
-        let title = self
-            .finished
-            .is_empty()
+        let title = (!self.finished.is_empty())
             .then_some(Text::new("finished downloads").size(50.).center());
         scrollable(column![title, lines])
     }
@@ -115,9 +111,7 @@ impl Downloads {
             .map(download_bar)
             .fold(Column::new(), |acc, x| acc.push(x))
             .spacing(5.);
-        let title = self
-            .downloading
-            .is_empty()
+        let title = (!self.downloading.is_empty())
             .then_some(Text::new("downloading files").size(50.).center());
         scrollable(column![title, buttons])
     }
