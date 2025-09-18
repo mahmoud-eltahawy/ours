@@ -4,7 +4,8 @@ use async_recursion::async_recursion;
 use common::{Unit, UnitKind};
 use delivery::Delivery;
 use iced::{
-    Task,
+    Alignment, Border, Color, Length, Task,
+    border::Radius,
     futures::StreamExt,
     task::Handle,
     widget::{Button, Column, Container, Text, column, progress_bar, scrollable},
@@ -18,8 +19,9 @@ use std::{
     io,
     path::{Path, PathBuf},
     sync::Arc,
+    time::Duration,
 };
-use tokio::io::AsyncWriteExt;
+use tokio::{io::AsyncWriteExt, time::sleep};
 
 pub struct Downloads {
     state: DownloadingState,
@@ -36,8 +38,9 @@ struct FailedDownload {
 
 pub struct Downloading {
     handle: Handle,
+    size: u64,
     host_path: PathBuf,
-    progress: f32,
+    progress_state: ProgressState,
 }
 
 pub enum DownloadingState {
@@ -102,18 +105,74 @@ impl Downloads {
         let buttons = self
             .downloading
             .values()
-            .map(|x| {
-                column![
-                    Text::new(format!(
-                        "downloading file {:#?} with progress {}",
-                        x.host_path, x.progress
-                    )),
-                    progress_bar(0.0..=100.0, x.progress)
-                ]
-            })
+            .map(download_bar)
             .fold(Column::new(), |acc, x| acc.push(x))
             .spacing(5.);
         scrollable(column![title, buttons])
+    }
+}
+
+fn download_bar(x: &Downloading) -> Column<'_, Message> {
+    let downloaded = match x.progress_state {
+        ProgressState::Waiting | ProgressState::Started { .. } => 0.0,
+        ProgressState::Marshing { downloaded } => downloaded as f32,
+        ProgressState::Finished => x.size as f32,
+    };
+    let bar = progress_bar(0.0..=(x.size as f32), downloaded)
+        .length(Length::Fill)
+        .style(move |_| {
+            if downloaded == 0.0 {
+                let color = Color::from_rgb(1., 1., 0.);
+                progress_bar::Style {
+                    background: iced::Background::Color(color),
+                    bar: iced::Background::Color(color),
+                    border: Border {
+                        color,
+                        width: 4.,
+                        radius: Radius::new(100.),
+                    },
+                }
+            } else {
+                progress_bar::Style {
+                    background: iced::Background::Color(Color::BLACK),
+                    bar: iced::Background::Color(Color::WHITE),
+                    border: Border {
+                        color: Color::WHITE,
+                        width: 4.,
+                        radius: Radius::new(6.),
+                    },
+                }
+            }
+        });
+    let text = if x.size == 0 {
+        format!("file {:#?} is pending", x.host_path)
+    } else {
+        format!(
+            "downloading file {:#?} of {} space",
+            x.host_path,
+            proper_size(x.size)
+        )
+    };
+    let title = Text::new(text).size(20.).center();
+    column![title, bar]
+        .align_x(Alignment::Center)
+        .spacing(3.)
+        .padding(20.)
+}
+
+fn proper_size(x: u64) -> String {
+    const KB: u64 = 1024;
+    const MB: u64 = KB * KB;
+    const GB: u64 = MB * MB;
+
+    if (0..KB).contains(&x) {
+        format!("{x} B")
+    } else if (KB..MB).contains(&x) {
+        format!("{} KB", x / KB)
+    } else if (MB..GB).contains(&x) {
+        format!("{} MB", x / MB)
+    } else {
+        format!("{} GB", x / GB)
     }
 }
 
@@ -143,8 +202,6 @@ pub fn download_file(
     host_path: PathBuf,
 ) -> impl Straw<(), Progress, Error> {
     sipper(async move |mut progress| {
-        println!("file {:#?} started downloading", host_path);
-        let end = format!("file {:#?} finished downloading", host_path);
         let url = format!(
             "{}/download/{}",
             origin,
@@ -155,8 +212,8 @@ pub fn download_file(
         let path_hashed = hash_path(&host_path);
         let _ = progress
             .send(Progress {
-                percent: 0.0,
                 id: path_hashed,
+                progress_state: ProgressState::Started { total },
             })
             .await;
 
@@ -175,14 +232,22 @@ pub fn download_file(
 
             file.write_all(&bytes).await?;
 
+            #[cfg(debug_assertions)]
+            sleep(Duration::from_millis(30)).await;
+
             let _ = progress
                 .send(Progress {
-                    percent: 100.0 * downloaded as f32 / total as f32,
                     id: path_hashed,
+                    progress_state: ProgressState::Marshing { downloaded },
                 })
                 .await;
         }
-        println!("{}", end);
+        let _ = progress
+            .send(Progress {
+                id: path_hashed,
+                progress_state: ProgressState::Finished,
+            })
+            .await;
 
         Ok(())
     })
@@ -197,7 +262,19 @@ fn hash_path(p: &PathBuf) -> u64 {
 #[derive(Debug, Clone)]
 pub struct Progress {
     pub id: u64,
-    pub percent: f32,
+    pub progress_state: ProgressState,
+}
+#[derive(Debug, Clone, Default)]
+pub enum ProgressState {
+    #[default]
+    Waiting,
+    Started {
+        total: u64,
+    },
+    Marshing {
+        downloaded: usize,
+    },
+    Finished,
 }
 
 #[derive(Debug, Clone)]
@@ -281,7 +358,8 @@ impl DownloadMessage {
                             task,
                             Downloading {
                                 handle,
-                                progress: 0.,
+                                size: 0,
+                                progress_state: ProgressState::Waiting,
                                 host_path,
                             },
                         )
@@ -329,7 +407,10 @@ impl DownloadMessage {
             }
             DownloadMessage::Progressing(progress) => {
                 if let Some(x) = state.downloads.downloading.get_mut(&progress.id) {
-                    x.progress = progress.percent;
+                    if let ProgressState::Started { total } = progress.progress_state {
+                        x.size = total;
+                    }
+                    x.progress_state = progress.progress_state;
                 };
                 Task::none()
             }
