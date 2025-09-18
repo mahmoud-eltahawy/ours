@@ -1,5 +1,5 @@
 use super::Download;
-use crate::Message;
+use crate::{Message, client::VIOLET};
 use async_recursion::async_recursion;
 use common::{Unit, UnitKind};
 use delivery::Delivery;
@@ -122,7 +122,7 @@ fn download_bar(x: &Downloading) -> Column<'_, Message> {
         .length(Length::Fill)
         .style(move |_| {
             if downloaded == 0.0 {
-                let color = Color::from_rgb(1., 1., 0.);
+                let color = Color::from_rgb(VIOLET.g, VIOLET.b, VIOLET.r);
                 progress_bar::Style {
                     background: iced::Background::Color(color),
                     bar: iced::Background::Color(color),
@@ -135,11 +135,11 @@ fn download_bar(x: &Downloading) -> Column<'_, Message> {
             } else {
                 progress_bar::Style {
                     background: iced::Background::Color(Color::BLACK),
-                    bar: iced::Background::Color(Color::WHITE),
+                    bar: iced::Background::Color(VIOLET),
                     border: Border {
-                        color: Color::WHITE,
-                        width: 4.,
-                        radius: Radius::new(6.),
+                        color: VIOLET,
+                        width: 7.,
+                        radius: Radius::new(7.),
                     },
                 }
             }

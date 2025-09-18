@@ -253,11 +253,13 @@ impl UnitViews for Unit {
     }
 }
 
+const VIOLET: Color = Color::from_rgb(127. / 255., 34. / 255., 254. / 255.);
+
 pub fn svg_from_icon_data(icon: &IconData) -> Svg<'_> {
     let handle = Handle::from_memory(icon.data.bytes().collect::<Vec<_>>());
     Svg::new(handle)
         .style(|_, _| iced::widget::svg::Style {
-            color: Some(Color::from_rgb(127. / 255., 34. / 255., 254. / 255.)),
+            color: Some(VIOLET),
         })
         .width(30.)
 }
