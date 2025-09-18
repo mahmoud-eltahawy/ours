@@ -43,24 +43,31 @@ impl ClientPrequistesMessage {
 
 impl ClientPrequistesState {
     pub fn view(&self) -> Container<'_, Message> {
-        let title = Text::new("choose client address").size(80.).center();
+        let title = Text::new("choose client address").size(50.).center();
         let ip_input = self.ip_input();
         let port_input = self.port_input();
         let url_input = row![ip_input, port_input].spacing(10.);
 
-        let submit = Text::new("submit").size(60.).center();
+        let submit = Text::new("submit")
+            .size(60.)
+            .center()
+            .color(Color::from_rgb(0.0, 1.0, 0.1));
         let submit =
             Button::new(submit).on_press_maybe(if self.valid_ip.is_some_and(|_| self.port != 0) {
                 Some(Message::SubmitClientPrequsits)
             } else {
                 None
             });
-        let cancel = Text::new("cancel").size(60.).center();
+        let cancel = Text::new("cancel")
+            .color(Color::from_rgb(1., 0., 0.))
+            .size(60.)
+            .center();
         let cancel = Button::new(cancel).on_press(Message::ToggleClientModal);
         let buttons = row![submit, cancel].spacing(10.);
 
         let content = column![title, url_input, buttons]
             .align_x(Alignment::Center)
+            .spacing(20.)
             .padding(20.);
         Container::new(content)
             .style(|_| container::Style {

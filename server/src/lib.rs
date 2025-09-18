@@ -82,8 +82,6 @@ impl Server {
             .route(OS, get(os))
             .route(NAME, get(name))
             .route(&APP_NAME, get(self_executable))
-            //TODO : complete this
-            // .route("/wls", any(ws_ls))
             .route(MKDIR_PATH, post(cd::mkdir))
             .nest_service("/download", target_dir)
             .with_state(Context { target_dir: target })
