@@ -2,7 +2,7 @@ use assets::{CLOSE_SVG, DOWNLOAD_SVG, HOME_SVG, IconData, SELECT_SVG};
 use common::{Origin, Selected, Unit};
 use delivery::Delivery;
 use iced::{
-    Border, Color, Length, Task,
+    Border, Color, Element, Length, Task,
     border::Radius,
     mouse::Interaction,
     widget::{
@@ -149,7 +149,7 @@ impl Default for ClientState {
 }
 
 impl ClientState {
-    pub fn view(&self) -> Container<'_, Message> {
+    pub fn view(&self) -> impl Into<Element<'_, Message>> {
         let tools = self.tools_bar();
         let units = self.units();
         let all = column![tools, units].spacing(10.).width(Length::Fill);

@@ -1,11 +1,11 @@
 use common::Origin;
-use iced::Length;
 use iced::widget::qr_code::Data;
 use iced::{
     Background, Border, Center, Color, Shadow, Task, Vector,
     border::Radius,
     widget::{Button, Column, Container, Row, button::Style, column, qr_code, row, text},
 };
+use iced::{Element, Length};
 use rfd::AsyncFileDialog;
 use std::env::home_dir;
 use std::path::PathBuf;
@@ -89,7 +89,7 @@ impl ServeMessage {
 }
 
 impl ServeState {
-    pub fn view(&self) -> Container<'_, Message> {
+    pub fn view(&self) -> impl Into<Element<'_, Message>> {
         let home = go_home_button();
         let serve = self.serve_button();
         let tp = self.target_pick();

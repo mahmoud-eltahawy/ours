@@ -3,9 +3,8 @@ use std::{env::args, path::PathBuf};
 use client::{ClientMessage, ClientState};
 use common::{Origin, Unit};
 use delivery::Delivery;
-use home::home_view;
 use iced::{
-    Color, Subscription, Task, exit,
+    Color, Element, Subscription, Task, exit,
     theme::Style,
     widget::Container,
     window::{self, Settings},
@@ -14,8 +13,7 @@ use serve::{ServeMessage, ServeState};
 use tokio::runtime::Runtime;
 
 use crate::{
-    client::download::DownloadMessage,
-    client_prequistes::{ClientPrequistesMessage, ClientPrequistesState},
+    client::download::DownloadMessage, client_prequistes::ClientPrequistesMessage, home::HomeState,
     serve::serve,
 };
 
@@ -68,7 +66,7 @@ pub fn main() {
 struct State {
     serve: ServeState,
     client: ClientState,
-    client_prequistes: ClientPrequistesState,
+    home: HomeState,
     page: Page,
     main_window_id: Option<window::Id>,
 }
@@ -79,8 +77,8 @@ impl Default for State {
             main_window_id: None,
             page: Page::Home,
             serve: ServeState::default(),
+            home: HomeState::default(),
             client: ClientState::default(),
-            client_prequistes: ClientPrequistesState::default(),
         }
     }
 }
@@ -88,7 +86,6 @@ impl Default for State {
 enum Page {
     Serve,
     Client,
-    ClientPrequistes,
     Home,
 }
 
@@ -98,7 +95,7 @@ enum Message {
     Client(ClientMessage),
     ClientPrequistes(ClientPrequistesMessage),
     Download(DownloadMessage),
-    GetClientPrequsits,
+    ToggleClientModal,
     SubmitClientPrequsits,
     ToServe,
     ToClient(Vec<Unit>),
@@ -136,7 +133,7 @@ impl State {
             }
             Message::Serve(serve_message) => serve_message.handle(&mut self.serve),
             Message::Client(client_message) => client_message.handle(&mut self.client),
-            Message::ClientPrequistes(message) => message.handle(&mut self.client_prequistes),
+            Message::ClientPrequistes(message) => message.handle(&mut self.home.client_prequistes),
             Message::ToServe => {
                 self.page = Page::Serve;
                 Task::none()
@@ -151,15 +148,16 @@ impl State {
                 self.page = Page::Home;
                 Task::none()
             }
-            Message::GetClientPrequsits => {
-                self.page = Page::ClientPrequistes;
+            Message::ToggleClientModal => {
+                self.home.show_client_modal = !self.home.show_client_modal;
                 Task::none()
             }
             Message::SubmitClientPrequsits => {
-                if let Some(ip) = self.client_prequistes.valid_ip {
-                    let origin = Origin::new(ip, self.client_prequistes.port);
+                if let Some(ip) = self.home.client_prequistes.valid_ip {
+                    let origin = Origin::new(ip, self.home.client_prequistes.port);
                     let delivery = Delivery::new(origin.to_string());
                     self.client.delivery = delivery.clone();
+                    self.home.show_client_modal = false;
                     Task::perform(delivery.ls(PathBuf::new()), move |units| match units {
                         Ok(units) => Message::ToClient(units),
                         Err(err) => Message::ErrorHappned(err.to_string()),
@@ -186,20 +184,19 @@ impl State {
         }
     }
 
-    fn view(&self, window_id: window::Id) -> Container<'_, Message> {
+    fn view(&self, window_id: window::Id) -> Element<'_, Message> {
         if self.client.download_window.is_some_and(|x| x == window_id) {
             return self.client.downloads.view();
         }
         if self.main_window_id.is_some_and(|x| x == window_id) {
             return match self.page {
-                Page::Serve => self.serve.view(),
-                Page::Client => self.client.view(),
-                Page::ClientPrequistes => self.client_prequistes.view(),
-                Page::Home => home_view(),
+                Page::Serve => self.serve.view().into(),
+                Page::Client => self.client.view().into(),
+                Page::Home => self.home.view().into(),
             };
         }
         println!("loading...");
-        Container::new("void")
+        Container::new("void").into()
     }
 
     fn subscription(&self) -> Subscription<Message> {

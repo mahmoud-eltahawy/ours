@@ -4,7 +4,7 @@ use async_recursion::async_recursion;
 use common::{Unit, UnitKind};
 use delivery::Delivery;
 use iced::{
-    Alignment, Border, Color, Length, Task,
+    Alignment, Border, Color, Element, Length, Task,
     border::Radius,
     futures::StreamExt,
     task::Handle,
@@ -64,13 +64,13 @@ impl Downloads {
         *self = Self::new();
     }
 
-    pub fn view(&self) -> Container<'_, Message> {
+    pub fn view(&self) -> Element<'_, Message> {
         let cancel = Button::new("cancel all downloads");
 
         let downloading = self.downloading();
         let finished = self.finished();
         let failed = self.failed();
-        Container::new(column![cancel, downloading, finished, failed].spacing(40.))
+        Container::new(column![cancel, downloading, finished, failed].spacing(40.)).into()
     }
 
     fn failed(&self) -> scrollable::Scrollable<'_, Message> {

@@ -1,11 +1,11 @@
 use std::net::IpAddr;
 
-use crate::{Message, home::go_home_button};
+use crate::Message;
 use iced::{
-    Border, Task, Theme,
-    theme::Palette,
+    Alignment, Background, Border, Color, Element, Task,
+    border::Radius,
     widget::{
-        Button, Container, Text, column, row,
+        Button, Container, Text, center, column, container, mouse_area, opaque, row, stack,
         text_input::{self, Style},
     },
 };
@@ -43,56 +43,64 @@ impl ClientPrequistesMessage {
 
 impl ClientPrequistesState {
     pub fn view(&self) -> Container<'_, Message> {
-        let home = go_home_button();
-        let title = Text::new("choose client address");
+        let title = Text::new("choose client address").size(80.).center();
         let ip_input = self.ip_input();
         let port_input = self.port_input();
-        let url_input = row![ip_input, port_input].spacing(5.);
+        let url_input = row![ip_input, port_input].spacing(10.);
 
+        let submit = Text::new("submit").size(60.).center();
         let submit =
-            Button::new("Go").on_press_maybe(if self.valid_ip.is_some_and(|_| self.port != 0) {
+            Button::new(submit).on_press_maybe(if self.valid_ip.is_some_and(|_| self.port != 0) {
                 Some(Message::SubmitClientPrequsits)
             } else {
                 None
             });
+        let cancel = Text::new("cancel").size(60.).center();
+        let cancel = Button::new(cancel).on_press(Message::ToggleClientModal);
+        let buttons = row![submit, cancel].spacing(10.);
 
-        let content = column![home, title, url_input, submit];
+        let content = column![title, url_input, buttons]
+            .align_x(Alignment::Center)
+            .padding(20.);
         Container::new(content)
+            .style(|_| container::Style {
+                text_color: Some(Color::WHITE),
+                border: Border {
+                    color: Color::WHITE,
+                    width: 12.,
+                    radius: Radius::new(22.),
+                },
+                background: Some(Background::Color(Color::BLACK)),
+                ..Default::default()
+            })
+            .padding(20.)
     }
 
     fn port_input(&self) -> text_input::TextInput<'_, Message> {
-        text_input::TextInput::new("insert port", &self.port.to_string()).on_input(|x| {
-            Message::ClientPrequistes(ClientPrequistesMessage::NewPort(
-                x.parse::<u16>().unwrap_or_default(),
-            ))
-        })
+        text_input::TextInput::new("insert port", &self.port.to_string())
+            .size(30.)
+            .padding(10.)
+            .align_x(Alignment::Center)
+            .style(|_, _| STYLE_INPUT)
+            .on_input(|x| {
+                Message::ClientPrequistes(ClientPrequistesMessage::NewPort(
+                    x.parse::<u16>().unwrap_or_default(),
+                ))
+            })
     }
 
     fn ip_input(&self) -> text_input::TextInput<'_, Message> {
         text_input::TextInput::new("insert ip", &self.ip.to_string())
-            .style(|theme: &Theme, _| {
-                let Palette {
-                    background,
-                    text,
-                    primary,
-                    success,
-                    danger,
-                    warning: _,
-                } = theme.palette();
-                let style = Style {
-                    background: iced::Background::Color(background),
-                    border: Border::default(),
-                    icon: primary,
-                    placeholder: text,
-                    value: success,
-                    selection: text,
-                };
+            .size(30.)
+            .padding(10.)
+            .align_x(Alignment::Center)
+            .style(|_, _| {
                 if self.valid_ip.is_some() {
-                    style
+                    STYLE_INPUT
                 } else {
                     Style {
-                        value: danger,
-                        ..style
+                        value: Color::from_rgb(1.0, 0.1, 0.1),
+                        ..STYLE_INPUT
                     }
                 }
             })
@@ -103,4 +111,48 @@ impl ClientPrequistesState {
                 })
             })
     }
+}
+
+const STYLE_INPUT: Style = Style {
+    background: iced::Background::Color(Color::BLACK),
+    border: Border {
+        color: Color::WHITE,
+        width: 2.,
+        radius: Radius {
+            top_left: 8.,
+            top_right: 8.,
+            bottom_right: 8.,
+            bottom_left: 8.,
+        },
+    },
+    placeholder: Color::from_rgb(0.7, 0.7, 0.7),
+    value: Color::from_rgb(0.1, 1., 0.1),
+    selection: Color::from_rgb(0.1, 0.1, 0.8),
+    icon: Color::from_rgb(0.1, 0.1, 1.),
+};
+
+pub fn modal<'a, Message>(
+    base: impl Into<Element<'a, Message>>,
+    content: impl Into<Element<'a, Message>>,
+    on_blur: Message,
+) -> Element<'a, Message>
+where
+    Message: Clone + 'a,
+{
+    stack![
+        base.into(),
+        opaque(
+            mouse_area(center(opaque(content)).style(|_theme| {
+                container::Style {
+                    background: Some(Background::Color(Color {
+                        a: 0.8,
+                        ..Color::BLACK
+                    })),
+                    ..container::Style::default()
+                }
+            }))
+            .on_press(on_blur)
+        )
+    ]
+    .into()
 }
