@@ -1,7 +1,5 @@
 use assets::{AUDIO_SVG, FILE_SVG, FOLDER_SVG, IconData, VIDEO_SVG};
-use get_port::Ops;
 use leptos::prelude::document;
-use local_ip_address::local_ip;
 pub use reactive_stores::Store;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, net::IpAddr, path::PathBuf};
@@ -32,11 +30,6 @@ impl Display for Origin {
 
 impl Origin {
     pub fn new(ip: IpAddr, port: u16) -> Self {
-        Self { ip, port }
-    }
-    pub fn random() -> Self {
-        let ip = local_ip().unwrap();
-        let port = get_port::tcp::TcpPort::any(&ip.to_string()).unwrap();
         Self { ip, port }
     }
 }

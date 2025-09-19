@@ -1,14 +1,16 @@
-use std::{env::args, path::PathBuf};
+use std::{env::args, path::PathBuf, sync::LazyLock, thread::sleep, time::Duration};
 
 use client::{ClientMessage, ClientState};
 use common::{Origin, Unit};
 use delivery::Delivery;
+use get_port::Ops;
 use iced::{
     Color, Element, Subscription, Task, exit,
     theme::Style,
     widget::Container,
     window::{self, Settings},
 };
+use local_ip_address::local_ip;
 use serve::{ServeMessage, ServeState};
 use tokio::runtime::Runtime;
 
@@ -22,6 +24,25 @@ mod client_prequistes;
 mod home;
 mod serve;
 
+static ORIGIN: LazyLock<Origin> = LazyLock::new(|| {
+    let ip = match local_ip() {
+        Ok(ip) => ip,
+        Err(err) => {
+            let msg = err.to_string();
+            error_message_blocking(&msg);
+            sleep(Duration::from_secs(3));
+            panic!("Panic {msg}");
+        }
+    };
+    let Some(port) = get_port::tcp::TcpPort::any(&ip.to_string()) else {
+        let msg = "could not find availble port";
+        error_message_blocking(msg);
+        sleep(Duration::from_secs(3));
+        panic!("Panic {msg}");
+    };
+    Origin { ip, port }
+});
+
 pub fn main() {
     let mut args = args();
     args.next();
@@ -30,12 +51,12 @@ pub fn main() {
         [target, port] => {
             let target = target.parse::<PathBuf>().expect("target should be a path");
             let port = port.parse::<u16>().expect("port should be a u16 number");
-            let Origin { ip, .. } = Origin::random();
+            let Origin { ip, .. } = *ORIGIN;
             Some((target, ip, port))
         }
         [target] => {
             let target = target.parse::<PathBuf>().expect("target should be a path");
-            let Origin { ip, port } = Origin::random();
+            let Origin { ip, port } = *ORIGIN;
             Some((target, ip, port))
         }
         _ => None,
@@ -76,7 +97,7 @@ impl Default for State {
         Self {
             main_window_id: None,
             page: Page::Home,
-            serve: ServeState::default(),
+            serve: ServeState::new(ORIGIN.clone()),
             home: HomeState::default(),
             client: ClientState::default(),
         }
@@ -116,6 +137,15 @@ pub async fn error_message(message: String) -> rfd::MessageDialogResult {
         .await
 }
 
+pub fn error_message_blocking(message: &str) -> rfd::MessageDialogResult {
+    println!("Error : {}", message);
+    rfd::MessageDialog::new()
+        .set_level(rfd::MessageLevel::Error)
+        .set_title("ours error")
+        .set_description(message)
+        .show()
+}
+
 impl State {
     fn new() -> (Self, Task<Message>) {
         let (_, task) = window::open(Settings::default());
@@ -153,18 +183,13 @@ impl State {
                 Task::none()
             }
             Message::SubmitClientPrequsits => {
-                if let Some(ip) = self.home.client_prequistes.valid_ip {
-                    let origin = Origin::new(ip, self.home.client_prequistes.port);
-                    let delivery = Delivery::new(origin.to_string());
-                    self.client.delivery = delivery.clone();
-                    self.home.show_client_modal = false;
-                    Task::perform(delivery.ls(PathBuf::new()), move |units| match units {
-                        Ok(units) => Message::ToClient(units),
-                        Err(err) => Message::ErrorHappned(err.to_string()),
-                    })
-                } else {
-                    Task::none()
-                }
+                let delivery = Delivery::new(ORIGIN.to_string());
+                self.client.delivery = delivery.clone();
+                self.home.show_client_modal = false;
+                Task::perform(delivery.ls(PathBuf::new()), move |units| match units {
+                    Ok(units) => Message::ToClient(units),
+                    Err(err) => Message::ErrorHappned(err.to_string()),
+                })
             }
             Message::ErrorHappned(message) => {
                 Task::perform(error_message(message), |_| Message::None)

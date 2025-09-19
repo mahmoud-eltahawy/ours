@@ -83,15 +83,16 @@ pub fn App() -> impl IntoView {
 pub fn NativeAppLink() -> impl IntoView {
     let host_os = LocalResource::new(move || DELIVERY.clone().get_host_os());
     let app_name = LocalResource::new(move || DELIVERY.clone().get_app_name());
+    let name = move || app_name.get().and_then(|x| x.ok());
     let show_download_link = Memo::new(move |_| {
         let ua = use_window()
             .navigator()
             .and_then(|x| x.user_agent().ok())
             .map(|x| x.to_lowercase());
-        let name = app_name.get().and_then(|x| x.ok());
+        let name = name();
         let os = host_os.get().and_then(|x| x.ok());
         match (ua, os) {
-            (Some(ua), Some(os)) if ua.contains(&os) => name,
+            (Some(ua), Some(os)) if ua.contains(&os) => name.map(|x| format!("/{x}")),
             _ => None,
         }
     });
@@ -109,6 +110,7 @@ pub fn NativeAppLink() -> impl IntoView {
                 {text}
                 <a
                     class="text-4xl text-red-700"
+                    download={name}
                     href={link}
                 >here</a>
             </div>

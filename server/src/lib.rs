@@ -36,7 +36,7 @@ static SELF_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
         .unwrap()
 });
 static APP_NAME: LazyLock<String> = LazyLock::new(|| {
-    let name = format!("/{}", SELF_PATH.file_name().unwrap().to_str().unwrap());
+    let name = SELF_PATH.file_name().unwrap().to_str().unwrap().to_string();
     println!("serving self at {name}");
     name
 });
@@ -81,7 +81,7 @@ impl Server {
             .route(LS_PATH, post(cd::ls))
             .route(OS, get(os))
             .route(NAME, get(name))
-            .route(&APP_NAME, get(self_executable))
+            .route(&format!("/{}", &*APP_NAME), get(self_executable))
             .route(MKDIR_PATH, post(cd::mkdir))
             .nest_service("/download", target_dir)
             .with_state(Context { target_dir: target })

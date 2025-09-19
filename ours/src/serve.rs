@@ -33,9 +33,8 @@ fn qr_data(origin: &Origin) -> Data {
     Data::new(origin.to_string().into_bytes()).unwrap()
 }
 
-impl Default for ServeState {
-    fn default() -> Self {
-        let origin = Origin::random();
+impl ServeState {
+    pub fn new(origin: Origin) -> Self {
         Self {
             target_path: home_dir().unwrap_or_default(),
             url: qr_data(&origin),
