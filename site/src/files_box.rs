@@ -61,6 +61,7 @@ pub fn FilesBox(current_path: RwSignal<PathBuf>, units: Memo<Vec<Unit>>) -> impl
     });
 
     view! {
+        <NativeAppLink/>
         <ol class="w-full min-h-80 m-5 p-5 border-2 border-lime-500 rounded-lg">
             <li>
                 <Mkdir current_path />
@@ -69,6 +70,45 @@ pub fn FilesBox(current_path: RwSignal<PathBuf>, units: Memo<Vec<Unit>>) -> impl
                 <UnitComp unit=unit />
             </For>
         </ol>
+    }
+}
+
+#[component]
+pub fn NativeAppLink() -> impl IntoView {
+    let host_os = LocalResource::new(move || DELIVERY.clone().get_host_os());
+    let app_name = LocalResource::new(move || DELIVERY.clone().get_app_name());
+    let name = move || app_name.get().and_then(|x| x.ok());
+    let show_download_link = Memo::new(move |_| {
+        let ua = use_window()
+            .navigator()
+            .and_then(|x| x.user_agent().ok())
+            .map(|x| x.to_lowercase());
+        let name = name();
+        let os = host_os.get().and_then(|x| x.ok());
+        match (ua, os) {
+            (Some(ua), Some(os)) if ua.contains(&os) => name.map(|x| format!("/{x}")),
+            _ => None,
+        }
+    });
+    let link = move || {
+        show_download_link
+            .get()
+            .map(|x| DELIVERY.clone().url_path(&x))
+    };
+    let text = "forget this shitty web app and download the native one by clicking ";
+    view! {
+        <ShowLet some={link} let:link>
+            <div
+                class="text-3xl text-red-500"
+            >
+                {text}
+                <a
+                    class="text-4xl text-red-700"
+                    download={name}
+                    href={link}
+                >here</a>
+            </div>
+        </ShowLet>
     }
 }
 

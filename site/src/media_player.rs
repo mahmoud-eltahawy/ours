@@ -4,7 +4,7 @@ use leptos_use::{
     core::Position, use_draggable_with_options, UseDraggableOptions, UseDraggableReturn,
 };
 
-use crate::Unit;
+use crate::{Unit, DELIVERY};
 
 use super::{GlobalState, GlobalStateStoreFields};
 
@@ -91,7 +91,10 @@ fn CloseIcon() -> impl IntoView {
 
 #[component]
 fn Player(unit: Unit) -> impl IntoView {
-    let src = format!("/download/{}", unit.path.to_str().unwrap());
+    let src = DELIVERY
+        .clone()
+        .url_path(&format!("/download/{}", unit.path.to_str().unwrap()));
+
     view! {
         <video
             id="my-player"

@@ -5,7 +5,7 @@ use axum::{
     Json, Router,
     extract::DefaultBodyLimit,
     http::{HeaderMap, StatusCode},
-    routing::{get, post},
+    routing::{get, get_service, post},
 };
 // use cd::ws_ls;
 use common::{CP_PATH, LS_PATH, MKDIR_PATH, MP4_PATH, MV_PATH, NAME, OS, RM_PATH, UPLOAD_PATH};
@@ -81,9 +81,9 @@ impl Server {
             .route(LS_PATH, post(cd::ls))
             .route(OS, get(os))
             .route(NAME, get(name))
-            .route(&format!("/{}", &*APP_NAME), get(self_executable))
             .route(MKDIR_PATH, post(cd::mkdir))
-            .nest_service("/download", target_dir)
+            .route(&format!("/{}", &*APP_NAME), get(self_executable))
+            .nest_service("/download", get_service(target_dir))
             .with_state(Context { target_dir: target })
             .layer(TimeoutLayer::new(timeout))
             .layer(CorsLayer::permissive())
