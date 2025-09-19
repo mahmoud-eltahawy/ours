@@ -232,6 +232,7 @@ pub fn download_file(
 
         let mut byte_stream = response.bytes_stream();
 
+        let _ = tokio::fs::remove_file(&host_path).await;
         let mut file = tokio::fs::OpenOptions::new()
             .append(true)
             .create(true)
