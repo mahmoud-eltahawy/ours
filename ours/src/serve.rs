@@ -56,7 +56,10 @@ pub async fn which_target() -> Option<PathBuf> {
 }
 
 impl ServeMessage {
-    pub fn handle(self, state: &mut ServeState) -> Task<Message> {
+    pub fn handle(self, state: &mut Result<ServeState, String>) -> Task<Message> {
+        let Ok(state) = state else {
+            return Task::none();
+        };
         match self {
             ServeMessage::Launch => {
                 state.working_process = Some(tokio::spawn(serve(

@@ -1,4 +1,4 @@
-use std::{env::args, path::PathBuf, sync::LazyLock, thread::sleep, time::Duration};
+use std::{env::args, path::PathBuf};
 
 use client::{ClientMessage, ClientState};
 use common::{Origin, Unit};
@@ -7,7 +7,7 @@ use get_port::Ops;
 use iced::{
     Color, Element, Subscription, Task, exit,
     theme::Style,
-    widget::Container,
+    widget::{Container, Text},
     window::{self, Settings},
 };
 use local_ip_address::local_ip;
@@ -24,68 +24,64 @@ mod client_prequistes;
 mod home;
 mod serve;
 
-static ORIGIN: LazyLock<Origin> = LazyLock::new(|| {
+async fn origin() -> Result<Origin, String> {
     let ip = match local_ip() {
         Ok(ip) => ip,
         Err(err) => {
-            let msg = err.to_string();
-            error_message_blocking(&msg);
-            sleep(Duration::from_secs(3));
-            panic!("Panic {msg}");
+            return Err(err.to_string());
         }
     };
     let Some(port) = get_port::tcp::TcpPort::any(&ip.to_string()) else {
-        let msg = "could not find availble port";
-        error_message_blocking(msg);
-        sleep(Duration::from_secs(3));
-        panic!("Panic {msg}");
+        return Err("could not find availble port".to_string());
     };
-    Origin { ip, port }
-});
+    Ok(Origin { ip, port })
+}
 
 pub fn main() {
     let mut args = args();
     args.next();
 
+    let rt = Runtime::new().unwrap();
+    if rt.block_on(not_server(args)) {
+        iced::daemon(State::new, State::update, State::view)
+            .subscription(State::subscription)
+            .title(State::title)
+            .style(|_, _| Style {
+                background_color: Color::BLACK,
+                text_color: Color::WHITE,
+            })
+            .run()
+            .unwrap();
+    }
+}
+
+async fn not_server(args: std::env::Args) -> bool {
     let args = match &args.collect::<Vec<_>>()[..] {
         [target, port] => {
             let target = target.parse::<PathBuf>().expect("target should be a path");
             let port = port.parse::<u16>().expect("port should be a u16 number");
-            let Origin { ip, .. } = *ORIGIN;
+            let Origin { ip, .. } = origin().await.unwrap();
             Some((target, ip, port))
         }
         [target] => {
             let target = target.parse::<PathBuf>().expect("target should be a path");
-            let Origin { ip, port } = *ORIGIN;
+            let Origin { ip, port } = origin().await.unwrap();
             Some((target, ip, port))
         }
         _ => None,
     };
-
     match args {
         Some((target, ip, port)) => {
-            let rt = Runtime::new().unwrap();
             println!("serving {target:#?} at {ip}:{port}");
-            rt.block_on(async move {
-                serve(target, port).await;
-            })
+            serve(target, port).await;
+            false
         }
-        None => {
-            iced::daemon(State::new, State::update, State::view)
-                .subscription(State::subscription)
-                .title(State::title)
-                .style(|_, _| Style {
-                    background_color: Color::BLACK,
-                    text_color: Color::WHITE,
-                })
-                .run()
-                .unwrap();
-        }
+        None => true,
     }
 }
 
 struct State {
-    serve: ServeState,
+    serve: Result<ServeState, String>,
     client: ClientState,
     home: HomeState,
     page: Page,
@@ -97,7 +93,7 @@ impl Default for State {
         Self {
             main_window_id: None,
             page: Page::Home,
-            serve: ServeState::new(ORIGIN.clone()),
+            serve: Err("Not initialized yet".to_string()),
             home: HomeState::default(),
             client: ClientState::default(),
         }
@@ -125,6 +121,7 @@ enum Message {
     MainWindowOpened(window::Id),
     WindowClosed(window::Id),
     None,
+    SetServeOrigin(Result<Origin, String>),
 }
 
 pub async fn error_message(message: String) -> rfd::MessageDialogResult {
@@ -135,15 +132,6 @@ pub async fn error_message(message: String) -> rfd::MessageDialogResult {
         .set_description(message)
         .show()
         .await
-}
-
-pub fn error_message_blocking(message: &str) -> rfd::MessageDialogResult {
-    println!("Error : {}", message);
-    rfd::MessageDialog::new()
-        .set_level(rfd::MessageLevel::Error)
-        .set_title("ours error")
-        .set_description(message)
-        .show()
 }
 
 impl State {
@@ -166,6 +154,10 @@ impl State {
             Message::ClientPrequistes(message) => message.handle(&mut self.home.client_prequistes),
             Message::ToServe => {
                 self.page = Page::Serve;
+                Task::future(origin()).map(Message::SetServeOrigin)
+            }
+            Message::SetServeOrigin(origin) => {
+                self.serve = origin.map(ServeState::new);
                 Task::none()
             }
             Message::Download(download_message) => download_message.handle(&mut self.client),
@@ -183,7 +175,9 @@ impl State {
                 Task::none()
             }
             Message::SubmitClientPrequsits => {
-                let delivery = Delivery::new(ORIGIN.to_string());
+                let ip = self.home.client_prequistes.valid_ip.unwrap();
+                let port = self.home.client_prequistes.port;
+                let delivery = Delivery::new(Origin { ip, port }.to_string());
                 self.client.delivery = delivery.clone();
                 self.home.show_client_modal = false;
                 Task::perform(delivery.ls(PathBuf::new()), move |units| match units {
@@ -215,7 +209,10 @@ impl State {
         }
         if self.main_window_id.is_some_and(|x| x == window_id) {
             return match self.page {
-                Page::Serve => self.serve.view().into(),
+                Page::Serve => match &self.serve {
+                    Ok(serve) => serve.view().into(),
+                    Err(err) => Text::new(err.to_string()).into(),
+                },
                 Page::Client => self.client.view().into(),
                 Page::Home => self.home.view().into(),
             };
