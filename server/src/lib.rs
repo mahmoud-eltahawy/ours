@@ -18,6 +18,8 @@ use web::{
 
 use assets_router::{favicon, htmx, tailwind};
 
+use crate::assets_router::icon;
+
 pub mod app_error;
 mod assets_router;
 mod cd;
@@ -85,6 +87,7 @@ impl Server {
             .route(&format!("/{}", &*APP_NAME), get(self_executable))
             .route("/", get(IndexPage::handle))
             .route(TAILWIND, get(tailwind))
+            .route("/icon/{name}", get(icon))
             .route(HTMX, get(htmx))
             .route(FAVICON, get(favicon))
             .route(BOXESIN, get(boxes_in))

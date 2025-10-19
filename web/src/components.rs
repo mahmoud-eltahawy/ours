@@ -180,22 +180,13 @@ fn UnitIcon(unit: Unit) -> impl IntoView {
 
 #[component]
 pub fn Icon(icon: &'static IconData) -> impl IntoView {
+    let IconData { name, .. } = icon;
+    let src = format!("/icon/{name}");
     view! {
-        <svg
-            style={icon.style}
-            x={icon.x}
-            y={icon.y}
-            width="4em"
-            height="4em"
-            viewBox={icon.view_box}
-            stroke-linecap={icon.stroke_linecap}
-            stroke-linejoin={icon.stroke_linejoin}
-            stroke-width={icon.stroke_width}
-            stroke={icon.stroke}
-            fill={icon.fill.unwrap_or("currentColor")}
-            role="graphics-symbol"
-        >
-            {icon.data}
-        </svg>
+        <img
+            width="40"
+            height="40"
+            src={src}
+        />
     }
 }

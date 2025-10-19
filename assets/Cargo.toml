@@ -4,4 +4,3 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-icondata_core = "0.1.0"
