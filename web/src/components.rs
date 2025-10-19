@@ -1,31 +1,192 @@
+use std::{
+    env::home_dir,
+    ffi::OsStr,
+    path::{Path, PathBuf},
+};
+
+use axum::{
+    extract::{self, State},
+    response::Html,
+};
+use common::{IconData, Unit, UnitKind};
 use leptos::prelude::*;
+use tokio::fs;
+
+use crate::Context;
+
+pub struct IndexPage {
+    target_dir: PathBuf,
+    units: Vec<Unit>,
+}
+
+impl IndexPage {
+    fn new(root: PathBuf) -> Self {
+        Self {
+            target_dir: root,
+            units: Vec::new(),
+        }
+    }
+    async fn fetch_data(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let units = ls(PathBuf::new(), home_dir().unwrap()).await?;
+        self.units = units;
+        Ok(())
+    }
+    fn render(self) -> String {
+        let IndexPage {
+            units,
+            target_dir: root,
+        } = self;
+        view! {
+        <!DOCTYPE html>
+        <html>
+            <head>
+                <meta charset="utf-8" />
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+                <script src="/htmx"></script>
+                <script src="/tailwind"></script>
+                <title>Ours</title>
+            </head>
+            <body>
+                <Boxes units base=root/>
+            </body>
+        </html>
+        }
+        .to_html()
+    }
+
+    pub async fn handle(State(Context { base }): State<Context>) -> Html<String> {
+        let mut data = Self::new(base);
+        data.fetch_data().await.unwrap();
+        Html(data.render())
+    }
+}
+
+pub async fn ls(
+    target_dir: PathBuf,
+    base: PathBuf,
+) -> Result<Vec<Unit>, Box<dyn std::error::Error>> {
+    let root = target_dir.join(base);
+    let mut dir = fs::read_dir(&root).await?;
+    let mut paths = Vec::new();
+    while let Some(x) = dir.next_entry().await? {
+        let kind = if x.file_type().await?.is_dir() {
+            UnitKind::Dirctory
+        } else {
+            //TODO check other file types like video , audio , etc
+            UnitKind::File
+        };
+        let unit = Unit {
+            path: x.path().to_path_buf(),
+            kind,
+        };
+        paths.push(unit);
+    }
+    Ok(paths)
+}
 
 #[component]
-pub fn Index() -> impl IntoView {
+pub fn Boxes(units: Vec<Unit>, base: PathBuf) -> impl IntoView {
+    let units_view = units
+        .into_iter()
+        .map(|unit| {
+            view! {
+                <UnitComp unit=unit base=base.clone()/>
+            }
+        })
+        .collect_view();
     view! {
-    <!DOCTYPE html>
-    <html>
-        <head>
-            <meta charset="utf-8" />
-            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-            <script src="/htmx"></script>
-            <script src="/tailwind"></script>
-            <title>Ours</title>
-        </head>
-        <body>
-            <h1
-                class="text-3xl fond-bold underline"
-                hx-post="/clicked"
-                hx-swap="/outerHTML"
-            >hello world</h1>
-        </body>
-    </html>
+        <div
+            id="BOXES"
+            class="w-full min-h-80 m-5 p-5 border-2 border-lime-500 rounded-lg"
+        >
+            {units_view}
+        </div>
+    }
+}
+
+pub async fn boxes_in(
+    extract::Query(mut params): extract::Query<Vec<(usize, String)>>,
+    State(Context { base }): State<Context>,
+) -> Html<String> {
+    params.sort_by_key(|x| x.0);
+    let path = params.into_iter().map(|(_, x)| x).collect::<PathBuf>();
+
+    let units = ls(base.clone(), path).await.unwrap();
+
+    Html(
+        view! {
+            <Boxes units base/>
+        }
+        .to_html(),
+    )
+}
+
+fn path_as_query(path: &Path) -> String {
+    let mut it = path.iter();
+    let kv = |(i, x): (_, &OsStr)| format!("{}={}", i, x.to_str().unwrap());
+
+    let prefix = String::from("?");
+    let first = it
+        .next()
+        .map(|x| prefix.clone() + &kv((0, x)))
+        .unwrap_or(prefix);
+
+    it.enumerate()
+        .map(|(i, x)| (i + 1, x))
+        .map(kv)
+        .fold(first, |acc, x| acc + "&&" + &x)
+}
+
+#[component]
+fn UnitComp(unit: Unit, base: PathBuf) -> impl IntoView {
+    let name = unit.name();
+    let path = unit.path.strip_prefix(base).unwrap();
+    let hx_get = match unit.kind {
+        UnitKind::Dirctory => format!("/boxesin{}", path_as_query(path)),
+        _ => format!("/download/{}", path.to_str().unwrap_or_default()),
+    };
+
+    view! {
+        <button
+            hx-trigger="pointerdown"
+            hx-get={hx_get}
+            hx-swap="outerHTML"
+            hx-target="#BOXES"
+            class="grid grid-cols-2 hover:text-white hover:bg-black justify-items-left"
+        >
+            <UnitIcon unit=unit />
+            <span class="mx-0 px-0 py-5">{name}</span>
+        </button>
     }
 }
 
 #[component]
-pub fn Clicked() -> impl IntoView {
+fn UnitIcon(unit: Unit) -> impl IntoView {
     view! {
-        <h1>hello mahmoud</h1>
+        <div>
+            <Icon icon={unit.icon()}/>
+        </div>
+    }
+}
+
+#[component]
+pub fn Icon(icon: &'static IconData) -> impl IntoView {
+    view! {
+        <svg
+            style={icon.style}
+            x={icon.x}
+            y={icon.y}
+            width="4em"
+            height="4em"
+            viewBox={icon.view_box}
+            stroke-linecap={icon.stroke_linecap}
+            stroke-linejoin={icon.stroke_linejoin}
+            stroke-width={icon.stroke_width}
+            stroke={icon.stroke}
+            fill={icon.fill.unwrap_or("currentColor")}
+            role="graphics-symbol"
+        >
+            {icon.data}
+        </svg>
     }
 }

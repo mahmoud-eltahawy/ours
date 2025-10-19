@@ -1,4 +1,5 @@
-use assets::{AUDIO_SVG, FILE_SVG, FOLDER_SVG, IconData, VIDEO_SVG};
+pub use assets::IconData;
+use assets::{AUDIO_SVG, FILE_SVG, FOLDER_SVG, VIDEO_SVG};
 use leptos::prelude::document;
 pub use reactive_stores::Store;
 use serde::{Deserialize, Serialize};
