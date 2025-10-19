@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 
-pub mod assets_router;
 pub mod components;
 
 #[derive(Clone)]

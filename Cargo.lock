@@ -4344,7 +4344,6 @@ dependencies = [
  "get-port",
  "serde",
  "serde_json",
- "site_assets",
  "tokio",
  "tower",
  "tower-http",
@@ -4477,10 +4476,6 @@ dependencies = [
  "futures",
  "pin-project-lite",
 ]
-
-[[package]]
-name = "site_assets"
-version = "0.1.0"
 
 [[package]]
 name = "skrifa"

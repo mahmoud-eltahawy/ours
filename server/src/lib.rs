@@ -13,11 +13,13 @@ use get_port::Ops;
 use tower_http::{cors::CorsLayer, services::ServeDir, timeout::TimeoutLayer};
 use web::{
     BOXESIN, Context, FAVICON, HTMX, TAILWIND,
-    assets_router::{favicon, htmx, tailwind},
     components::{IndexPage, boxes_in},
 };
 
+use assets_router::{favicon, htmx, tailwind};
+
 pub mod app_error;
+mod assets_router;
 mod cd;
 mod mp4;
 

@@ -5,7 +5,6 @@ members = [
     "ours",
     "assets",
     "delivery",
-    "site_assets",
     "web",
 ]
 resolver = "2"
@@ -22,13 +21,12 @@ reqwest = "0.12"
 
 [workspace.dependencies.delivery]
 path = "./delivery"
+
 [workspace.dependencies.web]
 path = "./web"
 
 [workspace.dependencies.assets]
 path = "./assets"
-[workspace.dependencies.site_assets]
-path = "./site_assets"
 
 [workspace.dependencies.server]
 path = "./server"
@@ -39,9 +37,3 @@ path = "./common"
 [workspace.dependencies.webls]
 path = "./webls"
 
-[profile.wasm-release]
-opt-level = "z"
-lto = true
-codegen-units = 1
-panic = "abort"
-inherits = "release"

@@ -9,6 +9,10 @@ macro_rules! load {
     };
 }
 
+pub const FAVICON: &[u8] = include_bytes!("../static/favicon.ico.gz");
+pub const TAILWINDJS: &[u8] = include_bytes!("../static/tailwind.js.gz");
+pub const HTMXJS: &[u8] = include_bytes!("../static/htmx.js.gz");
+
 load!(FOLDER_SVG, "../static/folder.svg");
 load!(FILE_SVG, "../static/file.svg");
 load!(VIDEO_SVG, "../static/video.svg");

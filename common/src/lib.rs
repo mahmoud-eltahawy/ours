@@ -1,4 +1,4 @@
-pub use assets::IconData;
+pub use assets::{self, IconData};
 use assets::{AUDIO_SVG, FILE_SVG, FOLDER_SVG, VIDEO_SVG};
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, net::IpAddr, path::PathBuf};
