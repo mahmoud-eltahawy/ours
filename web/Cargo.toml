@@ -1,0 +1,10 @@
+[package]
+name = "web"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+axum = "0.8.6"
+axum-extra = "0.10.3"
+leptos = { workspace = true, features = ["islands","ssr"] }
+tokio = { workspace = true, features = ["full"] }

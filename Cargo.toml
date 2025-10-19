@@ -6,7 +6,7 @@ members = [
     "ours",
     "assets",
     "delivery",
-    "site_assets",
+    "site_assets", "web",
 ]
 resolver = "2"
 
