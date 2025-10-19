@@ -4,7 +4,6 @@ use common::{
     AUDIO_X, CP_PATH, LS_PATH, MKDIR_PATH, MP4_PATH, MV_PATH, NAME, OS, RM_PATH, Unit, UnitKind,
     VIDEO_X,
 };
-use gloo::net::http::Request;
 
 #[derive(Debug, Clone)]
 pub struct Delivery {
@@ -106,17 +105,6 @@ impl Delivery {
         reqwest::Client::new()
             .post(self.url_path(RM_PATH))
             .json(&bases)
-            .send()
-            .await
-            .map_err(|x| x.to_string())?;
-        Ok(())
-    }
-
-    //FIX : should be available on wasm target only
-    pub async fn wasm_upload(&self, form_data: web_sys::FormData) -> Result<(), String> {
-        Request::post(common::UPLOAD_PATH)
-            .body(form_data)
-            .map_err(|x| x.to_string())?
             .send()
             .await
             .map_err(|x| x.to_string())?;

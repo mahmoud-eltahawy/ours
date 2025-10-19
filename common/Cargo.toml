@@ -4,10 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-reactive_stores = "0.2"
 serde.workspace = true
-web-sys = { workspace = true,features = ["File","FileList"]}
-leptos.workspace = true
 reqwest = { workspace = true , features = ["json"] }
 assets.workspace = true
 get-port = "4.0.0"

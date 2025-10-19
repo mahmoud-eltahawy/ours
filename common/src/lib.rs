@@ -1,10 +1,7 @@
 pub use assets::IconData;
 use assets::{AUDIO_SVG, FILE_SVG, FOLDER_SVG, VIDEO_SVG};
-use leptos::prelude::document;
-pub use reactive_stores::Store;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, net::IpAddr, path::PathBuf};
-use web_sys::wasm_bindgen::JsCast;
 
 pub const OS: &str = "/os";
 pub const NAME: &str = "/name";
@@ -72,14 +69,6 @@ pub struct Unit {
 impl Unit {
     pub fn name(&self) -> String {
         self.path.file_name().unwrap().to_str().unwrap().to_string()
-    }
-
-    pub fn click_anchor(&self) {
-        document()
-            .get_element_by_id(&self.name())
-            .unwrap()
-            .unchecked_into::<web_sys::HtmlAnchorElement>()
-            .click();
     }
 
     pub fn icon(&self) -> &'static IconData {
@@ -168,25 +157,5 @@ impl Selected {
 
     pub fn is_selected(&self, unit: &Unit) -> bool {
         self.units.contains(unit)
-    }
-
-    pub fn wasm_download_selected(self) {
-        for unit in self.units.into_iter() {
-            unit.click_anchor();
-        }
-    }
-}
-
-#[derive(Clone, Debug, Default, Store)]
-pub struct GlobalState {
-    select: Selected,
-    media_play: Option<Unit>,
-    units_refetch_tick: bool,
-    mkdir_state: Option<String>,
-}
-
-impl GlobalState {
-    pub fn new_store() -> Store<Self> {
-        Store::new(Self::default())
     }
 }
