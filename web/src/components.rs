@@ -12,7 +12,8 @@ use common::{IconData, Unit, UnitKind};
 use leptos::prelude::*;
 use tokio::fs;
 
-use crate::Context;
+use crate::{BOXESIN, Context, HTMX, TAILWIND};
+const BOXESID: &str = "BOXES";
 
 pub struct IndexPage {
     target_dir: PathBuf,
@@ -42,8 +43,8 @@ impl IndexPage {
             <head>
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-                <script src="/htmx"></script>
-                <script src="/tailwind"></script>
+                <script src={HTMX}></script>
+                <script src={TAILWIND}></script>
                 <title>Ours</title>
             </head>
             <body>
@@ -54,8 +55,8 @@ impl IndexPage {
         .to_html()
     }
 
-    pub async fn handle(State(Context { base }): State<Context>) -> Html<String> {
-        let mut data = Self::new(base);
+    pub async fn handle(State(Context { target_dir }): State<Context>) -> Html<String> {
+        let mut data = Self::new(target_dir);
         data.fetch_data().await.unwrap();
         Html(data.render())
     }
@@ -96,7 +97,7 @@ pub fn Boxes(units: Vec<Unit>, base: PathBuf) -> impl IntoView {
         .collect_view();
     view! {
         <div
-            id="BOXES"
+            id={BOXESID}
             class="w-full min-h-80 m-5 p-5 border-2 border-lime-500 rounded-lg"
         >
             {units_view}
@@ -106,16 +107,16 @@ pub fn Boxes(units: Vec<Unit>, base: PathBuf) -> impl IntoView {
 
 pub async fn boxes_in(
     extract::Query(mut params): extract::Query<Vec<(usize, String)>>,
-    State(Context { base }): State<Context>,
+    State(Context { target_dir }): State<Context>,
 ) -> Html<String> {
     params.sort_by_key(|x| x.0);
     let path = params.into_iter().map(|(_, x)| x).collect::<PathBuf>();
 
-    let units = ls(base.clone(), path).await.unwrap();
+    let units = ls(target_dir.clone(), path).await.unwrap();
 
     Html(
         view! {
-            <Boxes units base/>
+            <Boxes units base=target_dir/>
         }
         .to_html(),
     )
@@ -140,24 +141,32 @@ fn path_as_query(path: &Path) -> String {
 #[component]
 fn UnitComp(unit: Unit, base: PathBuf) -> impl IntoView {
     let name = unit.name();
-    let path = unit.path.strip_prefix(base).unwrap();
+    let path = unit.path.strip_prefix(base).unwrap().to_path_buf();
     let hx_get = match unit.kind {
-        UnitKind::Dirctory => format!("/boxesin{}", path_as_query(path)),
+        UnitKind::Dirctory => format!("{}{}", BOXESIN, path_as_query(&path)),
         _ => format!("/download/{}", path.to_str().unwrap_or_default()),
     };
+
+    let id = format!("#{}", BOXESID);
 
     view! {
         <button
             hx-trigger="pointerdown"
             hx-get={hx_get}
             hx-swap="outerHTML"
-            hx-target="#BOXES"
+            hx-target={id}
+            hx-push-url={path_as_url(&path)}
             class="grid grid-cols-2 hover:text-white hover:bg-black justify-items-left"
         >
             <UnitIcon unit=unit />
-            <span class="mx-0 px-0 py-5">{name}</span>
+            <span class="mx-0 px-0 py-5">{name.clone()}</span>
         </button>
     }
+}
+
+fn path_as_url(path: &Path) -> String {
+    path.iter()
+        .fold(String::new(), |acc, x| acc + "/" + x.to_str().unwrap())
 }
 
 #[component]

@@ -2,14 +2,8 @@
  
 def "main web" [] {
   let server_port = (port 8080);
-  $server_port out> ./site/src/port.txt
   cd ours
-  cargo build 
-  job spawn {
-    cargo run -- ~/ $server_port
-  }
-  cd ../site/
-  trunk serve --port (port 1024) --open
+  cargo run -- ~/ $server_port
 }
 
 def "main desk" [] {

@@ -15,4 +15,5 @@ get-port = "4.0.0"
 axum-extra = "0.10.1"
 futures-util = "0.3.31"
 site_assets.workspace = true
+web.workspace = true
 

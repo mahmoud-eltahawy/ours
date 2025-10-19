@@ -11,17 +11,15 @@ use axum::{
 use common::{CP_PATH, LS_PATH, MKDIR_PATH, MP4_PATH, MV_PATH, NAME, OS, RM_PATH, UPLOAD_PATH};
 use get_port::Ops;
 use tower_http::{cors::CorsLayer, services::ServeDir, timeout::TimeoutLayer};
+use web::{
+    BOXESIN, Context, FAVICON, HTMX, TAILWIND,
+    assets_router::{favicon, htmx, tailwind},
+    components::{IndexPage, boxes_in},
+};
 
 pub mod app_error;
-#[cfg(not(debug_assertions))]
-mod assets_router;
 mod cd;
 mod mp4;
-
-#[derive(Clone)]
-struct Context {
-    target_dir: PathBuf,
-}
 
 pub struct Server {
     target: PathBuf,
@@ -83,14 +81,16 @@ impl Server {
             .route(NAME, get(name))
             .route(MKDIR_PATH, post(cd::mkdir))
             .route(&format!("/{}", &*APP_NAME), get(self_executable))
+            .route("/", get(IndexPage::handle))
+            .route(TAILWIND, get(tailwind))
+            .route(HTMX, get(htmx))
+            .route(FAVICON, get(favicon))
+            .route(BOXESIN, get(boxes_in))
             .nest_service("/download", get_service(target_dir))
             .with_state(Context { target_dir: target })
             .layer(TimeoutLayer::new(timeout))
             .layer(CorsLayer::permissive())
             .layer(DefaultBodyLimit::disable());
-
-        #[cfg(not(debug_assertions))]
-        let app = app.merge(assets_router::assets_router());
 
         let listener = tokio::net::TcpListener::bind(&addr).await?;
         axum::serve(

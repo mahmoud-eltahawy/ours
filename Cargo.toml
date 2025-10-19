@@ -2,11 +2,11 @@
 members = [
     "common",
     "server",
-    "site",
     "ours",
     "assets",
     "delivery",
-    "site_assets", "web",
+    "site_assets",
+    "web",
 ]
 resolver = "2"
 
@@ -25,6 +25,8 @@ gloo = "0.11.0"
 
 [workspace.dependencies.delivery]
 path = "./delivery"
+[workspace.dependencies.web]
+path = "./web"
 
 [workspace.dependencies.assets]
 path = "./assets"
