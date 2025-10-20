@@ -50,6 +50,9 @@ impl IndexPage {
             <body>
                 <Boxes units base=root/>
             </body>
+            <footer>
+                <div id={PLAYER_SECTION} hidden></div>
+            </footer>
         </html>
         }
         .to_html()
@@ -109,14 +112,16 @@ pub fn Boxes(units: Vec<Unit>, base: PathBuf) -> impl IntoView {
         })
         .collect_view();
     view! {
-        <div
+        <main
             id={BOXESID}
             class="w-full min-h-80 m-5 p-5 border-2 border-lime-500 rounded-lg"
         >
             {units_view}
-        </div>
+        </main>
     }
 }
+
+const PLAYER_SECTION: &str = "PlayerSection";
 
 pub async fn boxes_in(
     extract::Query(mut params): extract::Query<Vec<(usize, String)>>,
@@ -151,24 +156,43 @@ fn path_as_query(path: &Path) -> String {
         .fold(first, |acc, x| acc + "&&" + &x)
 }
 
+const VIDEO_HREF: &str = "/videoplay";
+const AUDIO_HREF: &str = "/audioplay";
+
 #[component]
 fn UnitComp(unit: Unit, base: PathBuf) -> impl IntoView {
     let name = unit.name();
     let path = unit.path.strip_prefix(base).unwrap().to_path_buf();
-    let hx_get = match unit.kind {
+    let get = match unit.kind {
         UnitKind::Folder => format!("{}{}", BOXESIN, path_as_query(&path)),
+        UnitKind::Video => format!("{}{}", VIDEO_HREF, path_as_query(&path)),
+        UnitKind::Audio => format!("{}{}", AUDIO_HREF, path_as_query(&path)),
         _ => format!("/download/{}", path.to_str().unwrap_or_default()),
     };
 
-    let id = format!("#{}", BOXESID);
+    let target = match unit.kind {
+        UnitKind::Folder => format!("#{}", BOXESID),
+        UnitKind::Video | UnitKind::Audio => format!("#{}", PLAYER_SECTION),
+        UnitKind::File => String::new(),
+    };
+
+    let url = match unit.kind {
+        UnitKind::Folder => path_as_url(&path),
+        _ => "false".to_string(),
+    };
+
+    let swap = match unit.kind {
+        UnitKind::Folder | UnitKind::Video | UnitKind::Audio => "outerHTML",
+        UnitKind::File => "none",
+    };
 
     view! {
         <button
             hx-trigger="pointerdown"
-            hx-get={hx_get}
-            hx-swap="outerHTML"
-            hx-target={id}
-            hx-push-url={path_as_url(&path)}
+            hx-get={get}
+            hx-swap={swap}
+            hx-target={target}
+            hx-push-url={url}
             class="grid grid-cols-2 hover:text-white hover:bg-black justify-items-left"
         >
             <UnitIcon unit=unit />
