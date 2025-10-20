@@ -4,6 +4,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use crate::{
+    BOXESIN, Context, HTMX, TAILWIND,
+    components::media::{HiddenPlayer, PLAYER_SECTION},
+};
 use axum::{
     extract::{self, State},
     response::Html,
@@ -12,7 +16,8 @@ use common::{AUDIO_X, Unit, UnitKind, VIDEO_X};
 use leptos::prelude::*;
 use tokio::fs;
 
-use crate::{BOXESIN, Context, HTMX, TAILWIND};
+pub mod media;
+
 const BOXESID: &str = "BOXES";
 
 pub struct IndexPage {
@@ -51,7 +56,7 @@ impl IndexPage {
                 <Boxes units base=root/>
             </body>
             <footer>
-                <div id={PLAYER_SECTION} hidden></div>
+                <HiddenPlayer/>
             </footer>
         </html>
         }
@@ -121,8 +126,6 @@ pub fn Boxes(units: Vec<Unit>, base: PathBuf) -> impl IntoView {
     }
 }
 
-const PLAYER_SECTION: &str = "PlayerSection";
-
 pub async fn boxes_in(
     extract::Query(mut params): extract::Query<Vec<(usize, String)>>,
     State(Context { target_dir }): State<Context>,
@@ -135,46 +138,6 @@ pub async fn boxes_in(
     Html(
         view! {
             <Boxes units base=target_dir/>
-        }
-        .to_html(),
-    )
-}
-
-pub const CLOSE_PLAYER: &str = "/CLOSE_PLAYER";
-
-pub async fn videoplayer(
-    extract::Query(mut params): extract::Query<Vec<(usize, String)>>,
-) -> Html<String> {
-    params.sort_by_key(|x| x.0);
-    let url = params
-        .into_iter()
-        .map(|(_, x)| x)
-        .fold(String::from("/download"), |acc, x| acc + "/" + &x);
-
-    let view = view! {
-    <video
-        id={PLAYER_SECTION}
-        width="80%"
-        class="fixed top-5 left-1/2 transform -translate-x-1/2"
-        controls
-        autoplay
-        hx-get={CLOSE_PLAYER}
-        hx-target="this"
-        hx-swap="outerHTML"
-        hx-trigger="pointerdown from:body"
-    >
-        <source src={url} type="video/mp4"/>
-        Your browser does not support the video tag.
-    </video>
-    };
-
-    Html(view.to_html())
-}
-
-pub async fn close_player() -> Html<String> {
-    Html(
-        view! {
-            <div id={PLAYER_SECTION} hidden></div>
         }
         .to_html(),
     )
@@ -196,17 +159,14 @@ fn path_as_query(path: &Path) -> String {
         .fold(first, |acc, x| acc + "&&" + &x)
 }
 
-pub const VIDEO_HREF: &str = "/videoplay";
-pub const AUDIO_HREF: &str = "/audioplay";
-
 #[component]
 fn UnitComp(unit: Unit, base: PathBuf) -> impl IntoView {
     let name = unit.name();
     let path = unit.path.strip_prefix(base).unwrap().to_path_buf();
     let get = match unit.kind {
         UnitKind::Folder => format!("{}{}", BOXESIN, path_as_query(&path)),
-        UnitKind::Video => format!("{}{}", VIDEO_HREF, path_as_query(&path)),
-        UnitKind::Audio => format!("{}{}", AUDIO_HREF, path_as_query(&path)),
+        UnitKind::Video => format!("{}{}", media::VIDEO_HREF, path_as_query(&path)),
+        UnitKind::Audio => format!("{}{}", media::AUDIO_HREF, path_as_query(&path)),
         _ => format!("/download/{}", path.to_str().unwrap_or_default()),
     };
 
