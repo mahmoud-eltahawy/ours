@@ -13,7 +13,7 @@ use axum::{
     response::Html,
 };
 use common::{AUDIO_X, Unit, UnitKind, VIDEO_X};
-use leptos::prelude::*;
+use leptos::{either::Either, prelude::*};
 use tokio::fs;
 
 pub mod media;
@@ -119,7 +119,7 @@ pub fn Boxes(units: Vec<Unit>, base: PathBuf) -> impl IntoView {
     view! {
         <main
             id={BOXESID}
-            class="w-full min-h-80 m-5 p-5 border-2 border-lime-500 rounded-lg"
+            class="flex flex-wrap w-full min-h-80 m-5 p-5 border-2 border-lime-500 rounded-lg"
         >
             {units_view}
         </main>
@@ -163,56 +163,69 @@ fn path_as_query(path: &Path) -> String {
 fn UnitComp(unit: Unit, base: PathBuf) -> impl IntoView {
     let name = unit.name();
     let path = unit.path.strip_prefix(base).unwrap().to_path_buf();
-    let get = match unit.kind {
-        UnitKind::Folder => format!("{}{}", BOXESIN, path_as_query(&path)),
-        UnitKind::Video => format!("{}{}", media::VIDEO_HREF, path_as_query(&path)),
-        UnitKind::Audio => format!("{}{}", media::AUDIO_HREF, path_as_query(&path)),
-        _ => format!("/download/{}", path.to_str().unwrap_or_default()),
+
+    enum Hxs {
+        File {
+            get: String,
+        },
+        Other {
+            get: String,
+            target: String,
+            url: String,
+        },
+    }
+
+    let hxs = match unit.kind {
+        UnitKind::Folder => Hxs::Other {
+            get: format!("{}{}", BOXESIN, path_as_query(&path)),
+            target: format!("#{}", BOXESID),
+            url: path_as_url(&path),
+        },
+        UnitKind::Video => Hxs::Other {
+            get: format!("{}{}", media::VIDEO_HREF, path_as_query(&path)),
+            target: format!("#{}", PLAYER_SECTION),
+            url: "false".to_string(),
+        },
+        UnitKind::Audio => Hxs::Other {
+            get: format!("{}{}", media::AUDIO_HREF, path_as_query(&path)),
+            target: format!("#{}", PLAYER_SECTION),
+            url: "false".to_string(),
+        },
+        UnitKind::File => Hxs::File {
+            get: format!("/download/{}", path.to_str().unwrap_or_default()),
+        },
     };
 
-    let target = match unit.kind {
-        UnitKind::Folder => format!("#{}", BOXESID),
-        UnitKind::Video | UnitKind::Audio => format!("#{}", PLAYER_SECTION),
-        UnitKind::File => String::new(),
+    let children = view! {
+        <Icon name={unit.kind.to_string()} />
+        <span>{name.clone()}</span>
     };
+    let class = "m-5 p-4 grid grid-cols-2 gap-4 hover:text-white hover:bg-black justify-items-left";
 
-    let url = match unit.kind {
-        UnitKind::Folder => path_as_url(&path),
-        _ => "false".to_string(),
-    };
-
-    let swap = match unit.kind {
-        UnitKind::Folder | UnitKind::Video | UnitKind::Audio => "outerHTML",
-        UnitKind::File => "none",
-    };
-
-    view! {
-        <button
-            hx-trigger="pointerdown"
-            hx-get={get}
-            hx-swap={swap}
-            hx-target={target}
-            hx-push-url={url}
-            class="grid grid-cols-2 hover:text-white hover:bg-black justify-items-left"
-        >
-            <UnitIcon unit=unit />
-            <span class="mx-0 px-0 py-5">{name.clone()}</span>
-        </button>
+    match hxs {
+        Hxs::File { get } => Either::Left(view! {
+            <a href={get} class={class} download>
+                {children}
+            </a>
+        }),
+        Hxs::Other { get, target, url } => Either::Right(view! {
+            <button
+                hx-get={get}
+                hx-target={target}
+                hx-push-url={url}
+                hx-swap="outerHTML"
+                hx-trigger="pointerup"
+                class={class}
+            >
+                {children}
+            </button>
+        }),
     }
 }
 
 fn path_as_url(path: &Path) -> String {
     path.iter()
         .fold(String::new(), |acc, x| acc + "/" + x.to_str().unwrap())
-}
-
-#[component]
-fn UnitIcon(unit: Unit) -> impl IntoView {
-    view! {
-        <div>
-            <Icon name={unit.kind.to_string()}/>
-        </div>
-    }
 }
 
 #[component]
