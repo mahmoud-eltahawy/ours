@@ -140,6 +140,46 @@ pub async fn boxes_in(
     )
 }
 
+pub const CLOSE_PLAYER: &str = "/CLOSE_PLAYER";
+
+pub async fn videoplayer(
+    extract::Query(mut params): extract::Query<Vec<(usize, String)>>,
+) -> Html<String> {
+    params.sort_by_key(|x| x.0);
+    let url = params
+        .into_iter()
+        .map(|(_, x)| x)
+        .fold(String::from("/download"), |acc, x| acc + "/" + &x);
+
+    let view = view! {
+    <video
+        id={PLAYER_SECTION}
+        width="80%"
+        class="fixed top-5 left-1/2 transform -translate-x-1/2"
+        controls
+        autoplay
+        hx-get={CLOSE_PLAYER}
+        hx-target="this"
+        hx-swap="outerHTML"
+        hx-trigger="pointerdown from:body"
+    >
+        <source src={url} type="video/mp4"/>
+        Your browser does not support the video tag.
+    </video>
+    };
+
+    Html(view.to_html())
+}
+
+pub async fn close_player() -> Html<String> {
+    Html(
+        view! {
+            <div id={PLAYER_SECTION} hidden></div>
+        }
+        .to_html(),
+    )
+}
+
 fn path_as_query(path: &Path) -> String {
     let mut it = path.iter();
     let kv = |(i, x): (_, &OsStr)| format!("{}={}", i, x.to_str().unwrap());
@@ -156,8 +196,8 @@ fn path_as_query(path: &Path) -> String {
         .fold(first, |acc, x| acc + "&&" + &x)
 }
 
-const VIDEO_HREF: &str = "/videoplay";
-const AUDIO_HREF: &str = "/audioplay";
+pub const VIDEO_HREF: &str = "/videoplay";
+pub const AUDIO_HREF: &str = "/audioplay";
 
 #[component]
 fn UnitComp(unit: Unit, base: PathBuf) -> impl IntoView {

@@ -13,7 +13,7 @@ use get_port::Ops;
 use tower_http::{cors::CorsLayer, services::ServeDir, timeout::TimeoutLayer};
 use web::{
     BOXESIN, Context, FAVICON, HTMX, TAILWIND,
-    components::{IndexPage, boxes_in},
+    components::{CLOSE_PLAYER, IndexPage, VIDEO_HREF, boxes_in, close_player, videoplayer},
 };
 
 use assets_router::{favicon, htmx, tailwind};
@@ -88,6 +88,8 @@ impl Server {
             .route("/", get(IndexPage::handle))
             .route(TAILWIND, get(tailwind))
             .route("/icon/{name}", get(icon))
+            .route(VIDEO_HREF, get(videoplayer))
+            .route(CLOSE_PLAYER, get(close_player))
             .route(HTMX, get(htmx))
             .route(FAVICON, get(favicon))
             .route(BOXESIN, get(boxes_in))
