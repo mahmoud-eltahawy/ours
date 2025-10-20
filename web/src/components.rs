@@ -8,7 +8,7 @@ use axum::{
     extract::{self, State},
     response::Html,
 };
-use common::{IconData, Unit, UnitKind};
+use common::{AUDIO_X, Unit, UnitKind, VIDEO_X};
 use leptos::prelude::*;
 use tokio::fs;
 
@@ -68,21 +68,34 @@ pub async fn ls(
 ) -> Result<Vec<Unit>, Box<dyn std::error::Error>> {
     let root = target_dir.join(base);
     let mut dir = fs::read_dir(&root).await?;
-    let mut paths = Vec::new();
+    let mut units = Vec::new();
     while let Some(x) = dir.next_entry().await? {
         let kind = if x.file_type().await?.is_dir() {
-            UnitKind::Dirctory
+            UnitKind::Folder
         } else {
-            //TODO check other file types like video , audio , etc
-            UnitKind::File
+            let ex = x.path();
+            let ex = ex.extension().and_then(|x| x.to_str());
+            match ex {
+                Some(ex) => {
+                    if VIDEO_X.contains(&ex) {
+                        UnitKind::Video
+                    } else if AUDIO_X.contains(&ex) {
+                        UnitKind::Audio
+                    } else {
+                        UnitKind::File
+                    }
+                }
+                _ => UnitKind::File,
+            }
         };
         let unit = Unit {
             path: x.path().to_path_buf(),
             kind,
         };
-        paths.push(unit);
+        units.push(unit);
     }
-    Ok(paths)
+    units.sort_by_key(|x| (x.kind.clone(), x.name()));
+    Ok(units)
 }
 
 #[component]
@@ -143,7 +156,7 @@ fn UnitComp(unit: Unit, base: PathBuf) -> impl IntoView {
     let name = unit.name();
     let path = unit.path.strip_prefix(base).unwrap().to_path_buf();
     let hx_get = match unit.kind {
-        UnitKind::Dirctory => format!("{}{}", BOXESIN, path_as_query(&path)),
+        UnitKind::Folder => format!("{}{}", BOXESIN, path_as_query(&path)),
         _ => format!("/download/{}", path.to_str().unwrap_or_default()),
     };
 
@@ -173,14 +186,13 @@ fn path_as_url(path: &Path) -> String {
 fn UnitIcon(unit: Unit) -> impl IntoView {
     view! {
         <div>
-            <Icon icon={unit.icon()}/>
+            <Icon name={unit.kind.to_string()}/>
         </div>
     }
 }
 
 #[component]
-pub fn Icon(icon: &'static IconData) -> impl IntoView {
-    let IconData { name, .. } = icon;
+pub fn Icon(name: String) -> impl IntoView {
     let src = format!("/icon/{name}");
     view! {
         <img

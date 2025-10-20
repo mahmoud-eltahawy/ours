@@ -1,4 +1,4 @@
-use assets::HOME_SVG;
+use assets::get_icon;
 use iced::{
     Alignment, Background, Color, Element, Length,
     border::Radius,
@@ -61,7 +61,7 @@ impl HomeState {
 }
 
 pub fn go_home_button<'a>() -> Button<'a, Message> {
-    Button::new(svg_from_icon_data(&HOME_SVG))
+    Button::new(svg_from_icon_data(get_icon("home")))
         .on_press(Message::ToHome)
         .style(move |_, _| Style {
             background: Some(iced::Background::Color(Color::from_rgb(0.9, 0.1, 0.1))),

@@ -1,4 +1,4 @@
-use assets::{CLOSE_SVG, DOWNLOAD_SVG, HOME_SVG, IconData, SELECT_SVG};
+use assets::get_icon;
 use common::{Origin, Selected, Unit};
 use delivery::Delivery;
 use iced::{
@@ -84,7 +84,7 @@ impl ClientMessage {
                 Task::none()
             }
             ClientMessage::UnitDoubleClick(unit) => match unit.kind {
-                common::UnitKind::Dirctory => {
+                common::UnitKind::Folder => {
                     Task::perform(state.delivery.clone().ls(unit.path.clone()), move |xs| {
                         if let Ok(xs) = xs {
                             Message::Client(ClientMessage::CurrentPathChanged {
@@ -196,7 +196,7 @@ impl ClientState {
     }
 
     fn download_button(&self) -> Button<'_, Message> {
-        svg_button(&DOWNLOAD_SVG).on_press(match self.download_window {
+        svg_button(get_icon("download")).on_press(match self.download_window {
             Some(id) => Message::Download(DownloadMessage::CloseDownloadWindow(id)),
             None => Message::Download(DownloadMessage::OpenDownloadWindow),
         })
@@ -204,9 +204,9 @@ impl ClientState {
 
     fn select_button(&self) -> Button<'_, Message> {
         svg_button(if self.select.on {
-            &CLOSE_SVG
+            get_icon("close")
         } else {
-            &SELECT_SVG
+            get_icon("select")
         })
         .on_press(Message::Client(ClientMessage::ToggleSelectMode))
     }
@@ -217,9 +217,9 @@ impl ClientState {
         if self.current_path == PathBuf::new() {
             go_home_button()
         } else {
-            svg_button(&HOME_SVG).on_press(Message::Client(ClientMessage::ChangeCurrentPath(
-                PathBuf::new(),
-            )))
+            svg_button(get_icon("home")).on_press(Message::Client(
+                ClientMessage::ChangeCurrentPath(PathBuf::new()),
+            ))
         }
     }
 }
@@ -255,8 +255,8 @@ impl UnitViews for Unit {
 
 const VIOLET: Color = Color::from_rgb(127. / 255., 34. / 255., 254. / 255.);
 
-pub fn svg_from_icon_data(icon: &IconData) -> Svg<'_> {
-    let handle = Handle::from_memory(icon.data.to_vec());
+pub fn svg_from_icon_data(icon: &[u8]) -> Svg<'_> {
+    let handle = Handle::from_memory(icon.to_vec());
     Svg::new(handle)
         .style(|_, _| iced::widget::svg::Style {
             color: Some(VIOLET),
@@ -264,7 +264,7 @@ pub fn svg_from_icon_data(icon: &IconData) -> Svg<'_> {
         .width(30.)
 }
 
-fn svg_button<'a>(icon: &'a IconData) -> Button<'a, Message> {
+fn svg_button<'a>(icon: &'a [u8]) -> Button<'a, Message> {
     Button::new(svg_from_icon_data(icon))
         .style(|_, _| Style {
             background: Some(iced::Background::Color(Color::BLACK)),

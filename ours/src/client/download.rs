@@ -465,7 +465,7 @@ async fn prepare_downloads(
     let mut res = Vec::new();
     for unit in units.into_iter() {
         match unit.kind {
-            UnitKind::Dirctory => {
+            UnitKind::Folder => {
                 res.extend(prepare_directory(delivery.clone(), unit, &download_dir).await?);
             }
             _ => {

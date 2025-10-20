@@ -1,9 +1,9 @@
-macro_rules! load {
-    ($constname:ident,$name:literal,$path:literal) => {
-        pub const $constname: IconData = IconData {
+macro_rules! build_icon {
+    ($name:literal,$path:literal) => {
+        IconData {
             name: $name,
             data: include_bytes!($path),
-        };
+        }
     };
 }
 
@@ -11,16 +11,26 @@ pub const FAVICON: &[u8] = include_bytes!("../static/favicon.ico.gz");
 pub const TAILWINDJS: &[u8] = include_bytes!("../static/tailwind.js.gz");
 pub const HTMXJS: &[u8] = include_bytes!("../static/htmx.js.gz");
 
-load!(FOLDER_SVG, "folder.svg", "../static/folder.svg");
-load!(FILE_SVG, "file.svg", "../static/file.svg");
-load!(VIDEO_SVG, "video.svg", "../static/video.svg");
-load!(AUDIO_SVG, "audio.svg", "../static/audio.svg");
-load!(SELECT_SVG, "select.svg", "../static/select.svg");
-load!(CLOSE_SVG, "close.svg", "../static/close.svg");
-load!(EXPAND_SVG, "expand.svg", "../static/expand.svg");
-load!(COLLAPSE_SVG, "collapse.svg", "../static/collapse.svg");
-load!(DOWNLOAD_SVG, "download.svg", "../static/download.svg");
-load!(HOME_SVG, "home.svg", "../static/home.svg");
+pub const ICONS: [IconData; 10] = [
+    build_icon!("folder", "../static/folder.svg"),
+    build_icon!("file", "../static/file.svg"),
+    build_icon!("video", "../static/video.svg"),
+    build_icon!("audio", "../static/audio.svg"),
+    build_icon!("select", "../static/select.svg"),
+    build_icon!("close", "../static/close.svg"),
+    build_icon!("expand", "../static/expand.svg"),
+    build_icon!("collapse", "../static/collapse.svg"),
+    build_icon!("download", "../static/download.svg"),
+    build_icon!("home", "../static/home.svg"),
+];
+
+pub fn get_icon(name: &str) -> &'static [u8] {
+    ICONS
+        .iter()
+        .find(|x| x.name.starts_with(name))
+        .unwrap()
+        .data
+}
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct IconData {

@@ -82,7 +82,7 @@ pub async fn rm(
     for base in bases.into_iter() {
         let path = target_dir.join(base.path);
         match base.kind {
-            UnitKind::Dirctory => {
+            UnitKind::Folder => {
                 remove_dir_all(path).await?;
             }
             _ => {
@@ -131,7 +131,7 @@ pub async fn ls(
     let mut paths = Vec::new();
     while let Some(x) = dir.next_entry().await? {
         let kind = if x.file_type().await?.is_dir() {
-            UnitKind::Dirctory
+            UnitKind::Folder
         } else {
             UnitKind::File
         };

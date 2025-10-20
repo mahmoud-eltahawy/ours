@@ -1,5 +1,5 @@
+use assets::get_icon;
 pub use assets::{self, IconData};
-use assets::{AUDIO_SVG, FILE_SVG, FOLDER_SVG, VIDEO_SVG};
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, net::IpAddr, path::PathBuf};
 
@@ -42,7 +42,7 @@ pub enum SelectedState {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum UnitKind {
-    Dirctory,
+    Folder,
     Video,
     Audio,
     File,
@@ -51,7 +51,7 @@ pub enum UnitKind {
 impl Display for UnitKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let result = match self {
-            UnitKind::Dirctory => "directory",
+            UnitKind::Folder => "folder",
             UnitKind::File => "file",
             UnitKind::Video => "video",
             UnitKind::Audio => "audio",
@@ -71,13 +71,8 @@ impl Unit {
         self.path.file_name().unwrap().to_str().unwrap().to_string()
     }
 
-    pub fn icon(&self) -> &'static IconData {
-        match self.kind {
-            UnitKind::Dirctory => &FOLDER_SVG,
-            UnitKind::File => &FILE_SVG,
-            UnitKind::Video => &VIDEO_SVG,
-            UnitKind::Audio => &AUDIO_SVG,
-        }
+    pub fn icon(&self) -> &'static [u8] {
+        get_icon(&self.kind.to_string())
     }
 }
 
@@ -113,7 +108,7 @@ impl Selected {
     pub fn has_dirs(&self) -> bool {
         self.units
             .iter()
-            .any(|x| matches!(x.kind, UnitKind::Dirctory))
+            .any(|x| matches!(x.kind, UnitKind::Folder))
     }
 
     pub fn is_clear(&self) -> bool {
