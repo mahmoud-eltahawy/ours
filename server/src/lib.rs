@@ -114,7 +114,7 @@ async fn fallback(
     }
     let Ok(path) = path.parse::<PathBuf>();
     let path = target_dir.join(path);
-    let mut page = IndexPage::new(path.clone(), is_same_os(user_agent));
+    let mut page = IndexPage::new(target_dir, is_same_os(user_agent));
     match fetch_data(&mut page, path).await {
         Ok(_) => (StatusCode::OK, Html(page.render())),
         Err(err) => (

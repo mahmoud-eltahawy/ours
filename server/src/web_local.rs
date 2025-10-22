@@ -20,7 +20,6 @@ pub async fn boxes_in(
     let parent = params.into_iter().map(|(_, x)| x).collect::<PathBuf>();
 
     let path = target_dir.join(&parent);
-    dbg!(path.clone());
     let units = ls(path).await.unwrap();
 
     let is_downloadable = down == "down";
