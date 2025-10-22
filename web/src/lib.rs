@@ -19,7 +19,7 @@ pub mod utils;
 
 pub struct IndexPage {
     same_os: bool,
-    target_dir: PathBuf,
+    pub target_dir: PathBuf,
     pub units: Vec<Unit>,
 }
 

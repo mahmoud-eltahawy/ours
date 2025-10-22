@@ -4,7 +4,7 @@ use axum::{
 };
 use axum_extra::{TypedHeader, headers::UserAgent};
 use common::{AUDIO_X, Unit, UnitKind, VIDEO_X};
-use std::{env::home_dir, path::PathBuf};
+use std::path::PathBuf;
 use tokio::fs;
 use web::{
     Context, IndexPage,
@@ -19,7 +19,9 @@ pub async fn boxes_in(
     params.sort_by_key(|x| x.0);
     let parent = params.into_iter().map(|(_, x)| x).collect::<PathBuf>();
 
-    let units = ls(target_dir.clone(), parent.clone()).await.unwrap();
+    let path = target_dir.join(&parent);
+    dbg!(path.clone());
+    let units = ls(path).await.unwrap();
 
     let is_downloadable = down == "down";
 
@@ -34,17 +36,16 @@ pub async fn boxes_in(
     )
 }
 
-pub async fn fetch_data(page: &mut IndexPage) -> Result<(), Box<dyn std::error::Error>> {
-    let units = ls(PathBuf::new(), home_dir().unwrap()).await?;
+pub async fn fetch_data(
+    page: &mut IndexPage,
+    path: PathBuf,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let units = ls(path).await?;
     page.units = units;
     Ok(())
 }
 
-pub(crate) async fn ls(
-    target_dir: PathBuf,
-    base: PathBuf,
-) -> Result<Vec<Unit>, Box<dyn std::error::Error>> {
-    let root = target_dir.join(base);
+pub(crate) async fn ls(root: PathBuf) -> Result<Vec<Unit>, Box<dyn std::error::Error>> {
     let mut dir = fs::read_dir(&root).await?;
     let mut units = Vec::new();
     while let Some(x) = dir.next_entry().await? {
@@ -88,8 +89,8 @@ pub(crate) async fn index_page(
     State(Context { target_dir }): State<Context>,
 ) -> Html<String> {
     let same_os = is_same_os(user_agent);
-    let mut data = IndexPage::new(target_dir, same_os);
-    fetch_data(&mut data).await.unwrap();
+    let mut data = IndexPage::new(target_dir.clone(), same_os);
+    fetch_data(&mut data, target_dir).await.unwrap();
     Html(data.render())
 }
 
