@@ -11,6 +11,9 @@ pub(crate) fn NavBar(parent: PathBuf, is_downloadable: bool) -> impl IntoView {
     view! {
         <div class="flex place-content-around m-2 p-2">
             <DownloadButton is_downloadable parent/>
+            <a href="/">
+                <Icon name={IconName::Home}/>
+            </a>
             <UploadButton/>
         </div>
 
