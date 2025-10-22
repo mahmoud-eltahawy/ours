@@ -1,8 +1,7 @@
 use std::{path::PathBuf, sync::Arc};
 
 use common::{
-    AUDIO_X, CP_PATH, LS_PATH, MKDIR_PATH, MP4_PATH, MV_PATH, NAME, OS, RM_PATH, Unit, UnitKind,
-    VIDEO_X,
+    AUDIO_X, CP_PATH, LS_PATH, MKDIR_PATH, MP4_PATH, MV_PATH, RM_PATH, Unit, UnitKind, VIDEO_X,
 };
 
 #[derive(Debug, Clone)]
@@ -19,28 +18,6 @@ impl Delivery {
 
     pub fn url_path(self, path: &str) -> String {
         format!("{}{}", self.origin, path)
-    }
-
-    pub async fn get_host_os(self) -> Result<String, String> {
-        reqwest::Client::new()
-            .get(self.url_path(OS))
-            .send()
-            .await
-            .map_err(|x| x.to_string())?
-            .json::<String>()
-            .await
-            .map_err(|x| x.to_string())
-    }
-
-    pub async fn get_app_name(self) -> Result<String, String> {
-        reqwest::Client::new()
-            .get(self.url_path(NAME))
-            .send()
-            .await
-            .map_err(|x| x.to_string())?
-            .json::<String>()
-            .await
-            .map_err(|x| x.to_string())
     }
 
     pub async fn mp4_remux(self, targets: Vec<PathBuf>) -> Result<(), String> {

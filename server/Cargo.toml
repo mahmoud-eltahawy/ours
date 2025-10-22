@@ -5,6 +5,7 @@ edition.workspace = true
 
 [dependencies]
 axum= {version = "0.8",features = ["multipart","ws"]} 
+axum-extra = { version = "0.10", features = ["typed-header"]}
 tokio= {workspace = true, features = ["fs","process"]}
 serde_json.workspace = true
 common.workspace = true
@@ -12,7 +13,6 @@ serde = { workspace = true, features = ["derive"]}
 tower-http = { version = "0.6", features = ["fs","timeout","cors"] }
 tower = "0.5"
 get-port = "4.0.0"
-axum-extra = { version = "0.10.1", features = ["typed-header"]}
 futures-util = "0.3.31"
 web.workspace = true
 

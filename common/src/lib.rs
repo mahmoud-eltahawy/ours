@@ -3,8 +3,6 @@ use assets::IconName;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, net::IpAddr, path::PathBuf};
 
-pub const OS: &str = "/os";
-pub const NAME: &str = "/name";
 pub const LS_PATH: &str = "/ls";
 pub const MKDIR_PATH: &str = "/mkdir";
 pub const MP4_PATH: &str = "/to/mp4";

@@ -1,21 +1,31 @@
-use std::{env::args, net::SocketAddr, path::PathBuf, sync::LazyLock, time::Duration};
+use std::{
+    env::{args, home_dir},
+    net::SocketAddr,
+    path::PathBuf,
+    sync::LazyLock,
+    time::Duration,
+};
 
 use app_error::{ServerError, ServerResult};
 use axum::{
-    Json, Router,
-    extract::DefaultBodyLimit,
+    Router,
+    extract::{self, DefaultBodyLimit, Query, State},
     http::{HeaderMap, StatusCode},
+    response::Html,
     routing::{get, get_service, post},
 };
-use common::{CP_PATH, LS_PATH, MKDIR_PATH, MP4_PATH, MV_PATH, NAME, OS, RM_PATH, UPLOAD_PATH};
+use axum_extra::{TypedHeader, headers::UserAgent};
+use common::{
+    AUDIO_X, CP_PATH, LS_PATH, MKDIR_PATH, MP4_PATH, MV_PATH, RM_PATH, UPLOAD_PATH, Unit, UnitKind,
+    VIDEO_X,
+};
 use get_port::Ops;
+use tokio::fs;
 use tower_http::{cors::CorsLayer, services::ServeDir, timeout::TimeoutLayer};
 use web::{
-    BOXESIN, Context, FAVICON, HTMX, TAILWIND,
-    components::{
-        IndexPage, boxes_in,
-        media::{self, AUDIO_HREF, VIDEO_HREF, close_player},
-    },
+    BOXESIN, Context, FAVICON, HTMX, IndexPage, TAILWIND,
+    media::{self, AUDIO_HREF, AudioPlayerProps, HiddenPlayerProps, VIDEO_HREF, VideoPlayerProps},
+    utils,
 };
 
 use assets_router::{favicon, htmx, tailwind};
@@ -38,11 +48,6 @@ static SELF_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
         .next()
         .and_then(|x| x.parse::<PathBuf>().ok())
         .unwrap()
-});
-static APP_NAME: LazyLock<String> = LazyLock::new(|| {
-    let name = SELF_PATH.file_name().unwrap().to_str().unwrap().to_string();
-    println!("serving self at {name}");
-    name
 });
 
 impl Server {
@@ -83,15 +88,13 @@ impl Server {
             .route(MV_PATH, post(cd::mv))
             .route(RM_PATH, post(cd::rm))
             .route(LS_PATH, post(cd::ls))
-            .route(OS, get(os))
-            .route(NAME, get(name))
             .route(MKDIR_PATH, post(cd::mkdir))
-            .route(&format!("/{}", &*APP_NAME), get(self_executable))
-            .route("/", get(IndexPage::handle))
+            .route(&utils::app_name_url(), get(self_executable))
+            .route("/", get(index_page))
             .route(TAILWIND, get(tailwind))
             .route("/icon/{name}", get(icon))
-            .route(VIDEO_HREF, get(media::videoplayer))
-            .route(AUDIO_HREF, get(media::audioplayer))
+            .route(VIDEO_HREF, get(videoplayer))
+            .route(AUDIO_HREF, get(audioplayer))
             .route(media::CLOSE_PLAYER, get(close_player))
             .route(HTMX, get(htmx))
             .route(FAVICON, get(favicon))
@@ -112,6 +115,109 @@ impl Server {
     }
 }
 
+pub async fn boxes_in(
+    Query(mut params): Query<Vec<(usize, String)>>,
+    extract::Path(down): extract::Path<String>,
+    State(Context { target_dir }): State<Context>,
+) -> Html<String> {
+    params.sort_by_key(|x| x.0);
+    let parent = params.into_iter().map(|(_, x)| x).collect::<PathBuf>();
+
+    let units = ls(target_dir.clone(), parent.clone()).await.unwrap();
+
+    let is_downloadable = down == "down";
+
+    Html(
+        web::BoxesProps {
+            units,
+            target_dir,
+            parent,
+            is_downloadable,
+        }
+        .to_html(),
+    )
+}
+
+pub async fn fetch_data(page: &mut IndexPage) -> Result<(), Box<dyn std::error::Error>> {
+    let units = ls(PathBuf::new(), home_dir().unwrap()).await?;
+    page.units = units;
+    Ok(())
+}
+
+async fn ls(target_dir: PathBuf, base: PathBuf) -> Result<Vec<Unit>, Box<dyn std::error::Error>> {
+    let root = target_dir.join(base);
+    let mut dir = fs::read_dir(&root).await?;
+    let mut units = Vec::new();
+    while let Some(x) = dir.next_entry().await? {
+        let kind = if x.file_type().await?.is_dir() {
+            UnitKind::Folder
+        } else {
+            let ex = x.path();
+            let ex = ex.extension().and_then(|x| x.to_str());
+            match ex {
+                Some(ex) => {
+                    if VIDEO_X.contains(&ex) {
+                        UnitKind::Video
+                    } else if AUDIO_X.contains(&ex) {
+                        UnitKind::Audio
+                    } else {
+                        UnitKind::File
+                    }
+                }
+                _ => UnitKind::File,
+            }
+        };
+        let unit = Unit {
+            path: x.path().to_path_buf(),
+            kind,
+        };
+        units.push(unit);
+    }
+    units.sort_by_key(|x| (x.kind.clone(), x.name()));
+    Ok(units)
+}
+
+async fn index_page(
+    TypedHeader(user_agent): TypedHeader<UserAgent>,
+    State(Context { target_dir }): State<Context>,
+) -> Html<String> {
+    let same_os = user_agent
+        .as_str()
+        .to_lowercase()
+        .contains(std::env::consts::OS);
+    let mut data = IndexPage::new(target_dir, same_os);
+    fetch_data(&mut data).await.unwrap();
+    Html(data.render())
+}
+
+async fn videoplayer(
+    extract::Query(mut params): extract::Query<Vec<(usize, String)>>,
+) -> Html<String> {
+    params.sort_by_key(|x| x.0);
+    let url = params
+        .into_iter()
+        .map(|(_, x)| x)
+        .fold(String::from("/download"), |acc, x| acc + "/" + &x);
+
+    Html(VideoPlayerProps { url }.to_html())
+}
+
+pub async fn close_player() -> Html<String> {
+    Html(HiddenPlayerProps {}.to_html())
+}
+
+async fn audioplayer(
+    extract::Query(mut params): extract::Query<Vec<(usize, String)>>,
+) -> Html<String> {
+    params.sort_by_key(|x| x.0);
+    let url = params
+        .into_iter()
+        .map(|(_, x)| x)
+        .fold(String::from("/download"), |acc, x| acc + "/" + &x);
+
+    Html(AudioPlayerProps { url }.to_html())
+}
+
 async fn self_executable(headers: HeaderMap) -> (StatusCode, Vec<u8>) {
     let ua = headers.get("User-Agent").take_if(|user_agent| {
         user_agent
@@ -127,12 +233,4 @@ async fn self_executable(headers: HeaderMap) -> (StatusCode, Vec<u8>) {
     };
 
     (StatusCode::OK, contents)
-}
-
-async fn os() -> Json<&'static str> {
-    Json(std::env::consts::OS)
-}
-
-async fn name() -> Json<&'static str> {
-    Json(&APP_NAME)
 }

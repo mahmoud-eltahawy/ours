@@ -1942,7 +1942,7 @@ dependencies = [
 [[package]]
 name = "iced"
 version = "0.14.0-dev"
-source = "git+https://github.com/iced-rs/iced.git#bfc27e4691875840010e3d1e282b8e26b821c569"
+source = "git+https://github.com/iced-rs/iced.git#d5608162def4688052c75e43f5d1b04268af4d06"
 dependencies = [
  "iced_core",
  "iced_debug",
@@ -1957,7 +1957,7 @@ dependencies = [
 [[package]]
 name = "iced_core"
 version = "0.14.0-dev"
-source = "git+https://github.com/iced-rs/iced.git#bfc27e4691875840010e3d1e282b8e26b821c569"
+source = "git+https://github.com/iced-rs/iced.git#d5608162def4688052c75e43f5d1b04268af4d06"
 dependencies = [
  "bitflags 2.10.0",
  "bytes",
@@ -1974,7 +1974,7 @@ dependencies = [
 [[package]]
 name = "iced_debug"
 version = "0.14.0-dev"
-source = "git+https://github.com/iced-rs/iced.git#bfc27e4691875840010e3d1e282b8e26b821c569"
+source = "git+https://github.com/iced-rs/iced.git#d5608162def4688052c75e43f5d1b04268af4d06"
 dependencies = [
  "iced_core",
  "iced_futures",
@@ -1984,7 +1984,7 @@ dependencies = [
 [[package]]
 name = "iced_futures"
 version = "0.14.0-dev"
-source = "git+https://github.com/iced-rs/iced.git#bfc27e4691875840010e3d1e282b8e26b821c569"
+source = "git+https://github.com/iced-rs/iced.git#d5608162def4688052c75e43f5d1b04268af4d06"
 dependencies = [
  "futures",
  "iced_core",
@@ -1998,7 +1998,7 @@ dependencies = [
 [[package]]
 name = "iced_graphics"
 version = "0.14.0-dev"
-source = "git+https://github.com/iced-rs/iced.git#bfc27e4691875840010e3d1e282b8e26b821c569"
+source = "git+https://github.com/iced-rs/iced.git#d5608162def4688052c75e43f5d1b04268af4d06"
 dependencies = [
  "bitflags 2.10.0",
  "bytemuck",
@@ -2017,7 +2017,7 @@ dependencies = [
 [[package]]
 name = "iced_program"
 version = "0.14.0-dev"
-source = "git+https://github.com/iced-rs/iced.git#bfc27e4691875840010e3d1e282b8e26b821c569"
+source = "git+https://github.com/iced-rs/iced.git#d5608162def4688052c75e43f5d1b04268af4d06"
 dependencies = [
  "iced_graphics",
  "iced_runtime",
@@ -2026,7 +2026,7 @@ dependencies = [
 [[package]]
 name = "iced_renderer"
 version = "0.14.0-dev"
-source = "git+https://github.com/iced-rs/iced.git#bfc27e4691875840010e3d1e282b8e26b821c569"
+source = "git+https://github.com/iced-rs/iced.git#d5608162def4688052c75e43f5d1b04268af4d06"
 dependencies = [
  "iced_graphics",
  "iced_tiny_skia",
@@ -2038,7 +2038,7 @@ dependencies = [
 [[package]]
 name = "iced_runtime"
 version = "0.14.0-dev"
-source = "git+https://github.com/iced-rs/iced.git#bfc27e4691875840010e3d1e282b8e26b821c569"
+source = "git+https://github.com/iced-rs/iced.git#d5608162def4688052c75e43f5d1b04268af4d06"
 dependencies = [
  "bytes",
  "iced_core",
@@ -2052,7 +2052,7 @@ dependencies = [
 [[package]]
 name = "iced_tiny_skia"
 version = "0.14.0-dev"
-source = "git+https://github.com/iced-rs/iced.git#bfc27e4691875840010e3d1e282b8e26b821c569"
+source = "git+https://github.com/iced-rs/iced.git#d5608162def4688052c75e43f5d1b04268af4d06"
 dependencies = [
  "bytemuck",
  "cosmic-text",
@@ -2069,7 +2069,7 @@ dependencies = [
 [[package]]
 name = "iced_wgpu"
 version = "0.14.0-dev"
-source = "git+https://github.com/iced-rs/iced.git#bfc27e4691875840010e3d1e282b8e26b821c569"
+source = "git+https://github.com/iced-rs/iced.git#d5608162def4688052c75e43f5d1b04268af4d06"
 dependencies = [
  "bitflags 2.10.0",
  "bytemuck",
@@ -2090,7 +2090,7 @@ dependencies = [
 [[package]]
 name = "iced_widget"
 version = "0.14.0-dev"
-source = "git+https://github.com/iced-rs/iced.git#bfc27e4691875840010e3d1e282b8e26b821c569"
+source = "git+https://github.com/iced-rs/iced.git#d5608162def4688052c75e43f5d1b04268af4d06"
 dependencies = [
  "iced_renderer",
  "log",
@@ -2104,7 +2104,7 @@ dependencies = [
 [[package]]
 name = "iced_winit"
 version = "0.14.0-dev"
-source = "git+https://github.com/iced-rs/iced.git#bfc27e4691875840010e3d1e282b8e26b821c569"
+source = "git+https://github.com/iced-rs/iced.git#d5608162def4688052c75e43f5d1b04268af4d06"
 dependencies = [
  "iced_debug",
  "iced_program",
@@ -4104,9 +4104,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.33"
+version = "0.23.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "751e04a496ca00bb97a5e043158d23d66b5aabf2e1d5aa2a0aaebb1aafe6f82c"
+checksum = "6a9586e9ee2b4f8fab52a0048ca7334d7024eef48e2cb9407e3497bb7cab7fa7"
 dependencies = [
  "once_cell",
  "rustls-pki-types",
@@ -4232,9 +4232,9 @@ dependencies = [
 
 [[package]]
 name = "self_cell"
-version = "1.2.0"
+version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f7d95a54511e0c7be3f51e8867aa8cf35148d7b9445d44de2f943e2b206e749"
+checksum = "16c2f82143577edb4921b71ede051dac62ca3c16084e918bf7b40c96ae10eb33"
 
 [[package]]
 name = "semver"
@@ -4941,7 +4941,6 @@ dependencies = [
  "bytes",
  "libc",
  "mio",
- "parking_lot",
  "pin-project-lite",
  "signal-hook-registry",
  "socket2",
@@ -5650,11 +5649,8 @@ dependencies = [
 name = "web"
 version = "0.1.0"
 dependencies = [
- "axum",
- "axum-extra",
  "common",
  "leptos",
- "tokio",
 ]
 
 [[package]]

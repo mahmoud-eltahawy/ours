@@ -4,8 +4,5 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-axum = "0.8.6"
-axum-extra = "0.10.3"
 leptos = { version = "0.8", features = ["islands","ssr"] }
-tokio = { workspace = true, features = ["full"] }
 common.workspace = true
