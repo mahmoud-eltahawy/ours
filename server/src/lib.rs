@@ -3,26 +3,23 @@ use std::{net::SocketAddr, path::PathBuf, time::Duration};
 use app_error::{ServerError, ServerResult};
 use axum::{
     Router,
-    extract::{self, DefaultBodyLimit, State},
-    http::StatusCode,
-    response::Html,
+    extract::DefaultBodyLimit,
     routing::{get, get_service, post},
 };
-use axum_extra::{TypedHeader, headers::UserAgent};
 use common::{CP_PATH, LS_PATH, MKDIR_PATH, MP4_PATH, MV_PATH, RM_PATH, UPLOAD_PATH};
 use get_port::Ops;
 use tower_http::{cors::CorsLayer, services::ServeDir, timeout::TimeoutLayer};
 use web::{
-    BOXESIN, Context, FAVICON, HTMX, IndexPage, TAILWIND,
+    BOXESIN, Context, FAVICON, HTMX, TAILWIND,
     media::{self, AUDIO_HREF, VIDEO_HREF},
-    utils::{self, self_path},
+    utils::{self},
 };
 
 use assets_router::{favicon, htmx, tailwind};
 
 use crate::{
     assets_router::icon,
-    web_local::{fetch_data, is_same_os},
+    web_local::{fallback, self_executable},
 };
 
 pub mod app_error;
@@ -101,37 +98,4 @@ impl Server {
         .await?;
         Ok(())
     }
-}
-
-async fn fallback(
-    TypedHeader(user_agent): TypedHeader<UserAgent>,
-    State(Context { target_dir }): State<Context>,
-    reqwest: extract::Request,
-) -> (StatusCode, Html<String>) {
-    let mut path = reqwest.uri().path().to_string();
-    if path.starts_with('/') {
-        path.remove(0);
-    }
-    let Ok(path) = path.parse::<PathBuf>();
-    let path = target_dir.join(path);
-    let mut page = IndexPage::new(target_dir, is_same_os(user_agent));
-    match fetch_data(&mut page, path).await {
-        Ok(_) => (StatusCode::OK, Html(page.render())),
-        Err(err) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Html(format!("<h2>internal error {err:#?}</h2>")),
-        ),
-    }
-}
-
-async fn self_executable(TypedHeader(user_agent): TypedHeader<UserAgent>) -> (StatusCode, Vec<u8>) {
-    if !is_same_os(user_agent) {
-        return (StatusCode::BAD_REQUEST, vec![]);
-    }
-
-    let Ok(contents) = tokio::fs::read(self_path()).await else {
-        return (StatusCode::INTERNAL_SERVER_ERROR, vec![]);
-    };
-
-    (StatusCode::OK, contents)
 }

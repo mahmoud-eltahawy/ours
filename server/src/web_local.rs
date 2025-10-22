@@ -1,5 +1,6 @@
 use axum::{
     extract::{self, Query, State},
+    http::StatusCode,
     response::Html,
 };
 use axum_extra::{TypedHeader, headers::UserAgent};
@@ -9,6 +10,7 @@ use tokio::fs;
 use web::{
     Context, IndexPage,
     media::{AudioPlayerProps, HiddenPlayerProps, VideoPlayerProps},
+    utils::self_path,
 };
 
 pub async fn boxes_in(
@@ -119,4 +121,39 @@ pub(crate) async fn audioplayer(
         .fold(String::from("/download"), |acc, x| acc + "/" + &x);
 
     Html(AudioPlayerProps { url }.to_html())
+}
+
+pub(crate) async fn fallback(
+    TypedHeader(user_agent): TypedHeader<UserAgent>,
+    State(Context { target_dir }): State<Context>,
+    reqwest: extract::Request,
+) -> (StatusCode, Html<String>) {
+    let mut path = reqwest.uri().path().to_string();
+    if path.starts_with('/') {
+        path.remove(0);
+    }
+    let Ok(path) = path.parse::<PathBuf>();
+    let path = target_dir.join(path);
+    let mut page = IndexPage::new(target_dir, is_same_os(user_agent));
+    match fetch_data(&mut page, path).await {
+        Ok(_) => (StatusCode::OK, Html(page.render())),
+        Err(err) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Html(format!("<h2>internal error {err:#?}</h2>")),
+        ),
+    }
+}
+
+pub(crate) async fn self_executable(
+    TypedHeader(user_agent): TypedHeader<UserAgent>,
+) -> (StatusCode, Vec<u8>) {
+    if !is_same_os(user_agent) {
+        return (StatusCode::BAD_REQUEST, vec![]);
+    }
+
+    let Ok(contents) = tokio::fs::read(self_path()).await else {
+        return (StatusCode::INTERNAL_SERVER_ERROR, vec![]);
+    };
+
+    (StatusCode::OK, contents)
 }
