@@ -11,17 +11,9 @@ def "main desk" [] {
   cargo run
 }
 
-def "main build" [target? : string] {
-  mut args = []
-  if $target != null {
-     $args = [$"--target=($target)"]
-  } 
-  cd ./site
-  trunk build --release
-  cd ..
-  ls site_assets/gen | get name | par-each {|x| gzip $x} 
+def "main build" [] {
   cd ours
-  cargo build ...($args) --release
+  cargo build --release
 }
 
 def "main install" [] {
