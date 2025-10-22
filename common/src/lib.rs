@@ -1,5 +1,5 @@
-use assets::get_icon;
 pub use assets::{self, IconData};
+use assets::{IconName, get_icon};
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, net::IpAddr, path::PathBuf};
 
@@ -48,15 +48,14 @@ pub enum UnitKind {
     File,
 }
 
-impl Display for UnitKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let result = match self {
-            UnitKind::Folder => "folder",
-            UnitKind::File => "file",
-            UnitKind::Video => "video",
-            UnitKind::Audio => "audio",
-        };
-        write!(f, "{result}")
+impl From<UnitKind> for IconName {
+    fn from(value: UnitKind) -> Self {
+        match value {
+            UnitKind::Folder => Self::Folder,
+            UnitKind::Video => Self::Video,
+            UnitKind::Audio => Self::Audio,
+            UnitKind::File => Self::File,
+        }
     }
 }
 
@@ -72,7 +71,7 @@ impl Unit {
     }
 
     pub fn icon(&self) -> &'static [u8] {
-        get_icon(&self.kind.to_string())
+        get_icon(IconName::from(self.kind.clone()))
     }
 }
 

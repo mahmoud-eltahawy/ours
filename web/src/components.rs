@@ -12,7 +12,7 @@ use axum::{
     extract::{self, State},
     response::Html,
 };
-use common::{AUDIO_X, Unit, UnitKind, VIDEO_X};
+use common::{AUDIO_X, Unit, UnitKind, VIDEO_X, assets::IconName};
 use leptos::{either::Either, prelude::*};
 use tokio::fs;
 
@@ -127,7 +127,7 @@ pub fn Boxes(
             <div class="flex place-content-around m-2 p-2">
                 <DownloadButton is_downloadable parent/>
                 <button>
-                    <Icon name={String::from("upload")}/>
+                    <Icon name={IconName::Upload}/>
                 </button>
             </div>
             <div
@@ -147,7 +147,7 @@ fn DownloadButton(is_downloadable: bool, parent: PathBuf) -> impl IntoView {
                 hx-get={format!("{}/nah{}", BOXESIN, path_as_query(&parent))}
                 hx-target={format!("#{}",BOXESID)}
             >
-                <Icon name={String::from("close")}/>
+                <Icon name={IconName::Close}/>
             </button>
         })
     } else {
@@ -156,7 +156,7 @@ fn DownloadButton(is_downloadable: bool, parent: PathBuf) -> impl IntoView {
                 hx-get={format!("{}/down{}", BOXESIN, path_as_query(&parent))}
                 hx-target={format!("#{}",BOXESID)}
             >
-                <Icon name={String::from("download")}/>
+                <Icon name={IconName::Download}/>
             </button>
         })
     }
@@ -239,7 +239,7 @@ fn UnitComp(unit: Unit, base: PathBuf, is_downloadable: bool) -> impl IntoView {
     let download_a = match unit.kind {
         UnitKind::Video | UnitKind::Audio if is_downloadable => Some(view! {
             <a href={download_url} download>
-                <Icon name={"download".to_string()}/>
+                <Icon name={IconName::Download}/>
             </a>
         }),
         _ => None,
@@ -247,7 +247,7 @@ fn UnitComp(unit: Unit, base: PathBuf, is_downloadable: bool) -> impl IntoView {
 
     let children = view! {
         <div>
-            <Icon name={unit.kind.to_string()} />
+            <Icon name={IconName::from(unit.kind)} />
             <span>{name.clone()}</span>
         </div>
     };
@@ -284,8 +284,9 @@ fn path_as_url(path: &Path) -> String {
 }
 
 #[component]
-pub fn Icon(name: String) -> impl IntoView {
-    let src = format!("/icon/{name}");
+pub fn Icon(name: IconName) -> impl IntoView {
+    let iu: u8 = name.into();
+    let src = format!("/icon/{iu}");
     view! {
         <img
             width="40"

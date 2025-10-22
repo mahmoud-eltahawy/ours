@@ -20,11 +20,11 @@ pub async fn htmx() -> (HeaderMap, JavaScript<Vec<u8>>) {
     (gzip_headers(), JavaScript(HTMXJS.into()))
 }
 
-pub async fn icon(Path(name): Path<String>) -> (HeaderMap, Vec<u8>) {
+pub async fn icon(Path(name): Path<u8>) -> (HeaderMap, Vec<u8>) {
     let mut headers = HeaderMap::new();
     headers.insert("Content-Type", "image/svg+xml".parse().unwrap());
 
-    let data = get_icon(&name).to_vec();
+    let data = get_icon(name.into()).to_vec();
 
     (headers, data)
 }
