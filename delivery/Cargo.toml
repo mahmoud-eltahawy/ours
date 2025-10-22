@@ -6,7 +6,3 @@ edition.workspace = true
 [dependencies]
 reqwest = { workspace = true , features = ["json","multipart"] }
 common.workspace = true
-tokio = { workspace = true , features = ["fs"] ,optional = true}
-
-[features]
-native = ["dep:tokio"]

@@ -110,11 +110,6 @@ impl Delivery {
             .map_err(|x| x.to_string())?;
         Ok(())
     }
-
-    //FIX : should be available on non wasm target only
-    pub async fn iced_upload(&self, _files: &[std::fs::File]) -> Result<(), String> {
-        todo!()
-    }
 }
 
 fn retype(xs: Vec<Unit>) -> Vec<Unit> {
