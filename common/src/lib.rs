@@ -1,5 +1,5 @@
-pub use assets::{self, IconData};
-use assets::{IconName, get_icon};
+pub use assets;
+use assets::IconName;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, net::IpAddr, path::PathBuf};
 
@@ -71,7 +71,7 @@ impl Unit {
     }
 
     pub fn icon(&self) -> &'static [u8] {
-        get_icon(IconName::from(self.kind.clone()))
+        IconName::from(self.kind.clone()).get()
     }
 }
 

@@ -1,9 +1,6 @@
-macro_rules! build_icon {
-    ($name:ident,$path:literal) => {
-        IconData {
-            name: IconName::$name,
-            data: include_bytes!($path),
-        }
+macro_rules! include_svg {
+    ($name:literal) => {
+        include_bytes!(concat!("../static/", $name, ".svg"))
     };
 }
 
@@ -11,27 +8,21 @@ pub const FAVICON: &[u8] = include_bytes!("../static/favicon.ico.gz");
 pub const TAILWINDJS: &[u8] = include_bytes!("../static/tailwind.js.gz");
 pub const HTMXJS: &[u8] = include_bytes!("../static/htmx.js.gz");
 
-pub const ICONS: [IconData; 11] = [
-    build_icon!(Folder, "../static/folder.svg"),
-    build_icon!(File, "../static/file.svg"),
-    build_icon!(Video, "../static/video.svg"),
-    build_icon!(Audio, "../static/audio.svg"),
-    build_icon!(Select, "../static/select.svg"),
-    build_icon!(Close, "../static/close.svg"),
-    build_icon!(Expand, "../static/expand.svg"),
-    build_icon!(Collapse, "../static/collapse.svg"),
-    build_icon!(Download, "../static/download.svg"),
-    build_icon!(Home, "../static/home.svg"),
-    build_icon!(Upload, "../static/upload.svg"),
-];
+//WARNING : this implementation requires same sorting on ICONS assignment and IconName declration
 
-pub fn get_icon(name: IconName) -> &'static [u8] {
-    ICONS
-        .into_iter()
-        .find(|x| x.name == name)
-        .unwrap_or_default()
-        .data
-}
+pub const ICONS: [&[u8]; 11] = [
+    include_svg!("folder"),
+    include_svg!("file"),
+    include_svg!("video"),
+    include_svg!("audio"),
+    include_svg!("select"),
+    include_svg!("close"),
+    include_svg!("expand"),
+    include_svg!("collapse"),
+    include_svg!("download"),
+    include_svg!("home"),
+    include_svg!("upload"),
+];
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash, Default)]
 pub enum IconName {
@@ -61,10 +52,9 @@ impl From<IconName> for u8 {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash, Default)]
-pub struct IconData {
-    pub name: IconName,
-    pub data: &'static [u8],
+impl IconName {
+    pub fn get(self) -> &'static [u8] {
+        let index: u8 = self.into();
+        ICONS[index as usize]
+    }
 }
-
-pub type Icon = &'static IconData;

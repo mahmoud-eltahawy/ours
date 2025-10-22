@@ -1,4 +1,4 @@
-use assets::{IconName, get_icon};
+use assets::IconName;
 use common::{Origin, Selected, Unit};
 use delivery::Delivery;
 use iced::{
@@ -196,7 +196,7 @@ impl ClientState {
     }
 
     fn download_button(&self) -> Button<'_, Message> {
-        svg_button(get_icon(IconName::Download)).on_press(match self.download_window {
+        svg_button(IconName::Download.get()).on_press(match self.download_window {
             Some(id) => Message::Download(DownloadMessage::CloseDownloadWindow(id)),
             None => Message::Download(DownloadMessage::OpenDownloadWindow),
         })
@@ -204,9 +204,9 @@ impl ClientState {
 
     fn select_button(&self) -> Button<'_, Message> {
         svg_button(if self.select.on {
-            get_icon(IconName::Close)
+            IconName::Close.get()
         } else {
-            get_icon(IconName::Select)
+            IconName::Select.get()
         })
         .on_press(Message::Client(ClientMessage::ToggleSelectMode))
     }
@@ -217,7 +217,7 @@ impl ClientState {
         if self.current_path == PathBuf::new() {
             go_home_button()
         } else {
-            svg_button(get_icon(IconName::Home)).on_press(Message::Client(
+            svg_button(IconName::Home.get()).on_press(Message::Client(
                 ClientMessage::ChangeCurrentPath(PathBuf::new()),
             ))
         }

@@ -1,6 +1,6 @@
 use axum::{extract::Path, http::HeaderMap};
 use axum_extra::response::JavaScript;
-use common::assets::{FAVICON, HTMXJS, TAILWINDJS, get_icon};
+use common::assets::{FAVICON, HTMXJS, IconName, TAILWINDJS};
 
 fn gzip_headers() -> HeaderMap {
     let mut headers = HeaderMap::new();
@@ -24,7 +24,7 @@ pub async fn icon(Path(name): Path<u8>) -> (HeaderMap, Vec<u8>) {
     let mut headers = HeaderMap::new();
     headers.insert("Content-Type", "image/svg+xml".parse().unwrap());
 
-    let data = get_icon(name.into()).to_vec();
+    let data = IconName::from(name).get().to_vec();
 
     (headers, data)
 }
