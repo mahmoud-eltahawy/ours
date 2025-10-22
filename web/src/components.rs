@@ -32,16 +32,15 @@ impl IndexPage {
             units: Vec::new(),
         }
     }
+
     async fn fetch_data(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let units = ls(PathBuf::new(), home_dir().unwrap()).await?;
         self.units = units;
         Ok(())
     }
+
     fn render(self) -> String {
-        let IndexPage {
-            units,
-            target_dir: root,
-        } = self;
+        let IndexPage { units, target_dir } = self;
         view! {
         <!DOCTYPE html>
         <html>
@@ -53,11 +52,11 @@ impl IndexPage {
                 <title>Ours</title>
             </head>
             <body>
-                <Boxes units base=root/>
+                <Boxes units target_dir parent={PathBuf::new()}/>
+                <footer>
+                    <HiddenPlayer/>
+                </footer>
             </body>
-            <footer>
-                <HiddenPlayer/>
-            </footer>
         </html>
         }
         .to_html()
@@ -106,22 +105,39 @@ pub async fn ls(
     Ok(units)
 }
 
+const DOWNLAODABLE: &str = "/downloadable";
+
 #[component]
-pub fn Boxes(units: Vec<Unit>, base: PathBuf) -> impl IntoView {
+pub fn Boxes(units: Vec<Unit>, target_dir: PathBuf, parent: PathBuf) -> impl IntoView {
     let units_view = units
         .into_iter()
         .map(|unit| {
             view! {
-                <UnitComp unit=unit base=base.clone()/>
+                <UnitComp unit=unit base=target_dir.clone()/>
             }
         })
         .collect_view();
+    let d = format!("{}{}", DOWNLAODABLE, path_as_query(&parent));
     view! {
         <main
             id={BOXESID}
-            class="flex flex-wrap w-full min-h-80 m-5 p-5 border-2 border-lime-500 rounded-lg"
         >
-            {units_view}
+            <div class="flex place-content-around m-2 p-2">
+                <button
+                    hx-get={d}
+                    hx-target={format!("#{}",BOXESID)}
+                >
+                    <Icon name={String::from("download")}/>
+                </button>
+                <button>
+                    <Icon name={String::from("upload")}/>
+                </button>
+            </div>
+            <div
+                class="flex flex-wrap w-full min-h-80 m-2 p-2 border-2 border-lime-500 rounded-lg"
+            >
+                {units_view}
+            </div>
         </main>
     }
 }
@@ -131,13 +147,13 @@ pub async fn boxes_in(
     State(Context { target_dir }): State<Context>,
 ) -> Html<String> {
     params.sort_by_key(|x| x.0);
-    let path = params.into_iter().map(|(_, x)| x).collect::<PathBuf>();
+    let parent = params.into_iter().map(|(_, x)| x).collect::<PathBuf>();
 
-    let units = ls(target_dir.clone(), path).await.unwrap();
+    let units = ls(target_dir.clone(), parent.clone()).await.unwrap();
 
     Html(
         view! {
-            <Boxes units base=target_dir/>
+            <Boxes units target_dir=target_dir parent/>
         }
         .to_html(),
     )
@@ -151,7 +167,7 @@ fn path_as_query(path: &Path) -> String {
     let first = it
         .next()
         .map(|x| prefix.clone() + &kv((0, x)))
-        .unwrap_or(prefix);
+        .unwrap_or_default();
 
     it.enumerate()
         .map(|(i, x)| (i + 1, x))
