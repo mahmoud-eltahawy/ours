@@ -257,11 +257,7 @@ const VIOLET: Color = Color::from_rgb(127. / 255., 34. / 255., 254. / 255.);
 
 pub fn svg_from_icon_data(icon: &[u8]) -> Svg<'_> {
     let handle = Handle::from_memory(icon.to_vec());
-    Svg::new(handle)
-        .style(|_, _| iced::widget::svg::Style {
-            color: Some(VIOLET),
-        })
-        .width(30.)
+    Svg::new(handle).width(30.)
 }
 
 fn svg_button<'a>(icon: &'a [u8]) -> Button<'a, Message> {

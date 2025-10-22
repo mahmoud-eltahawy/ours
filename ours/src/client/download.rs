@@ -380,7 +380,8 @@ impl DownloadMessage {
                         )
                     })
                     .unzip();
-                let (task, handle) = Task::batch(tasks).abortable();
+
+                let (task, handle) = group_tasks(tasks).abortable();
                 state.downloads.downloading = downloading
                     .into_iter()
                     .map(|x| (hash_path(&x.host_path), x))
@@ -454,6 +455,24 @@ impl DownloadMessage {
             }
         }
     }
+}
+
+fn group_tasks(tasks: Vec<Task<Update>>) -> Task<Update> {
+    const CAP: usize = 4;
+    let mut vec_vec = Vec::new();
+    let mut vec = Vec::with_capacity(CAP);
+    for t in tasks.into_iter() {
+        if vec.len() < CAP {
+            vec.push(t);
+        } else {
+            vec_vec.push(vec);
+            vec = Vec::with_capacity(CAP);
+        }
+    }
+    vec_vec
+        .into_iter()
+        .map(Task::batch)
+        .fold(Task::none(), |acc, x| acc.chain(x))
 }
 
 #[async_recursion]
