@@ -9,14 +9,17 @@ pub(crate) fn path_as_url(path: &Path) -> String {
         .fold(String::new(), |acc, x| acc + "/" + x.to_str().unwrap())
 }
 
-pub fn app_name_url() -> String {
+pub fn self_path() -> PathBuf {
     args()
         .next()
         .and_then(|x| x.parse::<PathBuf>().ok())
-        .and_then(|x| {
-            x.file_name()
-                .and_then(|x| x.to_str().map(|x| x.to_string()))
-        })
+        .unwrap()
+}
+
+pub fn app_name_url() -> String {
+    self_path()
+        .file_name()
+        .and_then(|x| x.to_str().map(|x| x.to_string()))
         .map(|x| format!("/{}", x))
         .unwrap()
 }
