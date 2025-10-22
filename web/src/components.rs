@@ -52,7 +52,7 @@ impl IndexPage {
                 <title>Ours</title>
             </head>
             <body>
-                <Boxes units target_dir parent={PathBuf::new()}/>
+                <Boxes units target_dir parent={PathBuf::new()} is_downloadable={false}/>
                 <footer>
                     <HiddenPlayer/>
                 </footer>
@@ -105,30 +105,27 @@ pub async fn ls(
     Ok(units)
 }
 
-const DOWNLAODABLE: &str = "/downloadable";
-
 #[component]
-pub fn Boxes(units: Vec<Unit>, target_dir: PathBuf, parent: PathBuf) -> impl IntoView {
+pub fn Boxes(
+    units: Vec<Unit>,
+    target_dir: PathBuf,
+    parent: PathBuf,
+    is_downloadable: bool,
+) -> impl IntoView {
     let units_view = units
         .into_iter()
         .map(|unit| {
             view! {
-                <UnitComp unit=unit base=target_dir.clone()/>
+                <UnitComp unit=unit base=target_dir.clone() is_downloadable/>
             }
         })
         .collect_view();
-    let d = format!("{}{}", DOWNLAODABLE, path_as_query(&parent));
     view! {
         <main
             id={BOXESID}
         >
             <div class="flex place-content-around m-2 p-2">
-                <button
-                    hx-get={d}
-                    hx-target={format!("#{}",BOXESID)}
-                >
-                    <Icon name={String::from("download")}/>
-                </button>
+                <DownloadButton is_downloadable parent/>
                 <button>
                     <Icon name={String::from("upload")}/>
                 </button>
@@ -142,8 +139,32 @@ pub fn Boxes(units: Vec<Unit>, target_dir: PathBuf, parent: PathBuf) -> impl Int
     }
 }
 
+#[component]
+fn DownloadButton(is_downloadable: bool, parent: PathBuf) -> impl IntoView {
+    if is_downloadable {
+        Either::Right(view! {
+            <button
+                hx-get={format!("{}/nah{}", BOXESIN, path_as_query(&parent))}
+                hx-target={format!("#{}",BOXESID)}
+            >
+                <Icon name={String::from("close")}/>
+            </button>
+        })
+    } else {
+        Either::Left(view! {
+            <button
+                hx-get={format!("{}/down{}", BOXESIN, path_as_query(&parent))}
+                hx-target={format!("#{}",BOXESID)}
+            >
+                <Icon name={String::from("download")}/>
+            </button>
+        })
+    }
+}
+
 pub async fn boxes_in(
     extract::Query(mut params): extract::Query<Vec<(usize, String)>>,
+    extract::Path(down): extract::Path<String>,
     State(Context { target_dir }): State<Context>,
 ) -> Html<String> {
     params.sort_by_key(|x| x.0);
@@ -151,9 +172,11 @@ pub async fn boxes_in(
 
     let units = ls(target_dir.clone(), parent.clone()).await.unwrap();
 
+    let is_downloadable = down == "down";
+
     Html(
         view! {
-            <Boxes units target_dir=target_dir parent/>
+            <Boxes units target_dir=target_dir parent is_downloadable/>
         }
         .to_html(),
     )
@@ -163,10 +186,9 @@ fn path_as_query(path: &Path) -> String {
     let mut it = path.iter();
     let kv = |(i, x): (_, &OsStr)| format!("{}={}", i, x.to_str().unwrap());
 
-    let prefix = String::from("?");
     let first = it
         .next()
-        .map(|x| prefix.clone() + &kv((0, x)))
+        .map(|x| String::from("?") + &kv((0, x)))
         .unwrap_or_default();
 
     it.enumerate()
@@ -176,7 +198,7 @@ fn path_as_query(path: &Path) -> String {
 }
 
 #[component]
-fn UnitComp(unit: Unit, base: PathBuf) -> impl IntoView {
+fn UnitComp(unit: Unit, base: PathBuf, is_downloadable: bool) -> impl IntoView {
     let name = unit.name();
     let path = unit.path.strip_prefix(base).unwrap().to_path_buf();
 
@@ -191,9 +213,11 @@ fn UnitComp(unit: Unit, base: PathBuf) -> impl IntoView {
         },
     }
 
+    let download_url = format!("/download/{}", path.to_str().unwrap_or_default());
+
     let hxs = match unit.kind {
         UnitKind::Folder => Hxs::Other {
-            get: format!("{}{}", BOXESIN, path_as_query(&path)),
+            get: format!("{}/nah{}", BOXESIN, path_as_query(&path)),
             target: format!("#{}", BOXESID),
             url: path_as_url(&path),
         },
@@ -208,15 +232,27 @@ fn UnitComp(unit: Unit, base: PathBuf) -> impl IntoView {
             url: "false".to_string(),
         },
         UnitKind::File => Hxs::File {
-            get: format!("/download/{}", path.to_str().unwrap_or_default()),
+            get: download_url.clone(),
         },
     };
 
-    let children = view! {
-        <Icon name={unit.kind.to_string()} />
-        <span>{name.clone()}</span>
+    let download_a = match unit.kind {
+        UnitKind::Video | UnitKind::Audio if is_downloadable => Some(view! {
+            <a href={download_url} download>
+                <Icon name={"download".to_string()}/>
+            </a>
+        }),
+        _ => None,
     };
-    let class = "m-5 p-4 grid grid-cols-2 gap-4 hover:text-white hover:bg-black justify-items-left";
+
+    let children = view! {
+        <div>
+            <Icon name={unit.kind.to_string()} />
+            <span>{name.clone()}</span>
+        </div>
+    };
+
+    let class = "m-5 p-4 grid grid-cols-2 gap-2 justify-items-left hover:text-white hover:bg-black";
 
     match hxs {
         Hxs::File { get } => Either::Left(view! {
@@ -225,16 +261,19 @@ fn UnitComp(unit: Unit, base: PathBuf) -> impl IntoView {
             </a>
         }),
         Hxs::Other { get, target, url } => Either::Right(view! {
-            <button
-                hx-get={get}
-                hx-target={target}
-                hx-push-url={url}
-                hx-swap="outerHTML"
-                hx-trigger="pointerup"
-                class={class}
-            >
-                {children}
-            </button>
+            <div>
+                <button
+                    hx-get={get}
+                    hx-target={target}
+                    hx-push-url={url}
+                    hx-swap="outerHTML"
+                    hx-trigger="pointerup"
+                    class={class}
+                >
+                    {children}
+                </button>
+                {download_a}
+            </div>
         }),
     }
 }

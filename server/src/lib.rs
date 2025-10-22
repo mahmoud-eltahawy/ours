@@ -96,7 +96,7 @@ impl Server {
             .route(media::CLOSE_PLAYER, get(close_player))
             .route(HTMX, get(htmx))
             .route(FAVICON, get(favicon))
-            .route(BOXESIN, get(boxes_in))
+            .route(&format!("{}/{{down}}", BOXESIN), get(boxes_in))
             .nest_service("/download", get_service(target_dir))
             .with_state(Context { target_dir: target })
             .layer(TimeoutLayer::new(timeout))
