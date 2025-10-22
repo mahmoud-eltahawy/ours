@@ -1,5 +1,5 @@
 use std::{
-    env::home_dir,
+    env::{args, home_dir},
     ffi::OsStr,
     path::{Path, PathBuf},
 };
@@ -12,6 +12,7 @@ use axum::{
     extract::{self, State},
     response::Html,
 };
+use axum_extra::{TypedHeader, headers::UserAgent};
 use common::{AUDIO_X, Unit, UnitKind, VIDEO_X, assets::IconName};
 use leptos::{either::Either, prelude::*};
 use tokio::fs;
@@ -21,13 +22,15 @@ pub mod media;
 const BOXESID: &str = "BOXES";
 
 pub struct IndexPage {
+    same_os: bool,
     target_dir: PathBuf,
     units: Vec<Unit>,
 }
 
 impl IndexPage {
-    fn new(root: PathBuf) -> Self {
+    fn new(root: PathBuf, same_os: bool) -> Self {
         Self {
+            same_os,
             target_dir: root,
             units: Vec::new(),
         }
@@ -40,7 +43,12 @@ impl IndexPage {
     }
 
     fn render(self) -> String {
-        let IndexPage { units, target_dir } = self;
+        let IndexPage {
+            units,
+            target_dir,
+            same_os,
+        } = self;
+
         view! {
         <!DOCTYPE html>
         <html>
@@ -52,6 +60,9 @@ impl IndexPage {
                 <title>Ours</title>
             </head>
             <body>
+                <header>
+                    <DownloadNativeApp same_os/>
+                </header>
                 <Boxes units target_dir parent={PathBuf::new()} is_downloadable={false}/>
                 <footer>
                     <HiddenPlayer/>
@@ -62,10 +73,47 @@ impl IndexPage {
         .to_html()
     }
 
-    pub async fn handle(State(Context { target_dir }): State<Context>) -> Html<String> {
-        let mut data = Self::new(target_dir);
+    pub async fn handle(
+        TypedHeader(user_agent): TypedHeader<UserAgent>,
+        State(Context { target_dir }): State<Context>,
+    ) -> Html<String> {
+        let same_os = user_agent
+            .as_str()
+            .to_lowercase()
+            .contains(std::env::consts::OS);
+        let mut data = Self::new(target_dir, same_os);
         data.fetch_data().await.unwrap();
         Html(data.render())
+    }
+}
+
+#[component]
+fn DownloadNativeApp(same_os: bool) -> impl IntoView {
+    let app_name = args()
+        .next()
+        .and_then(|x| x.parse::<PathBuf>().ok())
+        .and_then(|x| {
+            x.file_name()
+                .and_then(|x| x.to_str().map(|x| x.to_string()))
+        })
+        .map(|x| format!("/{}", x));
+    if same_os {
+        Some(view! {
+            <h2
+                class="flex flex-wrap place-items-center justify-center"
+            >
+                <span
+                    class="m-2 text-red-700 text-xl text-wrap"
+                >this is a fallback app for better experience download native app from</span>
+                <a
+                    class="m-2 text-lime-700 text-2xl"
+                    href={app_name}
+                    download
+                >here</a>
+            </h2>
+        })
+    } else {
+        None
     }
 }
 
