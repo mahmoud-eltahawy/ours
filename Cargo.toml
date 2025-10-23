@@ -6,7 +6,7 @@ members = [
     "assets",
     "delivery",
     "web",
-    "grpc",
+    "grpc", "desktop",
 ]
 resolver = "2"
 
