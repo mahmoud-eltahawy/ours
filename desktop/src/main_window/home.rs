@@ -2,8 +2,10 @@ use std::net::IpAddr;
 
 use crate::{
     Message,
-    main_window::{self, MainWindowMessage},
+    main_window::{self, MainWindowMessage, Page},
+    svg_from_icon_data,
 };
+use common::assets::IconName;
 use iced::{
     Alignment, Background, Border, Color, Element, Length,
     border::Radius,
@@ -72,7 +74,7 @@ impl HomeState {
         Button::new(content)
             .padding(30.)
             .style(move |_, _| common_button_style())
-            .on_press(Message::GoToPage(main_window::Page::Server))
+            .on_press(Message::GoToPage(Page::Server))
     }
 
     pub fn go_to_client_button<'a>(&'a self) -> Button<'a, Message> {
@@ -231,4 +233,13 @@ where
         )
     ]
     .into()
+}
+
+pub fn go_home_button<'a>() -> Button<'a, Message> {
+    Button::new(svg_from_icon_data(IconName::Home.get()))
+        .on_press(Message::GoToPage(Page::Home))
+        .style(move |_, _| button::Style {
+            background: Some(iced::Background::Color(Color::from_rgb(0.9, 0.1, 0.1))),
+            ..Default::default()
+        })
 }

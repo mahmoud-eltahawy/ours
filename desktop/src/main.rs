@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use iced::{
     Color, Element, Subscription, Task, exit,
     theme::Style,
+    widget::{Svg, svg},
     window::{self, Settings},
 };
 
@@ -10,6 +11,7 @@ use crate::main_window::{
     MainWindowMessage, Page,
     client::{ClientMessage, ClientState},
     home::HomeMessage,
+    server::{ServerMessage, serve},
 };
 
 mod download_window;
@@ -120,6 +122,24 @@ impl State {
                         Task::none()
                     }
                 },
+                MainWindowMessage::Server(server_message) => match server_message {
+                    ServerMessage::Launch => {
+                        self.main_window_state.server.working_process = Some(tokio::spawn(serve(
+                            self.main_window_state.server.target_path.clone(),
+                            self.main_window_state.server.origin.port,
+                        )));
+                        Task::none()
+                    }
+                    ServerMessage::Stop => {
+                        if let Some(x) = &self.main_window_state.server.working_process {
+                            x.abort();
+                            self.main_window_state.server.working_process = None;
+                        }
+                        Task::none()
+                    }
+                    ServerMessage::PickTarget => todo!(),
+                    ServerMessage::TargetPicked(path_buf) => todo!(),
+                },
             },
         }
     }
@@ -137,4 +157,9 @@ impl State {
     fn close_event(&self) -> Subscription<Message> {
         window::close_events().map(Message::WindowClosed)
     }
+}
+
+pub fn svg_from_icon_data(icon: &[u8]) -> Svg<'_> {
+    let handle = svg::Handle::from_memory(icon.to_vec());
+    Svg::new(handle).width(30.)
 }
