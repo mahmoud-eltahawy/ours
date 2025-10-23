@@ -6,3 +6,4 @@ edition.workspace = true
 [dependencies]
 leptos = { version = "0.8", features = ["islands","ssr"] }
 common.workspace = true
+grpc.workspace = true

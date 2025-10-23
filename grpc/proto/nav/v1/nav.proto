@@ -1,0 +1,25 @@
+syntax = "proto3";
+package nav.v1;
+
+service NavService {
+  rpc Ls (LsRequest) returns (LsResponse) {}
+}
+
+message LsRequest {
+  string path = 1;
+}
+message LsResponse {
+  repeated Unit units = 1;
+}
+
+message Unit {
+  string path = 1;
+  UnitKind kind = 2;
+}
+
+enum UnitKind {
+  UNIT_KIND_FOLDER = 0;
+  UNIT_KIND_VIDEO = 1;
+  UNIT_KIND_AUDIO = 2;
+  UNIT_KIND_FILE = 3;
+}

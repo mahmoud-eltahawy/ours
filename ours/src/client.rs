@@ -1,6 +1,10 @@
 use assets::IconName;
-use common::{Origin, Selected, Unit};
+use common::Origin;
 use delivery::Delivery;
+use grpc::{
+    UnitKind,
+    client::{Selected, Unit},
+};
 use iced::{
     Border, Color, Element, Length, Task,
     border::Radius,
@@ -84,7 +88,7 @@ impl ClientMessage {
                 Task::none()
             }
             ClientMessage::UnitDoubleClick(unit) => match unit.kind {
-                common::UnitKind::Folder => {
+                UnitKind::Folder => {
                     Task::perform(state.delivery.clone().ls(unit.path.clone()), move |xs| {
                         if let Ok(xs) = xs {
                             Message::Client(ClientMessage::CurrentPathChanged {

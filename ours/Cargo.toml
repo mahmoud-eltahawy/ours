@@ -15,4 +15,5 @@ common.workspace = true
 assets.workspace = true
 async-recursion = "1.1.1"
 reqwest = {workspace = true,features = ["stream"]}
+grpc.workspace = true
 

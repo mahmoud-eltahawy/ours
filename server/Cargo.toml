@@ -15,4 +15,5 @@ tower = "0.5"
 get-port = "4.0.0"
 futures-util = "0.3.31"
 web.workspace = true
+grpc.workspace = true
 

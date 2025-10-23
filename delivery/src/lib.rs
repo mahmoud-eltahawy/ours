@@ -1,6 +1,6 @@
 use std::{path::PathBuf, sync::Arc};
 
-use common::{AUDIO_X, LS_PATH, Unit, UnitKind, VIDEO_X};
+use grpc::client::Unit;
 
 #[derive(Debug, Clone)]
 pub struct Delivery {
@@ -18,46 +18,8 @@ impl Delivery {
         format!("{}{}", self.origin, path)
     }
 
-    pub async fn ls(self, base: PathBuf) -> Result<Vec<Unit>, String> {
-        let res = reqwest::Client::new()
-            .post(self.url_path(LS_PATH))
-            .json(&base)
-            .send()
-            .await
-            .map_err(|x| x.to_string())?
-            .json::<Vec<Unit>>()
-            .await
-            .map(retype)
-            .map(|mut xs| {
-                xs.sort_by_key(|x| (x.kind.clone(), x.name()));
-                xs
-            })
-            .map_err(|x| x.to_string())?;
-        Ok(res)
+    pub async fn ls(self, _base: PathBuf) -> Result<Vec<Unit>, String> {
+        //TODO : repalce it with grpc
+        todo!()
     }
-}
-
-fn retype(xs: Vec<Unit>) -> Vec<Unit> {
-    xs.into_iter()
-        .map(|x| match x.kind {
-            common::UnitKind::File => {
-                let Unit { path, kind } = x;
-                let kind = match path.extension().and_then(|x| x.to_str()) {
-                    Some(x) => {
-                        if VIDEO_X.contains(&x) {
-                            UnitKind::Video
-                        } else if AUDIO_X.contains(&x) {
-                            UnitKind::Audio
-                        } else {
-                            kind
-                        }
-                    }
-                    None => kind,
-                };
-
-                Unit { path, kind }
-            }
-            _ => x,
-        })
-        .collect::<Vec<_>>()
 }

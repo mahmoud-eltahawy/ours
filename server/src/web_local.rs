@@ -1,11 +1,11 @@
 use axum::{
-    Json,
     extract::{self, Query, State},
     http::StatusCode,
     response::Html,
 };
 use axum_extra::{TypedHeader, headers::UserAgent};
-use common::{AUDIO_X, Unit, UnitKind, VIDEO_X};
+use common::{AUDIO_X, VIDEO_X};
+use grpc::{UnitKind, client::Unit};
 use std::path::PathBuf;
 use tokio::fs;
 use web::{
@@ -14,7 +14,7 @@ use web::{
     utils::self_path,
 };
 
-use crate::app_error::{ServerError, ServerResult};
+use crate::app_error::ServerError;
 
 pub async fn boxes_in(
     Query(mut params): Query<Vec<(usize, String)>>,
@@ -77,17 +77,8 @@ pub(crate) async fn ls(root: PathBuf) -> Result<Vec<Unit>, ServerError> {
         };
         units.push(unit);
     }
-    units.sort_by_key(|x| (x.kind.clone(), x.name()));
+    units.sort_by_key(|x| (x.kind, x.name()));
     Ok(units)
-}
-
-pub async fn ls_service(
-    State(Context { target_dir }): State<Context>,
-    Json(base): Json<PathBuf>,
-) -> ServerResult<Json<Vec<Unit>>> {
-    let root = target_dir.join(base);
-    let paths = ls(root).await?;
-    Ok(Json(paths))
 }
 
 pub(crate) fn is_same_os(user_agent: UserAgent) -> bool {

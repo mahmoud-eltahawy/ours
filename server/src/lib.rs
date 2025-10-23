@@ -4,9 +4,8 @@ use app_error::{ServerError, ServerResult};
 use axum::{
     Router,
     extract::DefaultBodyLimit,
-    routing::{get, get_service, post},
+    routing::{get, get_service},
 };
-use common::LS_PATH;
 use get_port::Ops;
 use tower_http::{cors::CorsLayer, services::ServeDir, timeout::TimeoutLayer};
 use web::{
@@ -19,7 +18,7 @@ use assets_router::{favicon, htmx, tailwind};
 
 use crate::{
     assets_router::icon,
-    web_local::{fallback, ls_service, self_executable},
+    web_local::{fallback, self_executable},
 };
 
 pub mod app_error;
@@ -64,7 +63,6 @@ impl Server {
         let target_dir = ServeDir::new(&target);
 
         let app = Router::new()
-            .route(LS_PATH, post(ls_service))
             .route(&utils::app_name_url(), get(self_executable))
             .route("/", get(web_local::index_page))
             .route(TAILWIND, get(tailwind))

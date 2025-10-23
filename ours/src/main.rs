@@ -1,9 +1,10 @@
 use std::{env::args, path::PathBuf};
 
 use client::{ClientMessage, ClientState};
-use common::{Origin, Unit};
+use common::Origin;
 use delivery::Delivery;
 use get_port::Ops;
+use grpc::client::Unit;
 use iced::{
     Color, Element, Subscription, Task, exit,
     theme::Style,

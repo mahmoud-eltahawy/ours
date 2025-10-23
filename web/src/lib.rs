@@ -9,7 +9,8 @@ use crate::{
     navbar::{DownloadNativeApp, NavBar},
     utils::path_as_query,
 };
-use common::{Unit, UnitKind, assets::IconName};
+use common::assets::IconName;
+use grpc::{UnitKind, client::Unit};
 use leptos::{either::Either, prelude::*};
 use std::path::PathBuf;
 
