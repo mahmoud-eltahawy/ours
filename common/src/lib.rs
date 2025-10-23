@@ -4,10 +4,6 @@ use serde::{Deserialize, Serialize};
 use std::{fmt::Display, net::IpAddr, path::PathBuf};
 
 pub const LS_PATH: &str = "/ls";
-pub const MKDIR_PATH: &str = "/mkdir";
-pub const CP_PATH: &str = "/cp";
-pub const MV_PATH: &str = "/mv";
-pub const RM_PATH: &str = "/rm";
 
 #[derive(Debug, Clone)]
 pub struct Origin {

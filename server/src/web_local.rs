@@ -1,4 +1,5 @@
 use axum::{
+    Json,
     extract::{self, Query, State},
     http::StatusCode,
     response::Html,
@@ -12,6 +13,8 @@ use web::{
     media::{AudioPlayerProps, HiddenPlayerProps, VideoPlayerProps},
     utils::self_path,
 };
+
+use crate::app_error::{ServerError, ServerResult};
 
 pub async fn boxes_in(
     Query(mut params): Query<Vec<(usize, String)>>,
@@ -46,7 +49,7 @@ pub async fn fetch_data(
     Ok(())
 }
 
-pub(crate) async fn ls(root: PathBuf) -> Result<Vec<Unit>, Box<dyn std::error::Error>> {
+pub(crate) async fn ls(root: PathBuf) -> Result<Vec<Unit>, ServerError> {
     let mut dir = fs::read_dir(&root).await?;
     let mut units = Vec::new();
     while let Some(x) = dir.next_entry().await? {
@@ -76,6 +79,15 @@ pub(crate) async fn ls(root: PathBuf) -> Result<Vec<Unit>, Box<dyn std::error::E
     }
     units.sort_by_key(|x| (x.kind.clone(), x.name()));
     Ok(units)
+}
+
+pub async fn ls_service(
+    State(Context { target_dir }): State<Context>,
+    Json(base): Json<PathBuf>,
+) -> ServerResult<Json<Vec<Unit>>> {
+    let root = target_dir.join(base);
+    let paths = ls(root).await?;
+    Ok(Json(paths))
 }
 
 pub(crate) fn is_same_os(user_agent: UserAgent) -> bool {

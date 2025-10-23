@@ -6,7 +6,7 @@ use axum::{
     extract::DefaultBodyLimit,
     routing::{get, get_service, post},
 };
-use common::{CP_PATH, LS_PATH, MKDIR_PATH, MV_PATH, RM_PATH};
+use common::LS_PATH;
 use get_port::Ops;
 use tower_http::{cors::CorsLayer, services::ServeDir, timeout::TimeoutLayer};
 use web::{
@@ -19,12 +19,11 @@ use assets_router::{favicon, htmx, tailwind};
 
 use crate::{
     assets_router::icon,
-    web_local::{fallback, self_executable},
+    web_local::{fallback, ls_service, self_executable},
 };
 
 pub mod app_error;
 mod assets_router;
-mod cd;
 mod web_local;
 
 pub struct Server {
@@ -65,11 +64,7 @@ impl Server {
         let target_dir = ServeDir::new(&target);
 
         let app = Router::new()
-            .route(CP_PATH, post(cd::cp))
-            .route(MV_PATH, post(cd::mv))
-            .route(RM_PATH, post(cd::rm))
-            .route(LS_PATH, post(cd::ls))
-            .route(MKDIR_PATH, post(cd::mkdir))
+            .route(LS_PATH, post(ls_service))
             .route(&utils::app_name_url(), get(self_executable))
             .route("/", get(web_local::index_page))
             .route(TAILWIND, get(tailwind))

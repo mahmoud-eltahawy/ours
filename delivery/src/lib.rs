@@ -1,6 +1,6 @@
 use std::{path::PathBuf, sync::Arc};
 
-use common::{AUDIO_X, CP_PATH, LS_PATH, MKDIR_PATH, MV_PATH, RM_PATH, Unit, UnitKind, VIDEO_X};
+use common::{AUDIO_X, LS_PATH, Unit, UnitKind, VIDEO_X};
 
 #[derive(Debug, Clone)]
 pub struct Delivery {
@@ -16,26 +16,6 @@ impl Delivery {
 
     pub fn url_path(self, path: &str) -> String {
         format!("{}{}", self.origin, path)
-    }
-
-    pub async fn cp(self, targets: Vec<PathBuf>, to: PathBuf) -> Result<(), String> {
-        reqwest::Client::new()
-            .post(self.url_path(CP_PATH))
-            .json(&(targets, to))
-            .send()
-            .await
-            .map_err(|x| x.to_string())?;
-        Ok(())
-    }
-
-    pub async fn mv(self, targets: Vec<PathBuf>, to: PathBuf) -> Result<(), String> {
-        reqwest::Client::new()
-            .post(self.url_path(MV_PATH))
-            .json(&(targets, to))
-            .send()
-            .await
-            .map_err(|x| x.to_string())?;
-        Ok(())
     }
 
     pub async fn ls(self, base: PathBuf) -> Result<Vec<Unit>, String> {
@@ -54,26 +34,6 @@ impl Delivery {
             })
             .map_err(|x| x.to_string())?;
         Ok(res)
-    }
-
-    pub async fn mkdir(self, target: PathBuf) -> Result<(), String> {
-        let _ = reqwest::Client::new()
-            .post(self.url_path(MKDIR_PATH))
-            .json(&target)
-            .send()
-            .await
-            .map_err(|x| x.to_string())?;
-        Ok(())
-    }
-
-    pub async fn rm(self, bases: Vec<Unit>) -> Result<(), String> {
-        reqwest::Client::new()
-            .post(self.url_path(RM_PATH))
-            .json(&bases)
-            .send()
-            .await
-            .map_err(|x| x.to_string())?;
-        Ok(())
     }
 }
 
