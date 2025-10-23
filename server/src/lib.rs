@@ -6,7 +6,7 @@ use axum::{
     extract::DefaultBodyLimit,
     routing::{get, get_service, post},
 };
-use common::{CP_PATH, LS_PATH, MKDIR_PATH, MP4_PATH, MV_PATH, RM_PATH, UPLOAD_PATH};
+use common::{CP_PATH, LS_PATH, MKDIR_PATH, MV_PATH, RM_PATH};
 use get_port::Ops;
 use tower_http::{cors::CorsLayer, services::ServeDir, timeout::TimeoutLayer};
 use web::{
@@ -25,7 +25,6 @@ use crate::{
 pub mod app_error;
 mod assets_router;
 mod cd;
-mod mp4;
 mod web_local;
 
 pub struct Server {
@@ -66,8 +65,6 @@ impl Server {
         let target_dir = ServeDir::new(&target);
 
         let app = Router::new()
-            .route(MP4_PATH, post(mp4::mp4_remux))
-            .route(UPLOAD_PATH, post(cd::upload))
             .route(CP_PATH, post(cd::cp))
             .route(MV_PATH, post(cd::mv))
             .route(RM_PATH, post(cd::rm))

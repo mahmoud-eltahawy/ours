@@ -81,7 +81,7 @@ pub fn Boxes(
         .into_iter()
         .map(|unit| {
             view! {
-                <UnitComp unit=unit base=target_dir.clone() is_downloadable/>
+                <UnitComp unit=unit target_dir=target_dir.clone() is_downloadable/>
             }
         })
         .collect_view();
@@ -100,9 +100,9 @@ pub fn Boxes(
 }
 
 #[component]
-fn UnitComp(unit: Unit, base: PathBuf, is_downloadable: bool) -> impl IntoView {
+fn UnitComp(unit: Unit, target_dir: PathBuf, is_downloadable: bool) -> impl IntoView {
     let name = unit.name();
-    let path = unit.path.strip_prefix(base).unwrap().to_path_buf();
+    let path = unit.path.strip_prefix(target_dir).unwrap().to_path_buf();
 
     enum Hxs {
         File {

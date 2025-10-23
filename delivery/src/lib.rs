@@ -1,8 +1,6 @@
 use std::{path::PathBuf, sync::Arc};
 
-use common::{
-    AUDIO_X, CP_PATH, LS_PATH, MKDIR_PATH, MP4_PATH, MV_PATH, RM_PATH, Unit, UnitKind, VIDEO_X,
-};
+use common::{AUDIO_X, CP_PATH, LS_PATH, MKDIR_PATH, MV_PATH, RM_PATH, Unit, UnitKind, VIDEO_X};
 
 #[derive(Debug, Clone)]
 pub struct Delivery {
@@ -18,16 +16,6 @@ impl Delivery {
 
     pub fn url_path(self, path: &str) -> String {
         format!("{}{}", self.origin, path)
-    }
-
-    pub async fn mp4_remux(self, targets: Vec<PathBuf>) -> Result<(), String> {
-        reqwest::Client::new()
-            .post(self.url_path(MP4_PATH))
-            .json(&targets)
-            .send()
-            .await
-            .map_err(|x| x.to_string())?;
-        Ok(())
     }
 
     pub async fn cp(self, targets: Vec<PathBuf>, to: PathBuf) -> Result<(), String> {

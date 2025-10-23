@@ -5,8 +5,6 @@ use std::{fmt::Display, net::IpAddr, path::PathBuf};
 
 pub const LS_PATH: &str = "/ls";
 pub const MKDIR_PATH: &str = "/mkdir";
-pub const MP4_PATH: &str = "/to/mp4";
-pub const UPLOAD_PATH: &str = "/upload";
 pub const CP_PATH: &str = "/cp";
 pub const MV_PATH: &str = "/mv";
 pub const RM_PATH: &str = "/rm";

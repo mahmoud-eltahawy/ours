@@ -1,19 +1,8 @@
 use crate::app_error::{ServerError, ServerResult};
-use crate::mp4::par_mp4_remux;
-use axum::{
-    Json,
-    extract::{Multipart, State},
-};
-use common::{Unit, UnitKind, VIDEO_X};
-use std::{
-    path::{Path, PathBuf},
-    str::FromStr,
-};
+use axum::{Json, extract::State};
+use common::{Unit, UnitKind};
+use std::path::{Path, PathBuf};
 use tokio::fs;
-use tokio::{
-    fs::File,
-    io::{AsyncWriteExt, BufWriter},
-};
 
 use web::Context;
 
@@ -90,34 +79,6 @@ pub async fn rm(
             }
         };
     }
-
-    Ok(())
-}
-
-pub async fn upload(
-    State(Context { target_dir }): State<Context>,
-    multipart: Multipart,
-) -> ServerResult<()> {
-    let mut data = multipart;
-    let mut non_mp4_paths = Vec::new();
-    while let Some(mut field) = data.next_field().await? {
-        let name = field.name().unwrap();
-        let path = PathBuf::from_str(name).unwrap();
-        let path = target_dir.join(path);
-        let mut file = BufWriter::new(File::create(&path).await?);
-        while let Some(chunk) = field.chunk().await? {
-            file.write_all(&chunk).await?;
-            file.flush().await?;
-        }
-        if path
-            .extension()
-            .and_then(|x| x.to_str())
-            .is_some_and(|x| VIDEO_X.contains(&x) && x != "mp4")
-        {
-            non_mp4_paths.push(path);
-        };
-    }
-    par_mp4_remux(non_mp4_paths).await?;
 
     Ok(())
 }
