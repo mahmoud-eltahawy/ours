@@ -1,4 +1,7 @@
-use crate::{Message, State, main_window::home::HomeMessage};
+use crate::{
+    Message, State,
+    main_window::{client::ClientMessage, home::HomeMessage},
+};
 use iced::Element;
 
 pub mod client;
@@ -16,13 +19,14 @@ pub enum Page {
 #[derive(Default)]
 pub struct MainWindowState {
     pub home: home::HomeState,
-    client: client::ClientState,
+    pub client: Option<client::ClientState>,
     server: server::ServerState,
 }
 
 #[derive(Clone)]
 pub enum MainWindowMessage {
     Home(HomeMessage),
+    Client(ClientMessage),
 }
 
 impl State {

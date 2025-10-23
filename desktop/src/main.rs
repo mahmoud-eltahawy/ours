@@ -1,7 +1,15 @@
+use std::path::PathBuf;
+
 use iced::{
     Color, Element, Subscription, Task, exit,
     theme::Style,
     window::{self, Settings},
+};
+
+use crate::main_window::{
+    MainWindowMessage, Page,
+    client::{ClientMessage, ClientState},
+    home::HomeMessage,
 };
 
 mod download_window;
@@ -31,7 +39,7 @@ enum Message {
     WindowOpened(window::Id),
     WindowClosed(window::Id),
     GoToPage(main_window::Page),
-    MainWindow(main_window::MainWindowMessage),
+    MainWindow(MainWindowMessage),
 }
 
 impl State {
@@ -71,12 +79,12 @@ impl State {
                 Task::none()
             }
             Message::MainWindow(main_window_message) => match main_window_message {
-                main_window::MainWindowMessage::Home(home_message) => match home_message {
-                    main_window::home::HomeMessage::PortNewInput(port) => {
+                MainWindowMessage::Home(home_message) => match home_message {
+                    HomeMessage::PortNewInput(port) => {
                         self.main_window_state.home.url_form.port = port;
                         Task::none()
                     }
-                    main_window::home::HomeMessage::IpNewInput {
+                    HomeMessage::IpNewInput {
                         valid_ip,
                         input_value,
                     } => {
@@ -84,10 +92,31 @@ impl State {
                         self.main_window_state.home.url_form.valid_ip = valid_ip;
                         Task::none()
                     }
-                    main_window::home::HomeMessage::SubmitInput(ip_addr, port) => todo!(),
-                    main_window::home::HomeMessage::ToggleInputModal => {
+                    HomeMessage::SubmitInput(ip_addr, port) => {
+                        Task::future(grpc::client::RpcClient::new(ip_addr, port))
+                            .map(|x| ClientMessage::PrepareGrpc(x.ok()).into())
+                    }
+                    HomeMessage::ToggleInputModal => {
                         self.main_window_state.home.show_form =
                             !self.main_window_state.home.show_form;
+                        Task::none()
+                    }
+                },
+                MainWindowMessage::Client(client_message) => match client_message {
+                    ClientMessage::PrepareGrpc(rpc_client) => match rpc_client {
+                        Some(grpc) => {
+                            self.main_window_state.client = Some(ClientState::new(grpc.clone()));
+                            self.main_window_page = Page::Client;
+                            Task::future(grpc.ls(PathBuf::new()))
+                                .map(|x| ClientMessage::RefreshUnits(x.unwrap_or_default()).into())
+                        }
+                        None => Task::none(),
+                    },
+                    ClientMessage::RefreshUnits(units) => {
+                        let Some(client) = &mut self.main_window_state.client else {
+                            return Task::none();
+                        };
+                        client.units = units;
                         Task::none()
                     }
                 },

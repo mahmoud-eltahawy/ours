@@ -8,7 +8,7 @@ mod nav {
 use std::net::AddrParseError;
 
 pub use nav::UnitKind;
-use tonic::transport;
+pub use tonic::transport;
 
 #[derive(Debug)]
 pub enum RpcError {

@@ -62,7 +62,7 @@ impl RpcClient {
         Ok(Self { origin, client })
     }
 
-    pub async fn ls(&self, target: PathBuf) -> Result<Vec<Unit>, RpcError> {
+    pub async fn ls(self, target: PathBuf) -> Result<Vec<Unit>, RpcError> {
         let req = LsRequest {
             path: target.to_str().unwrap().to_string(),
         };

@@ -6,3 +6,4 @@ edition.workspace = true
 [dependencies]
 tokio = {workspace = true, features = ["process"]}
 iced = {git = "https://github.com/iced-rs/iced.git", features = ["tokio","qr_code","svg","sipper"] }
+grpc.workspace = true
