@@ -11,6 +11,7 @@ use iced::{
     border::Radius,
     widget::{self, Button, Column, Container, Row, button::Style, qr_code, row, text},
 };
+use rfd::AsyncFileDialog;
 use tokio::task::JoinHandle;
 
 pub struct ServerState {
@@ -25,7 +26,7 @@ pub enum ServerMessage {
     Launch,
     Stop,
     PickTarget,
-    TargetPicked(PathBuf),
+    TargetPicked(Option<PathBuf>),
 }
 
 impl From<ServerMessage> for Message {
@@ -152,7 +153,7 @@ impl ServerState {
                     ..Default::default()
                 }
             })
-            .on_press_maybe(working.then_some(ServerMessage::PickTarget.into()))
+            .on_press_maybe((!working).then_some(ServerMessage::PickTarget.into()))
     }
 
     fn url_section(&self) -> Column<'_, Message> {
@@ -169,4 +170,11 @@ pub async fn serve(root: PathBuf, port: u16) {
     let two = grpc::server::RpcServer::new(root, port);
     let two = two.serve();
     let (_, _) = tokio::join!(one, two);
+}
+
+pub async fn which_target() -> Option<PathBuf> {
+    AsyncFileDialog::new()
+        .pick_folder()
+        .await
+        .map(|x| x.path().to_path_buf())
 }

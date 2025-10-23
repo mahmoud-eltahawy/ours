@@ -9,4 +9,4 @@ iced = {git = "https://github.com/iced-rs/iced.git", features = ["tokio","qr_cod
 grpc.workspace = true
 common.workspace = true
 server.workspace = true
-# rfd = { version = "0.15.4", features = ["tokio"] }
+rfd = { version = "0.15.4"}

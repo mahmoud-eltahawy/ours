@@ -11,7 +11,7 @@ use crate::main_window::{
     MainWindowMessage, Page,
     client::{ClientMessage, ClientState},
     home::HomeMessage,
-    server::{ServerMessage, serve},
+    server::{ServerMessage, serve, which_target},
 };
 
 mod download_window;
@@ -137,8 +137,15 @@ impl State {
                         }
                         Task::none()
                     }
-                    ServerMessage::PickTarget => todo!(),
-                    ServerMessage::TargetPicked(path_buf) => todo!(),
+                    ServerMessage::PickTarget => {
+                        Task::perform(which_target(), |x| ServerMessage::TargetPicked(x).into())
+                    }
+                    ServerMessage::TargetPicked(path_buf) => {
+                        if let Some(path_buf) = path_buf {
+                            self.main_window_state.server.target_path = path_buf;
+                        }
+                        Task::none()
+                    }
                 },
             },
         }

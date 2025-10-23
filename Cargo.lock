@@ -1009,6 +1009,7 @@ dependencies = [
  "common",
  "grpc",
  "iced",
+ "rfd",
  "server",
  "tokio",
 ]
