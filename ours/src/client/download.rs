@@ -2,7 +2,7 @@ use super::Download;
 use crate::{Message, client::VIOLET};
 use async_recursion::async_recursion;
 use delivery::Delivery;
-use grpc::{UnitKind, client::Unit};
+use grpc::{UnitKind, top::Unit};
 use iced::{
     Alignment, Border, Color, Element, Length, Task,
     border::Radius,

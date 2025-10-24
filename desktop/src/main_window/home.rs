@@ -1,4 +1,4 @@
-use std::net::IpAddr;
+use std::net::{AddrParseError, IpAddr};
 
 use crate::{
     Message,
@@ -30,9 +30,9 @@ pub struct UrlForm {
 
 #[derive(Clone)]
 pub enum HomeMessage {
-    PortNewInput(u16),
+    PortNewInput(Result<u16, std::num::ParseIntError>),
     IpNewInput {
-        valid_ip: Option<IpAddr>,
+        valid_ip: Result<IpAddr, AddrParseError>,
         input_value: String,
     },
     SubmitInput(IpAddr, u16),
@@ -147,7 +147,7 @@ impl UrlForm {
         .padding(10.)
         .align_x(Alignment::Center)
         .style(|_, _| STYLE_INPUT)
-        .on_input(|x| HomeMessage::PortNewInput(x.parse::<u16>().unwrap_or_default()).into())
+        .on_input(|x| HomeMessage::PortNewInput(x.parse::<u16>()).into())
     }
 
     fn ip_input(&self) -> text_input::TextInput<'_, Message> {
@@ -167,7 +167,7 @@ impl UrlForm {
             })
             .on_input(|x| {
                 HomeMessage::IpNewInput {
-                    valid_ip: x.parse::<IpAddr>().ok(),
+                    valid_ip: x.parse::<IpAddr>(),
                     input_value: x,
                 }
                 .into()

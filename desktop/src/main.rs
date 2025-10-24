@@ -84,7 +84,14 @@ impl State {
             Message::MainWindow(main_window_message) => match main_window_message {
                 MainWindowMessage::Home(home_message) => match home_message {
                     HomeMessage::PortNewInput(port) => {
-                        self.main_window_state.home.url_form.port = port;
+                        match port {
+                            Ok(port) => {
+                                self.main_window_state.home.url_form.port = port;
+                            }
+                            Err(err) => {
+                                dbg!(err);
+                            }
+                        }
                         Task::none()
                     }
                     HomeMessage::IpNewInput {
@@ -92,12 +99,19 @@ impl State {
                         input_value,
                     } => {
                         self.main_window_state.home.url_form.ip = input_value;
-                        self.main_window_state.home.url_form.valid_ip = valid_ip;
+                        match valid_ip {
+                            Ok(valid_ip) => {
+                                self.main_window_state.home.url_form.valid_ip = Some(valid_ip);
+                            }
+                            Err(err) => {
+                                dbg!(err);
+                            }
+                        }
                         Task::none()
                     }
                     HomeMessage::SubmitInput(ip_addr, port) => {
                         Task::future(RpcClient::new(SocketAddr::new(ip_addr, port)))
-                            .map(|x| ClientMessage::PrepareGrpc(x.ok()).into())
+                            .map(|x| ClientMessage::PrepareGrpc(x).into())
                     }
                     HomeMessage::ToggleInputModal => {
                         self.main_window_state.home.show_form =
@@ -107,16 +121,26 @@ impl State {
                 },
                 MainWindowMessage::Client(client_message) => match client_message {
                     ClientMessage::PrepareGrpc(rpc_client) => match rpc_client {
-                        Some(grpc) => {
+                        Ok(grpc) => {
                             self.main_window_state.client = ClientState::new(grpc.clone());
                             self.main_window_page = Page::Client;
                             Task::future(grpc.ls(PathBuf::new()))
-                                .map(|x| ClientMessage::RefreshUnits(x.unwrap_or_default()).into())
+                                .map(|x| ClientMessage::RefreshUnits(x).into())
                         }
-                        None => Task::none(),
+                        Err(err) => {
+                            dbg!(err);
+                            Task::none()
+                        }
                     },
                     ClientMessage::RefreshUnits(units) => {
-                        self.main_window_state.client.units = units;
+                        match units {
+                            Ok(units) => {
+                                self.main_window_state.client.units = units;
+                            }
+                            Err(err) => {
+                                dbg!(err);
+                            }
+                        }
                         Task::none()
                     }
                     ClientMessage::UnitClick(unit) => {
@@ -138,7 +162,7 @@ impl State {
                             (UnitKind::Folder, Some(grpc)) => {
                                 self.main_window_state.client.target = unit.path.clone();
                                 Task::perform(grpc.clone().ls(unit.path.clone()), move |xs| {
-                                    ClientMessage::RefreshUnits(xs.unwrap_or_default()).into()
+                                    ClientMessage::RefreshUnits(xs).into()
                                 })
                             }
                             _ => {

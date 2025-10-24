@@ -1,6 +1,6 @@
 use std::{path::PathBuf, sync::Arc};
 
-use grpc::client::Unit;
+use grpc::top::Unit;
 
 #[derive(Debug, Clone)]
 pub struct Delivery {

@@ -3,7 +3,7 @@ use common::Origin;
 use delivery::Delivery;
 use grpc::{
     UnitKind,
-    client::{Selected, Unit},
+    top::{Selected, Unit},
 };
 use iced::{
     Border, Color, Element, Length, Task,

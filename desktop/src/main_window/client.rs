@@ -1,7 +1,9 @@
 use std::path::PathBuf;
 
 use crate::{Message, main_window::MainWindowMessage, svg_from_icon_data};
-use grpc::client::{RpcClient, Selected, Unit};
+use grpc::RpcError;
+use grpc::client::RpcClient;
+use grpc::top::{Selected, Unit};
 use iced::{
     Border, Color, Element, Length,
     border::Radius,
@@ -14,7 +16,7 @@ pub struct ClientState {
     pub grpc: Option<RpcClient>,
     pub target: PathBuf,
     pub select: Selected,
-    pub units: Vec<grpc::client::Unit>,
+    pub units: Vec<grpc::top::Unit>,
 }
 
 impl ClientState {
@@ -30,8 +32,8 @@ impl ClientState {
 
 #[derive(Clone)]
 pub enum ClientMessage {
-    RefreshUnits(Vec<grpc::client::Unit>),
-    PrepareGrpc(Option<RpcClient>),
+    RefreshUnits(Result<Vec<grpc::top::Unit>, RpcError>),
+    PrepareGrpc(Result<RpcClient, RpcError>),
     UnitClick(Unit),
     UnitDoubleClick(Unit),
 }

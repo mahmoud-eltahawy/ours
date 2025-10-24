@@ -4,7 +4,7 @@ use client::{ClientMessage, ClientState};
 use common::Origin;
 use delivery::Delivery;
 use get_port::Ops;
-use grpc::client::Unit;
+use grpc::top::Unit;
 use iced::{
     Color, Element, Subscription, Task, exit,
     theme::Style,

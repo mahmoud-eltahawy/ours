@@ -10,7 +10,7 @@ use crate::{
     utils::path_as_query,
 };
 use common::assets::IconName;
-use grpc::{UnitKind, client::Unit};
+use grpc::{UnitKind, top::Unit};
 use leptos::{either::Either, prelude::*};
 use std::path::PathBuf;
 

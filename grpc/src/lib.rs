@@ -1,19 +1,20 @@
 pub mod client;
 pub mod server;
+pub mod top;
 mod nav {
     use tonic::include_proto;
 
     include_proto!("nav.v1");
 }
-use std::net::AddrParseError;
 
 pub use nav::UnitKind;
+use std::{net::AddrParseError, sync::Arc};
 pub use tonic::transport;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum RpcError {
     AddrParse(AddrParseError),
-    Tonic(transport::Error),
+    Tonic(Arc<transport::Error>),
     TonicStatus(tonic::Status),
 }
 
@@ -25,7 +26,7 @@ impl From<AddrParseError> for RpcError {
 
 impl From<transport::Error> for RpcError {
     fn from(value: transport::Error) -> Self {
-        Self::Tonic(value)
+        Self::Tonic(Arc::new(value))
     }
 }
 
