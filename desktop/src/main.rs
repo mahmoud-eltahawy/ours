@@ -176,7 +176,8 @@ impl State {
                     ServerMessage::Launch => {
                         self.main_window_state.server.working_process = Some(tokio::spawn(serve(
                             self.main_window_state.server.target_path.clone(),
-                            self.main_window_state.server.addr.port(),
+                            self.main_window_state.server.tonic_port,
+                            self.main_window_state.server.axum_port,
                         )));
                         Task::none()
                     }

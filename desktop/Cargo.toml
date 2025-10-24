@@ -10,3 +10,5 @@ grpc.workspace = true
 common.workspace = true
 server.workspace = true
 rfd = { version = "0.15.4"}
+get-port = "4.0.0"
+local-ip-address = "0.6.5"

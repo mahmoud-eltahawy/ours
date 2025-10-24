@@ -1,6 +1,8 @@
-use std::net::{IpAddr, SocketAddr};
+use common::Origin;
+use get_port::Ops;
+use std::env::home_dir;
+use std::net::IpAddr;
 use std::path::PathBuf;
-use std::{env::home_dir, net::Ipv4Addr};
 
 use crate::Message;
 use crate::main_window::MainWindowMessage;
@@ -9,15 +11,23 @@ use iced::{
     Alignment::Center,
     Background, Border, Color, Element, Length, Shadow, Vector,
     border::Radius,
-    widget::{self, Button, Column, Container, Row, button::Style, qr_code, row, text},
+    widget::{
+        self, Button, Column, Container, Row,
+        button::Style,
+        column, qr_code, row,
+        text::{self, Wrapping},
+    },
 };
 use rfd::AsyncFileDialog;
 use tokio::task::JoinHandle;
 
 pub struct ServerState {
-    pub addr: SocketAddr,
+    pub local_ip: Result<IpAddr, local_ip_address::Error>,
+    pub axum_port: Option<u16>,
+    pub tonic_port: Option<u16>,
     pub target_path: PathBuf,
-    pub url: qr_code::Data,
+    pub tonic_qr: Option<qr_code::Data>,
+    pub axum_qr: Option<qr_code::Data>,
     pub working_process: Option<JoinHandle<()>>,
 }
 
@@ -37,10 +47,42 @@ impl From<ServerMessage> for Message {
 
 impl Default for ServerState {
     fn default() -> Self {
+        let local_ip = local_ip_address::local_ip();
+        let tonic_port = local_ip
+            .as_ref()
+            .ok()
+            .and_then(|ip| get_port::tcp::TcpPort::any(&ip.to_string()));
+
+        let axum_port = match tonic_port {
+            Some(port) => local_ip
+                .as_ref()
+                .ok()
+                .and_then(|ip| get_port::tcp::TcpPort::except(&ip.to_string(), vec![port])),
+            None => local_ip
+                .as_ref()
+                .ok()
+                .and_then(|ip| get_port::tcp::TcpPort::any(&ip.to_string())),
+        };
+
+        let tonic_url = local_ip
+            .as_ref()
+            .ok()
+            .and_then(|ip| tonic_port.map(|port| (ip, port)))
+            .map(|(ip, port)| Origin::new(*ip, port))
+            .and_then(|x| qr_code::Data::new(x.to_string()).ok());
+        let axum_url = local_ip
+            .as_ref()
+            .ok()
+            .and_then(|ip| axum_port.map(|port| (ip, port)))
+            .map(|(ip, port)| Origin::new(*ip, port))
+            .and_then(|x| qr_code::Data::new(x.to_string()).ok());
         Self {
-            addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 8080),
+            local_ip,
+            axum_port,
+            tonic_port,
             target_path: home_dir().unwrap(),
-            url: qr_code::Data::new("invalid data").unwrap(),
+            tonic_qr: tonic_url,
+            axum_qr: axum_url,
             working_process: Default::default(),
         }
     }
@@ -64,7 +106,10 @@ impl ServerState {
         let working = self.is_working();
         let h = 80.;
         let lt = if working { "stop" } else { "serve" };
-        let lt = text(lt).align_x(Center).align_y(Center).size(25.);
+        let lt = text::Text::new(lt)
+            .align_x(Center)
+            .align_y(Center)
+            .size(25.);
         Button::new(lt)
             .height(h)
             .width(h * 1.6)
@@ -107,7 +152,7 @@ impl ServerState {
     }
 
     fn target_pick(&self) -> Row<'_, Message> {
-        let my_text = |x: String| text(x).size(60).align_x(Center).center();
+        let my_text = |x: String| text::Text::new(x).size(60).align_x(Center).center();
         let target = my_text(
             self.target_path
                 .clone()
@@ -122,7 +167,7 @@ impl ServerState {
 
     fn pick_button(&self) -> Button<'_, Message> {
         let working = self.is_working();
-        let pt = text("pick other target")
+        let pt = text::Text::new("pick other target")
             .align_x(Center)
             .align_y(Center)
             .size(25.);
@@ -154,19 +199,47 @@ impl ServerState {
     }
 
     fn url_section(&self) -> Column<'_, Message> {
-        let my_text = |x: String| text(x).size(60).align_x(Center).center();
+        let my_text = |x: String| {
+            text::Text::new(x)
+                .wrapping(Wrapping::Word)
+                .size(40)
+                .align_x(Center)
+                .center()
+        };
         let at = my_text(String::from("at"));
-        let url = my_text(self.addr.to_string());
-        let qr = qr_code(&self.url).cell_size(13);
-        widget::column![at, url, qr]
+        let native_url = my_text(address_msg(
+            &self.local_ip,
+            self.tonic_port,
+            "native app : ",
+        ));
+        let web_url = my_text(address_msg(&self.local_ip, self.axum_port, "web app : "));
+        let native_qr = match &self.tonic_qr {
+            None => Container::new(text::Text::new("url is unvalid")),
+            Some(x) => Container::new(qr_code(x).cell_size(13)),
+        };
+        let web_qr = match &self.axum_qr {
+            None => Container::new(text::Text::new("url is unvalid")),
+            Some(x) => Container::new(qr_code(x).cell_size(13)),
+        };
+        let web = column![native_url, native_qr].spacing(5.);
+        let native = column![web_url, web_qr].spacing(5.);
+        let row = row![web, native].spacing(15.);
+        widget::column![at, row]
     }
 }
-
-pub async fn serve(root: PathBuf, port: u16) {
-    let one = server::Server::new(root.clone()).port(port - 1).serve();
-    let two = grpc::server::RpcServer::new(root, port);
-    let two = two.serve();
-    let (_, _) = tokio::join!(one, two);
+fn address_msg(
+    local_ip: &Result<IpAddr, local_ip_address::Error>,
+    port: Option<u16>,
+    prefix: &str,
+) -> String {
+    match (local_ip, port) {
+        (Ok(ip), Some(port)) => format!("{prefix} {}", Origin::new(*ip, port)),
+        (Ok(_), None) => format!("{prefix} Error : unavilable port"),
+        (Err(err), Some(_)) => format!("{prefix} error while getting local ip : {err:#?}"),
+        (Err(err), None) => {
+            format!("{prefix} error while getting local ip : {err:#?} and no avilable port")
+        }
+    }
 }
 
 pub async fn which_target() -> Option<PathBuf> {
@@ -174,4 +247,16 @@ pub async fn which_target() -> Option<PathBuf> {
         .pick_folder()
         .await
         .map(|x| x.path().to_path_buf())
+}
+
+pub async fn serve(target_path: PathBuf, tonic_port: Option<u16>, axum_port: Option<u16>) {
+    let (Some(tonic_port), Some(axum_port)) = (tonic_port, axum_port) else {
+        return;
+    };
+    let one = server::Server::new(target_path.clone())
+        .port(axum_port)
+        .serve();
+    let two = grpc::server::RpcServer::new(target_path.clone(), tonic_port);
+    let two = two.serve();
+    let (_, _) = tokio::join!(one, two);
 }
