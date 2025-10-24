@@ -44,7 +44,6 @@ impl From<ClientMessage> for Message {
 
 impl ClientState {
     pub fn view<'a>(&'a self) -> Element<'a, Message> {
-        dbg!(&self.units);
         self.units().into()
     }
 

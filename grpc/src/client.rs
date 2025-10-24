@@ -25,15 +25,10 @@ impl RpcClient {
         let req = LsRequest {
             path: target.to_str().unwrap().to_string(),
         };
-        dbg!(&req);
         let mut client = self.client.lock().await;
-        dbg!(&target);
         let units = client
             .ls(req)
-            .await
-            .inspect_err(|e| {
-                dbg!(e);
-            })?
+            .await?
             .into_inner()
             .units
             .into_iter()

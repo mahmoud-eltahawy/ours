@@ -163,7 +163,7 @@ impl ServerState {
 }
 
 pub async fn serve(root: PathBuf, port: u16) {
-    let one = server::Server::new(root.clone()).port(port).serve();
+    let one = server::Server::new(root.clone()).port(port - 1).serve();
     let two = grpc::server::RpcServer::new(root, port);
     let two = two.serve();
     let (_, _) = tokio::join!(one, two);

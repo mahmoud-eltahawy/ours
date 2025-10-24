@@ -19,9 +19,7 @@ pub struct RpcServer {
 #[tonic::async_trait]
 impl NavService for RpcServer {
     async fn ls(&self, req: Request<LsRequest>) -> Result<Response<LsResponse>, Status> {
-        dbg!(&req);
         let Ok(root) = req.into_inner().path.parse::<PathBuf>();
-        dbg!(&root);
         let root = self.target_dir.join(root);
         let mut dir = fs::read_dir(&root).await?;
         let mut units = Vec::new();
