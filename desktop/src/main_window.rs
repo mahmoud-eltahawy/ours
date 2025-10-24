@@ -19,8 +19,8 @@ pub enum Page {
 #[derive(Default)]
 pub struct MainWindowState {
     pub home: home::HomeState,
-    pub client: Option<client::ClientState>,
     pub server: server::ServerState,
+    pub client: client::ClientState,
 }
 
 #[derive(Clone)]
@@ -35,7 +35,7 @@ impl State {
         match self.main_window_page {
             Page::Home => self.main_window_state.home.view(),
             Page::Server => self.main_window_state.server.view(),
-            Page::Client => self.client(),
+            Page::Client => self.main_window_state.client.view(),
         }
     }
 }

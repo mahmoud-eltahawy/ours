@@ -2,7 +2,7 @@ use std::net::IpAddr;
 
 use crate::{
     Message,
-    main_window::{self, MainWindowMessage, Page},
+    main_window::{MainWindowMessage, Page},
     svg_from_icon_data,
 };
 use common::assets::IconName;

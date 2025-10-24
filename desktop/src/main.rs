@@ -1,5 +1,6 @@
-use std::path::PathBuf;
+use std::{net::SocketAddr, path::PathBuf};
 
+use grpc::client::RpcClient;
 use iced::{
     Color, Element, Subscription, Task, exit,
     theme::Style,
@@ -95,7 +96,7 @@ impl State {
                         Task::none()
                     }
                     HomeMessage::SubmitInput(ip_addr, port) => {
-                        Task::future(grpc::client::RpcClient::new(ip_addr, port))
+                        Task::future(RpcClient::new(SocketAddr::new(ip_addr, port)))
                             .map(|x| ClientMessage::PrepareGrpc(x.ok()).into())
                     }
                     HomeMessage::ToggleInputModal => {
@@ -107,7 +108,7 @@ impl State {
                 MainWindowMessage::Client(client_message) => match client_message {
                     ClientMessage::PrepareGrpc(rpc_client) => match rpc_client {
                         Some(grpc) => {
-                            self.main_window_state.client = Some(ClientState::new(grpc.clone()));
+                            self.main_window_state.client = ClientState::new(grpc.clone());
                             self.main_window_page = Page::Client;
                             Task::future(grpc.ls(PathBuf::new()))
                                 .map(|x| ClientMessage::RefreshUnits(x.unwrap_or_default()).into())
@@ -115,10 +116,15 @@ impl State {
                         None => Task::none(),
                     },
                     ClientMessage::RefreshUnits(units) => {
-                        let Some(client) = &mut self.main_window_state.client else {
-                            return Task::none();
-                        };
-                        client.units = units;
+                        self.main_window_state.client.units = units;
+                        Task::none()
+                    }
+                    ClientMessage::UnitClick(unit) => {
+                        println!("unit {:#?} clicked", unit);
+                        Task::none()
+                    }
+                    ClientMessage::UnitDoubleClick(unit) => {
+                        println!("unit {:#?} double clicked", unit);
                         Task::none()
                     }
                 },
@@ -126,7 +132,7 @@ impl State {
                     ServerMessage::Launch => {
                         self.main_window_state.server.working_process = Some(tokio::spawn(serve(
                             self.main_window_state.server.target_path.clone(),
-                            self.main_window_state.server.origin.port,
+                            self.main_window_state.server.addr.port(),
                         )));
                         Task::none()
                     }

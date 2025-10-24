@@ -3,73 +3,37 @@ use crate::{
     nav::{LsRequest, UnitKind, nav_service_client::NavServiceClient},
 };
 use common::assets::IconName;
-use std::{fmt::Display, net::IpAddr, path::PathBuf, sync::Arc};
+use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 use tokio::sync::Mutex;
 use tonic::transport::{self, Channel};
 
 #[derive(Clone, Debug)]
 pub struct RpcClient {
-    pub origin: Origin,
+    pub addr: SocketAddr,
     pub client: Arc<Mutex<NavServiceClient<Channel>>>,
 }
 
-#[derive(Clone, Debug)]
-pub struct Origin {
-    pub ip: IpAddr,
-    pub port: u16,
-}
-
-impl Display for Origin {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let Self { ip, port } = self;
-        write!(f, "http://{ip}:{port}")
-    }
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord)]
-pub struct Unit {
-    pub path: PathBuf,
-    pub kind: UnitKind,
-}
-
-impl From<UnitKind> for IconName {
-    fn from(value: UnitKind) -> Self {
-        match value {
-            UnitKind::Folder => IconName::Folder,
-            UnitKind::Video => IconName::Video,
-            UnitKind::Audio => IconName::Audio,
-            UnitKind::File => IconName::File,
-        }
-    }
-}
-
-impl Unit {
-    pub fn name(&self) -> String {
-        self.path.file_name().unwrap().to_str().unwrap().to_string()
-    }
-
-    pub fn icon(&self) -> &'static [u8] {
-        IconName::from(self.kind).get()
-    }
-}
-
 impl RpcClient {
-    pub async fn new(ip: IpAddr, port: u16) -> Result<Self, transport::Error> {
-        let origin = Origin { ip, port };
+    pub async fn new(addr: SocketAddr) -> Result<Self, transport::Error> {
         let client: NavServiceClient<Channel> =
-            NavServiceClient::connect(origin.to_string()).await?;
+            NavServiceClient::connect(format!("http://{}", addr)).await?;
         let client = Arc::new(Mutex::new(client));
-        Ok(Self { origin, client })
+        Ok(Self { addr, client })
     }
 
     pub async fn ls(self, target: PathBuf) -> Result<Vec<Unit>, RpcError> {
         let req = LsRequest {
             path: target.to_str().unwrap().to_string(),
         };
+        dbg!(&req);
         let mut client = self.client.lock().await;
+        dbg!(&target);
         let units = client
             .ls(req)
-            .await?
+            .await
+            .inspect_err(|e| {
+                dbg!(e);
+            })?
             .into_inner()
             .units
             .into_iter()
@@ -158,5 +122,32 @@ impl Selected {
 
     pub fn is_selected(&self, unit: &Unit) -> bool {
         self.units.contains(unit)
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord)]
+pub struct Unit {
+    pub path: PathBuf,
+    pub kind: UnitKind,
+}
+
+impl From<UnitKind> for IconName {
+    fn from(value: UnitKind) -> Self {
+        match value {
+            UnitKind::Folder => IconName::Folder,
+            UnitKind::Video => IconName::Video,
+            UnitKind::Audio => IconName::Audio,
+            UnitKind::File => IconName::File,
+        }
+    }
+}
+
+impl Unit {
+    pub fn name(&self) -> String {
+        self.path.file_name().unwrap().to_str().unwrap().to_string()
+    }
+
+    pub fn icon(&self) -> &'static [u8] {
+        IconName::from(self.kind).get()
     }
 }

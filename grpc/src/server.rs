@@ -4,7 +4,10 @@ use crate::{
     nav::{LsRequest, LsResponse, Unit, UnitKind, nav_service_server::NavServiceServer},
 };
 use common::{AUDIO_X, VIDEO_X};
-use std::path::PathBuf;
+use std::{
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    path::PathBuf,
+};
 use tokio::fs;
 use tonic::{Request, Response, Status, transport::Server};
 
@@ -16,7 +19,9 @@ pub struct RpcServer {
 #[tonic::async_trait]
 impl NavService for RpcServer {
     async fn ls(&self, req: Request<LsRequest>) -> Result<Response<LsResponse>, Status> {
+        dbg!(&req);
         let Ok(root) = req.into_inner().path.parse::<PathBuf>();
+        dbg!(&root);
         let root = self.target_dir.join(root);
         let mut dir = fs::read_dir(&root).await?;
         let mut units = Vec::new();
@@ -60,7 +65,7 @@ impl RpcServer {
             port: *port,
         };
 
-        let addr = format!("[::1]:{port}").parse()?;
+        let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), *port);
         Server::builder()
             .add_service(NavServiceServer::new(rpc_service))
             .serve(addr)

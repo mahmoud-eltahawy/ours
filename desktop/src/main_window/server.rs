@@ -1,10 +1,10 @@
-use std::net::Ipv4Addr;
+use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
+use std::{env::home_dir, net::Ipv4Addr};
 
 use crate::Message;
 use crate::main_window::MainWindowMessage;
 use crate::main_window::home::go_home_button;
-use grpc::client::Origin;
 use iced::{
     Alignment::Center,
     Background, Border, Color, Element, Length, Shadow, Vector,
@@ -15,7 +15,7 @@ use rfd::AsyncFileDialog;
 use tokio::task::JoinHandle;
 
 pub struct ServerState {
-    pub origin: Origin,
+    pub addr: SocketAddr,
     pub target_path: PathBuf,
     pub url: qr_code::Data,
     pub working_process: Option<JoinHandle<()>>,
@@ -38,11 +38,8 @@ impl From<ServerMessage> for Message {
 impl Default for ServerState {
     fn default() -> Self {
         Self {
-            origin: Origin {
-                ip: std::net::IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
-                port: 8080,
-            },
-            target_path: Default::default(),
+            addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 8080),
+            target_path: home_dir().unwrap(),
             url: qr_code::Data::new("invalid data").unwrap(),
             working_process: Default::default(),
         }
@@ -159,7 +156,7 @@ impl ServerState {
     fn url_section(&self) -> Column<'_, Message> {
         let my_text = |x: String| text(x).size(60).align_x(Center).center();
         let at = my_text(String::from("at"));
-        let url = my_text(self.origin.to_string());
+        let url = my_text(self.addr.to_string());
         let qr = qr_code(&self.url).cell_size(13);
         widget::column![at, url, qr]
     }
