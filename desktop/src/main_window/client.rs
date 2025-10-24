@@ -11,8 +11,8 @@ use iced::{
 
 #[derive(Default)]
 pub struct ClientState {
-    grpc: Option<RpcClient>,
-    target: PathBuf,
+    pub grpc: Option<RpcClient>,
+    pub target: PathBuf,
     pub select: Selected,
     pub units: Vec<grpc::client::Unit>,
 }

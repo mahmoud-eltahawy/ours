@@ -1,6 +1,6 @@
 use std::{net::SocketAddr, path::PathBuf};
 
-use grpc::client::RpcClient;
+use grpc::{UnitKind, client::RpcClient};
 use iced::{
     Color, Element, Subscription, Task, exit,
     theme::Style,
@@ -120,12 +120,32 @@ impl State {
                         Task::none()
                     }
                     ClientMessage::UnitClick(unit) => {
-                        println!("unit {:#?} clicked", unit);
+                        if self.main_window_state.client.select.on {
+                            self.main_window_state
+                                .client
+                                .select
+                                .toggle_unit_selection(&unit);
+                        } else {
+                            self.main_window_state
+                                .client
+                                .select
+                                .toggle_unit_alone_selection(&unit);
+                        }
                         Task::none()
                     }
                     ClientMessage::UnitDoubleClick(unit) => {
-                        println!("unit {:#?} double clicked", unit);
-                        Task::none()
+                        match (unit.kind, &self.main_window_state.client.grpc) {
+                            (UnitKind::Folder, Some(grpc)) => {
+                                self.main_window_state.client.target = unit.path.clone();
+                                Task::perform(grpc.clone().ls(unit.path.clone()), move |xs| {
+                                    ClientMessage::RefreshUnits(xs.unwrap_or_default()).into()
+                                })
+                            }
+                            _ => {
+                                println!("opening file {unit:#?} is not supported yet");
+                                Task::none()
+                            }
+                        }
                     }
                 },
                 MainWindowMessage::Server(server_message) => match server_message {
