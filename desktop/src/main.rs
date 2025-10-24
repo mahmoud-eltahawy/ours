@@ -124,6 +124,7 @@ impl State {
                         Ok(grpc) => {
                             self.main_window_state.client = ClientState::new(grpc.clone());
                             self.main_window_page = Page::Client;
+                            self.main_window_state.home.show_form = false;
                             Task::future(grpc.ls(PathBuf::new()))
                                 .map(|x| ClientMessage::RefreshUnits(x).into())
                         }

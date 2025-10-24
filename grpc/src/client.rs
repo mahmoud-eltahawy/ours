@@ -26,7 +26,7 @@ impl RpcClient {
             path: target.to_str().unwrap().to_string(),
         };
         let mut client = self.client.lock().await;
-        let units = client
+        let mut units: Vec<top::Unit> = client
             .ls(req)
             .await?
             .into_inner()
@@ -40,6 +40,7 @@ impl RpcClient {
                 }
             })
             .collect();
+        units.sort_by_key(|x| (x.kind, x.name()));
         Ok(units)
     }
 }

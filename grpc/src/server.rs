@@ -42,8 +42,12 @@ impl NavService for RpcServer {
                     _ => UnitKind::File,
                 }
             };
+            let path = x.path();
+            let Ok(path) = path.strip_prefix(&self.target_dir) else {
+                continue;
+            };
             let unit = Unit {
-                path: x.path().to_str().unwrap().to_string(),
+                path: path.to_str().unwrap().to_string(),
                 kind: kind.into(),
             };
             units.push(unit);
