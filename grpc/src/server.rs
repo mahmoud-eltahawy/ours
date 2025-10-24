@@ -1,6 +1,6 @@
 use super::nav::nav_service_server::NavService;
 use crate::{
-    RpcError,
+    error::RpcError,
     nav::{LsRequest, LsResponse, Unit, UnitKind, nav_service_server::NavServiceServer},
 };
 use common::{AUDIO_X, VIDEO_X};

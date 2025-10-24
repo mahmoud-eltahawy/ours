@@ -1,5 +1,5 @@
 use crate::{
-    RpcError,
+    error::RpcError,
     nav::{LsRequest, nav_service_client::NavServiceClient},
     top,
 };

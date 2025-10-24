@@ -1,8 +1,6 @@
-use std::path::PathBuf;
-
 use crate::{Message, main_window::MainWindowMessage, svg_from_icon_data};
-use grpc::RpcError;
 use grpc::client::RpcClient;
+use grpc::error::RpcError;
 use grpc::top::{Selected, Unit};
 use iced::{
     Border, Color, Element, Length,
@@ -10,6 +8,7 @@ use iced::{
     mouse::Interaction,
     widget::{Button, Container, MouseArea, Row, Text, button::Style, mouse_area, row, scrollable},
 };
+use std::path::PathBuf;
 
 #[derive(Default)]
 pub struct ClientState {
