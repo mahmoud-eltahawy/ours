@@ -171,6 +171,24 @@ impl State {
                             }
                         }
                     }
+                    ClientMessage::ToggleSelectMode => {
+                        if self.main_window_state.client.select.on {
+                            self.main_window_state.client.select.clear();
+                        } else {
+                            self.main_window_state.client.select.on = true;
+                        }
+                        Task::none()
+                    }
+                    ClientMessage::GoToPath(path) => {
+                        self.main_window_state.client.target = path.clone();
+                        match &self.main_window_state.client.grpc {
+                            Some(grpc) => Task::perform(grpc.clone().ls(path), |xs| {
+                                ClientMessage::RefreshUnits(xs).into()
+                            }),
+                            None => Task::none(),
+                        }
+                    }
+                    ClientMessage::QueueDownloadFromSelected => unimplemented!(),
                 },
                 MainWindowMessage::Server(server_message) => match server_message {
                     ServerMessage::Launch => {
