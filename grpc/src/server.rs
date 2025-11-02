@@ -1,22 +1,26 @@
 use super::nav::nav_service_server::NavService;
+use crate::nav::{DownloadRequest, DownloadResponse, UploadRequest, UploadResponse};
 use crate::{
     error::RpcError,
     nav::{LsRequest, LsResponse, Unit, UnitKind, nav_service_server::NavServiceServer},
 };
 use common::{AUDIO_X, VIDEO_X};
+use std::pin::Pin;
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
     path::PathBuf,
 };
 use tokio::fs;
-use tonic::{Request, Response, Status, transport::Server};
+use tokio_stream::Stream;
+use tonic::Streaming;
+use tonic::{Request, Response, Status, async_trait, transport::Server};
 
 pub struct RpcServer {
     pub target_dir: PathBuf,
     pub port: u16,
 }
 
-#[tonic::async_trait]
+#[async_trait]
 impl NavService for RpcServer {
     async fn ls(&self, req: Request<LsRequest>) -> Result<Response<LsResponse>, Status> {
         let Ok(root) = req.into_inner().path.parse::<PathBuf>();
@@ -53,6 +57,20 @@ impl NavService for RpcServer {
             units.push(unit);
         }
         Ok(Response::new(LsResponse { units }))
+    }
+
+    type DownloadStream = Pin<Box<dyn Stream<Item = Result<DownloadResponse, Status>> + Send>>;
+    async fn download(
+        &self,
+        req: Request<DownloadRequest>,
+    ) -> Result<Response<Self::DownloadStream>, Status> {
+        unimplemented!()
+    }
+    async fn upload(
+        &self,
+        req: Request<Streaming<UploadRequest>>,
+    ) -> Result<Response<UploadResponse>, Status> {
+        unimplemented!()
     }
 }
 

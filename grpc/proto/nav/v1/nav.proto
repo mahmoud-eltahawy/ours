@@ -3,13 +3,34 @@ package nav.v1;
 
 service NavService {
   rpc Ls (LsRequest) returns (LsResponse) {}
+  rpc Download(DownloadRequest) returns (stream DownloadResponse) {}
+  rpc Upload(stream UploadRequest) returns (UploadResponse) {}
 }
 
 message LsRequest {
   string path = 1;
 }
+
 message LsResponse {
   repeated Unit units = 1;
+}
+
+message DownloadRequest {
+  string path = 1;
+}
+
+
+message DownloadResponse {
+  bytes data = 1;
+}
+
+message UploadRequest {
+  bool ok = 1;
+}
+
+
+message UploadResponse {
+  string path = 1;
 }
 
 message Unit {
@@ -23,3 +44,5 @@ enum UnitKind {
   UNIT_KIND_AUDIO = 2;
   UNIT_KIND_FILE = 3;
 }
+
+

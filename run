@@ -7,7 +7,7 @@ def "main web" [] {
 }
 
 def "main desk" [] {
-  cd ours/
+  cd desktop/
   cargo run
 }
 
