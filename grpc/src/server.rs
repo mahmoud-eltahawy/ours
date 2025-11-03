@@ -10,8 +10,11 @@ use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
     path::PathBuf,
 };
-use tokio::fs;
+use tokio::fs::{self, File};
+use tokio::io::AsyncReadExt;
+use tokio::sync::mpsc;
 use tokio_stream::Stream;
+use tokio_stream::wrappers::ReceiverStream;
 use tonic::Streaming;
 use tonic::{Request, Response, Status, async_trait, transport::Server};
 
@@ -64,7 +67,28 @@ impl NavService for RpcServer {
         &self,
         req: Request<DownloadRequest>,
     ) -> Result<Response<Self::DownloadStream>, Status> {
-        unimplemented!()
+        let Ok(path) = req.into_inner().path.parse::<PathBuf>();
+        let path = self.target_dir.join(path);
+        let mut file = File::open(path).await?;
+
+        let (tx, rx) = mpsc::channel(1024);
+        tokio::spawn(async move {
+            loop {
+                let mut data = Vec::with_capacity(1024);
+                let rb = file.read_buf(&mut data).await.unwrap();
+                if rb == 0 {
+                    break;
+                }
+                tx.send(Result::<_, Status>::Ok(DownloadResponse { data }))
+                    .await
+                    .unwrap();
+            }
+        });
+
+        let output_stream = ReceiverStream::new(rx);
+        Ok(Response::new(
+            Box::pin(output_stream) as Self::DownloadStream
+        ))
     }
     async fn upload(
         &self,
