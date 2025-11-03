@@ -70,21 +70,26 @@ impl NavService for RpcServer {
         let Ok(path) = req.into_inner().path.parse::<PathBuf>();
         let path = self.target_dir.join(path);
         let mut file = File::open(path).await?;
-
-        let (tx, rx) = mpsc::channel(1024);
+        let (tx, rx) = mpsc::channel::<Result<DownloadResponse, Status>>(1024);
         tokio::spawn(async move {
             loop {
-                let mut data = Vec::with_capacity(1024);
-                let rb = file.read_buf(&mut data).await.unwrap();
+                let mut buffer = bytes::BytesMut::with_capacity(1024);
+                let rb = match file.read_buf(&mut buffer).await {
+                    Ok(rb) => rb,
+                    Err(err) => {
+                        return tx.send(Err(err.into())).await;
+                    }
+                };
                 if rb == 0 {
                     break;
                 }
-                tx.send(Result::<_, Status>::Ok(DownloadResponse { data }))
-                    .await
-                    .unwrap();
+                tx.send(Ok(DownloadResponse {
+                    data: buffer.to_vec(),
+                }))
+                .await?;
             }
+            Ok(())
         });
-
         let output_stream = ReceiverStream::new(rx);
         Ok(Response::new(
             Box::pin(output_stream) as Self::DownloadStream

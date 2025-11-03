@@ -166,6 +166,13 @@ impl State {
                                     ClientMessage::RefreshUnits(xs).into()
                                 })
                             }
+                            (_, Some(grpc)) => {
+                                //TODO : double click on files should open preview them not to download them
+                                Task::perform(grpc.clone().download(unit.path), |x| {
+                                    println!("{:#?}", x);
+                                    ClientMessage::QueueDownloadFromSelected.into()
+                                })
+                            }
                             _ => {
                                 println!("opening file {unit:#?} is not supported yet");
                                 Task::none()

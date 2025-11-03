@@ -10,6 +10,7 @@ tonic-prost = "0.14"
 tokio = {workspace = true, features = ["macros", "rt-multi-thread","fs"]}
 common.workspace = true
 tokio-stream = "0.1.17"
+bytes = "1"
 
 [build-dependencies]
 tonic-prost-build = "0.14.2"
