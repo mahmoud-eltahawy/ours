@@ -12,13 +12,13 @@ def "main desk" [] {
 }
 
 def "main build" [] {
-  cd ours
+  cd desktop/
   cargo build --release
 }
 
 def "main install" [] {
   main build 
-  cargo install --path ./ours
+  cargo install --path ./desktop
 }
 
 def main [] {}
