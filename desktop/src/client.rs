@@ -150,6 +150,7 @@ impl UnitViews for Unit {
             let Palette {
                 background,
                 primary,
+                text,
                 ..
             } = theme.palette();
             Style {
@@ -158,6 +159,7 @@ impl UnitViews for Unit {
                     width: 1.,
                     radius: Radius::new(5.),
                 },
+                text_color: text,
                 ..Default::default()
             }
         }))

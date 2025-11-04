@@ -218,8 +218,7 @@ where
         base.into(),
         opaque(
             mouse_area(center(opaque(content)).style(|theme| {
-                let mut bg = theme.palette().background;
-                bg.a = 0.8;
+                let bg = theme.palette().background;
                 container::Style {
                     background: Some(Background::Color(bg)),
                     ..container::Style::default()
