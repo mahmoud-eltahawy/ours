@@ -5,12 +5,12 @@ use std::net::IpAddr;
 use std::path::PathBuf;
 
 use crate::Message;
-use crate::main_window::MainWindowMessage;
-use crate::main_window::home::go_home_button;
+use crate::home::go_home_button;
 use iced::{
     Alignment::Center,
-    Background, Border, Color, Element, Length, Shadow, Vector,
+    Background, Border, Element, Length, Shadow, Theme, Vector,
     border::Radius,
+    theme::Palette,
     widget::{
         self, Button, Column, Container, Row,
         button::Style,
@@ -41,7 +41,7 @@ pub enum ServerMessage {
 
 impl From<ServerMessage> for Message {
     fn from(value: ServerMessage) -> Self {
-        Message::MainWindow(MainWindowMessage::Server(value))
+        Message::Server(value)
     }
 }
 
@@ -106,45 +106,46 @@ impl ServerState {
         let working = self.is_working();
         let h = 80.;
         let lt = if working { "stop" } else { "serve" };
-        let lt = text::Text::new(lt)
-            .align_x(Center)
-            .align_y(Center)
-            .size(25.);
-        Button::new(lt)
-            .height(h)
-            .width(h * 1.6)
-            .style(move |_, _| {
-                let bg = if working {
-                    Color::from_rgb(1., 0., 0.)
-                } else {
-                    Color::from_rgb(0., 1., 0.)
-                };
-                Style {
-                    background: Some(Background::Color(bg)),
-                    border: Border {
-                        width: 3.,
-                        radius: Radius::new(h),
-                        color: Color::from_rgb(0., 0., 0.),
-                    },
-                    shadow: Shadow {
-                        color: if working {
-                            Color::from_rgb(0.8, 0.5, 0.5)
-                        } else {
-                            Color::from_rgb(0.5, 0.8, 0.5)
-                        },
-                        offset: Vector::new(0., 0.),
-                        blur_radius: h * 3.,
-                    },
-                    ..Default::default()
-                }
-            })
-            .on_press({
-                match &self.working_process {
-                    Some(_) => ServerMessage::Stop,
-                    None => ServerMessage::Launch,
-                }
-                .into()
-            })
+        Button::new(
+            text::Text::new(lt)
+                .align_x(Center)
+                .align_y(Center)
+                .size(25.),
+        )
+        .height(h)
+        .width(h * 1.6)
+        .style(move |theme: &Theme, _| {
+            let Palette {
+                background,
+                primary,
+                success,
+                warning,
+                danger,
+                ..
+            } = theme.palette();
+            let bg = if working { danger } else { success };
+            Style {
+                background: Some(Background::Color(bg)),
+                border: Border {
+                    width: 3.,
+                    radius: Radius::new(h),
+                    color: background,
+                },
+                shadow: Shadow {
+                    color: if working { warning } else { primary },
+                    offset: Vector::new(0., 0.),
+                    blur_radius: h * 3.,
+                },
+                ..Default::default()
+            }
+        })
+        .on_press({
+            match &self.working_process {
+                Some(_) => ServerMessage::Stop,
+                None => ServerMessage::Launch,
+            }
+            .into()
+        })
     }
 
     fn is_working(&self) -> bool {
@@ -173,22 +174,24 @@ impl ServerState {
             .size(25.);
 
         Button::new(pt)
-            .style(move |_, _| {
-                let bg = if working {
-                    Color::from_rgb(0.1, 0.1, 0.1)
-                } else {
-                    Color::from_rgb(0.1, 0.1, 1.0)
-                };
+            .style(move |theme: &Theme, _| {
+                let Palette {
+                    background,
+                    success,
+                    ..
+                } = theme.palette();
+
+                let bg = if working { background } else { success };
                 let h = 70.;
                 Style {
                     background: Some(Background::Color(bg)),
                     border: Border {
                         width: 3.,
                         radius: Radius::new(h),
-                        color: Color::from_rgb(0., 0., 0.),
+                        color: bg,
                     },
                     shadow: Shadow {
-                        color: Color::from_rgb(0.5, 0.5, 0.8),
+                        color: success,
                         offset: Vector::new(0., 0.),
                         blur_radius: h * 3.,
                     },

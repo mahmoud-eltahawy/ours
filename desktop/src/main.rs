@@ -2,244 +2,219 @@ use std::{net::SocketAddr, path::PathBuf};
 
 use grpc::{UnitKind, client::RpcClient};
 use iced::{
-    Color, Element, Subscription, Task, exit,
-    theme::Style,
+    Task, Theme,
     widget::{Svg, svg},
-    window::{self, Settings},
 };
 
-use crate::main_window::{
-    MainWindowMessage, Page,
-    client::{ClientMessage, ClientState},
-    home::HomeMessage,
-    server::{ServerMessage, serve, which_target},
+use crate::{
+    client::ClientState,
+    home::HomeState,
+    server::{ServerMessage, ServerState, serve, which_target},
 };
 
-mod download_window;
-mod main_window;
+use client::ClientMessage;
+use home::HomeMessage;
+use iced::Element;
+
+pub mod client;
+pub mod home;
+pub mod server;
+
+#[derive(Default, Clone)]
+pub enum Page {
+    #[default]
+    Home,
+    Client,
+    Server,
+}
 
 fn main() {
-    iced::daemon(State::new, State::update, State::view)
-        .subscription(State::close_event)
+    iced::application(State::new, State::update, State::view)
         .title(State::title)
-        .style(|_, _| Style {
-            background_color: Color::BLACK,
-            text_color: Color::WHITE,
-        })
+        .theme(State::theme)
         .run()
         .unwrap();
 }
 
+#[derive(Default)]
 struct State {
-    main_window_id: window::Id,
-    download_window_id: Option<window::Id>,
-    main_window_page: main_window::Page,
-    pub main_window_state: main_window::MainWindowState,
+    page: Page,
+    pub home: HomeState,
+    pub server: ServerState,
+    pub client: ClientState,
 }
 
 #[derive(Clone)]
-enum Message {
-    WindowOpened(window::Id),
-    WindowClosed(window::Id),
-    GoToPage(main_window::Page),
-    MainWindow(MainWindowMessage),
+pub enum Message {
+    GoToPage(Page),
+    Home(HomeMessage),
+    Client(ClientMessage),
+    Server(ServerMessage),
 }
 
 impl State {
-    fn title(&self, _: window::Id) -> String {
+    fn title(&self) -> String {
         String::from("ours")
     }
-    fn new() -> (Self, Task<Message>) {
-        let (id, task) = window::open(Settings::default());
-        (
-            State {
-                main_window_id: id,
-                download_window_id: None,
-                main_window_page: Default::default(),
-                main_window_state: Default::default(),
-            },
-            task.map(Message::WindowOpened),
-        )
+    fn theme(&self) -> Theme {
+        Theme::Dracula
+    }
+    fn new() -> Self {
+        State {
+            page: Default::default(),
+            ..Default::default()
+        }
     }
     fn update(&mut self, msg: Message) -> Task<Message> {
         match msg {
-            Message::WindowOpened(id) => {
-                if self.main_window_id != id {
-                    self.download_window_id = Some(id);
-                }
-                Task::none()
-            }
-            Message::WindowClosed(id) => {
-                if self.download_window_id.is_some_and(|x| x == id) {
-                    self.download_window_id = None;
-                    Task::none()
-                } else {
-                    exit()
-                }
-            }
             Message::GoToPage(page) => {
-                self.main_window_page = page;
+                self.page = page;
                 Task::none()
             }
-            Message::MainWindow(main_window_message) => match main_window_message {
-                MainWindowMessage::Home(home_message) => match home_message {
-                    HomeMessage::PortNewInput(port) => {
-                        match port {
-                            Ok(port) => {
-                                self.main_window_state.home.url_form.port = port;
-                            }
-                            Err(err) => {
-                                dbg!(err);
-                            }
-                        }
-                        Task::none()
-                    }
-                    HomeMessage::IpNewInput {
-                        valid_ip,
-                        input_value,
-                    } => {
-                        self.main_window_state.home.url_form.ip = input_value;
-                        match valid_ip {
-                            Ok(valid_ip) => {
-                                self.main_window_state.home.url_form.valid_ip = Some(valid_ip);
-                            }
-                            Err(err) => {
-                                dbg!(err);
-                            }
-                        }
-                        Task::none()
-                    }
-                    HomeMessage::SubmitInput(ip_addr, port) => {
-                        Task::future(RpcClient::new(SocketAddr::new(ip_addr, port)))
-                            .map(|x| ClientMessage::PrepareGrpc(x).into())
-                    }
-                    HomeMessage::ToggleInputModal => {
-                        self.main_window_state.home.show_form =
-                            !self.main_window_state.home.show_form;
-                        Task::none()
-                    }
-                },
-                MainWindowMessage::Client(client_message) => match client_message {
-                    ClientMessage::PrepareGrpc(rpc_client) => match rpc_client {
-                        Ok(grpc) => {
-                            self.main_window_state.client = ClientState::new(grpc.clone());
-                            self.main_window_page = Page::Client;
-                            self.main_window_state.home.show_form = false;
-                            Task::future(grpc.ls(PathBuf::new()))
-                                .map(|x| ClientMessage::RefreshUnits(x).into())
+            Message::Home(home_message) => match home_message {
+                HomeMessage::PortNewInput(port) => {
+                    match port {
+                        Ok(port) => {
+                            self.home.url_form.port = port;
                         }
                         Err(err) => {
                             dbg!(err);
+                        }
+                    }
+                    Task::none()
+                }
+                HomeMessage::IpNewInput {
+                    valid_ip,
+                    input_value,
+                } => {
+                    self.home.url_form.ip = input_value;
+                    match valid_ip {
+                        Ok(valid_ip) => {
+                            self.home.url_form.valid_ip = Some(valid_ip);
+                        }
+                        Err(err) => {
+                            dbg!(err);
+                        }
+                    }
+                    Task::none()
+                }
+                HomeMessage::SubmitInput(ip_addr, port) => {
+                    Task::future(RpcClient::new(SocketAddr::new(ip_addr, port)))
+                        .map(|x| ClientMessage::PrepareGrpc(x).into())
+                }
+                HomeMessage::ToggleInputModal => {
+                    self.home.show_form = !self.home.show_form;
+                    Task::none()
+                }
+            },
+            Message::Client(client_message) => match client_message {
+                ClientMessage::PrepareGrpc(rpc_client) => match rpc_client {
+                    Ok(grpc) => {
+                        self.client = ClientState::new(grpc.clone());
+                        self.page = Page::Client;
+                        self.home.show_form = false;
+                        Task::future(grpc.ls(PathBuf::new()))
+                            .map(|x| ClientMessage::RefreshUnits(x).into())
+                    }
+                    Err(err) => {
+                        dbg!(err);
+                        Task::none()
+                    }
+                },
+                ClientMessage::RefreshUnits(units) => {
+                    match units {
+                        Ok(units) => {
+                            self.client.units = units;
+                        }
+                        Err(err) => {
+                            dbg!(err);
+                        }
+                    }
+                    Task::none()
+                }
+                ClientMessage::UnitClick(unit) => {
+                    if self.client.select.on {
+                        self.client.select.toggle_unit_selection(&unit);
+                    } else {
+                        self.client.select.toggle_unit_alone_selection(&unit);
+                    }
+                    Task::none()
+                }
+                ClientMessage::UnitDoubleClick(unit) => {
+                    match (unit.kind, &self.client.grpc) {
+                        (UnitKind::Folder, Some(grpc)) => {
+                            self.client.target = unit.path.clone();
+                            Task::perform(grpc.clone().ls(unit.path.clone()), move |xs| {
+                                ClientMessage::RefreshUnits(xs).into()
+                            })
+                        }
+                        (_, Some(grpc)) => {
+                            //TODO : double click on files should open preview them not to download them
+                            Task::perform(grpc.clone().download_file(unit.path), |x| {
+                                println!("{:#?}", x);
+                                ClientMessage::QueueDownloadFromSelected.into()
+                            })
+                        }
+                        _ => {
+                            println!("opening file {unit:#?} is not supported yet");
                             Task::none()
                         }
-                    },
-                    ClientMessage::RefreshUnits(units) => {
-                        match units {
-                            Ok(units) => {
-                                self.main_window_state.client.units = units;
-                            }
-                            Err(err) => {
-                                dbg!(err);
-                            }
-                        }
-                        Task::none()
                     }
-                    ClientMessage::UnitClick(unit) => {
-                        if self.main_window_state.client.select.on {
-                            self.main_window_state
-                                .client
-                                .select
-                                .toggle_unit_selection(&unit);
-                        } else {
-                            self.main_window_state
-                                .client
-                                .select
-                                .toggle_unit_alone_selection(&unit);
-                        }
-                        Task::none()
+                }
+                ClientMessage::ToggleSelectMode => {
+                    if self.client.select.on {
+                        self.client.select.clear();
+                    } else {
+                        self.client.select.on = true;
                     }
-                    ClientMessage::UnitDoubleClick(unit) => {
-                        match (unit.kind, &self.main_window_state.client.grpc) {
-                            (UnitKind::Folder, Some(grpc)) => {
-                                self.main_window_state.client.target = unit.path.clone();
-                                Task::perform(grpc.clone().ls(unit.path.clone()), move |xs| {
-                                    ClientMessage::RefreshUnits(xs).into()
-                                })
-                            }
-                            (_, Some(grpc)) => {
-                                //TODO : double click on files should open preview them not to download them
-                                Task::perform(grpc.clone().download(unit.path), |x| {
-                                    println!("{:#?}", x);
-                                    ClientMessage::QueueDownloadFromSelected.into()
-                                })
-                            }
-                            _ => {
-                                println!("opening file {unit:#?} is not supported yet");
-                                Task::none()
-                            }
-                        }
+                    Task::none()
+                }
+                ClientMessage::GoToPath(path) => {
+                    self.client.target = path.clone();
+                    match &self.client.grpc {
+                        Some(grpc) => Task::perform(grpc.clone().ls(path), |xs| {
+                            ClientMessage::RefreshUnits(xs).into()
+                        }),
+                        None => Task::none(),
                     }
-                    ClientMessage::ToggleSelectMode => {
-                        if self.main_window_state.client.select.on {
-                            self.main_window_state.client.select.clear();
-                        } else {
-                            self.main_window_state.client.select.on = true;
-                        }
-                        Task::none()
+                }
+                ClientMessage::QueueDownloadFromSelected => unimplemented!(),
+            },
+            Message::Server(server_message) => match server_message {
+                ServerMessage::Launch => {
+                    self.server.working_process = Some(tokio::spawn(serve(
+                        self.server.target_path.clone(),
+                        self.server.tonic_port,
+                        self.server.axum_port,
+                    )));
+                    Task::none()
+                }
+                ServerMessage::Stop => {
+                    if let Some(x) = &self.server.working_process {
+                        x.abort();
+                        self.server.working_process = None;
                     }
-                    ClientMessage::GoToPath(path) => {
-                        self.main_window_state.client.target = path.clone();
-                        match &self.main_window_state.client.grpc {
-                            Some(grpc) => Task::perform(grpc.clone().ls(path), |xs| {
-                                ClientMessage::RefreshUnits(xs).into()
-                            }),
-                            None => Task::none(),
-                        }
+                    Task::none()
+                }
+                ServerMessage::PickTarget => {
+                    Task::perform(which_target(), |x| ServerMessage::TargetPicked(x).into())
+                }
+                ServerMessage::TargetPicked(path_buf) => {
+                    if let Some(path_buf) = path_buf {
+                        self.server.target_path = path_buf;
                     }
-                    ClientMessage::QueueDownloadFromSelected => unimplemented!(),
-                },
-                MainWindowMessage::Server(server_message) => match server_message {
-                    ServerMessage::Launch => {
-                        self.main_window_state.server.working_process = Some(tokio::spawn(serve(
-                            self.main_window_state.server.target_path.clone(),
-                            self.main_window_state.server.tonic_port,
-                            self.main_window_state.server.axum_port,
-                        )));
-                        Task::none()
-                    }
-                    ServerMessage::Stop => {
-                        if let Some(x) = &self.main_window_state.server.working_process {
-                            x.abort();
-                            self.main_window_state.server.working_process = None;
-                        }
-                        Task::none()
-                    }
-                    ServerMessage::PickTarget => {
-                        Task::perform(which_target(), |x| ServerMessage::TargetPicked(x).into())
-                    }
-                    ServerMessage::TargetPicked(path_buf) => {
-                        if let Some(path_buf) = path_buf {
-                            self.main_window_state.server.target_path = path_buf;
-                        }
-                        Task::none()
-                    }
-                },
+                    Task::none()
+                }
             },
         }
     }
 
-    fn view<'a>(&'a self, window_id: window::Id) -> Element<'a, Message> {
-        if self.main_window_id == window_id {
-            self.main_window_view()
-        } else if self.download_window_id.is_some_and(|x| x == window_id) {
-            self.download_window_view()
-        } else {
-            unreachable!()
+    pub fn view<'a>(&'a self) -> Element<'a, Message> {
+        match self.page {
+            Page::Home => self.home.view(),
+            Page::Server => self.server.view(),
+            Page::Client => self.client.view(),
         }
-    }
-
-    fn close_event(&self) -> Subscription<Message> {
-        window::close_events().map(Message::WindowClosed)
     }
 }
 

@@ -1,14 +1,11 @@
 use std::net::{AddrParseError, IpAddr};
 
-use crate::{
-    Message,
-    main_window::{MainWindowMessage, Page},
-    svg_from_icon_data,
-};
+use crate::{Message, Page, svg_from_icon_data};
 use common::assets::IconName;
 use iced::{
-    Alignment, Background, Border, Color, Element, Length,
+    Alignment, Background, Border, Element, Length,
     border::Radius,
+    theme::Palette,
     widget::{
         Button, Container, Text, button, center, column, container, mouse_area, opaque, row, stack,
         text_input::{self, Style},
@@ -41,7 +38,7 @@ pub enum HomeMessage {
 
 impl From<HomeMessage> for Message {
     fn from(value: HomeMessage) -> Self {
-        Self::MainWindow(MainWindowMessage::Home(value))
+        Self::Home(value)
     }
 }
 
@@ -73,7 +70,7 @@ impl HomeState {
         let content = Text::new("go to server mode").center().size(60);
         Button::new(content)
             .padding(30.)
-            .style(move |_, _| common_button_style())
+            .style(move |theme, _| common_button_style(theme))
             .on_press(Message::GoToPage(Page::Server))
     }
 
@@ -81,28 +78,37 @@ impl HomeState {
         let content = Text::new("go to client mode").center().size(60);
         Button::new(content)
             .padding(30.)
-            .style(move |_, _| common_button_style())
+            .style(move |theme, _| common_button_style(theme))
             .on_press(HomeMessage::ToggleInputModal.into())
     }
 }
 
-const STYLE_INPUT: Style = Style {
-    background: iced::Background::Color(Color::BLACK),
-    border: Border {
-        color: Color::WHITE,
-        width: 2.,
-        radius: Radius {
-            top_left: 8.,
-            top_right: 8.,
-            bottom_right: 8.,
-            bottom_left: 8.,
+fn style_input(theme: &iced::Theme) -> Style {
+    let Palette {
+        background,
+        text,
+        primary,
+        success,
+        ..
+    } = theme.palette();
+    Style {
+        background: iced::Background::Color(background),
+        border: Border {
+            color: primary,
+            width: 2.,
+            radius: Radius {
+                top_left: 8.,
+                top_right: 8.,
+                bottom_right: 8.,
+                bottom_left: 8.,
+            },
         },
-    },
-    placeholder: Color::from_rgb(0.7, 0.7, 0.7),
-    value: Color::from_rgb(0.1, 1., 0.1),
-    selection: Color::from_rgb(0.1, 0.1, 0.8),
-    icon: Color::from_rgb(0.1, 0.1, 1.),
-};
+        placeholder: text,
+        value: text,
+        selection: primary,
+        icon: success,
+    }
+}
 
 impl UrlForm {
     pub fn view(&self) -> Container<'_, Message> {
@@ -123,10 +129,7 @@ impl UrlForm {
     }
 
     fn submit_button(&self) -> Button<'_, Message> {
-        let content = Text::new("submit")
-            .size(60.)
-            .center()
-            .color(Color::from_rgb(0.0, 1.0, 0.1));
+        let content = Text::new("submit").size(60.).center();
         Button::new(content).on_press_maybe(
             self.valid_ip
                 .map(|ip| HomeMessage::SubmitInput(ip, self.port).into())
@@ -146,7 +149,7 @@ impl UrlForm {
         .size(30.)
         .padding(10.)
         .align_x(Alignment::Center)
-        .style(|_, _| STYLE_INPUT)
+        .style(|theme, _| style_input(theme))
         .on_input(|x| HomeMessage::PortNewInput(x.parse::<u16>()).into())
     }
 
@@ -155,13 +158,13 @@ impl UrlForm {
             .size(30.)
             .padding(10.)
             .align_x(Alignment::Center)
-            .style(|_, _| {
+            .style(|theme, _| {
                 if self.valid_ip.is_some() {
-                    STYLE_INPUT
+                    style_input(theme)
                 } else {
                     Style {
-                        value: Color::from_rgb(1.0, 0.1, 0.1),
-                        ..STYLE_INPUT
+                        value: theme.palette().danger,
+                        ..style_input(theme)
                     }
                 }
             })
@@ -175,36 +178,30 @@ impl UrlForm {
     }
 
     fn cancle_button(&self) -> Button<'_, Message> {
-        let cancel = Text::new("cancel")
-            .color(Color::from_rgb(1., 0., 0.))
-            .size(60.)
-            .center();
+        let cancel = Text::new("cancel").size(60.).center();
         Button::new(cancel).on_press(HomeMessage::ToggleInputModal.into())
     }
 }
 
-fn form_style(_: &iced::Theme) -> container::Style {
+fn form_style(theme: &iced::Theme) -> container::Style {
     container::Style {
-        text_color: Some(Color::WHITE),
         border: Border {
-            color: Color::WHITE,
             width: 12.,
             radius: Radius::new(22.),
+            color: theme.palette().primary,
         },
-        background: Some(Background::Color(Color::BLACK)),
         ..Default::default()
     }
 }
 
-fn common_button_style() -> button::Style {
+fn common_button_style(theme: &iced::Theme) -> button::Style {
     button::Style {
-        background: Some(Background::Color(Color::BLACK)),
-        text_color: Color::WHITE,
         border: iced::Border {
-            color: Color::WHITE,
             width: 5.,
             radius: Radius::new(30.),
+            color: theme.palette().text,
         },
+        text_color: theme.palette().text,
         ..Default::default()
     }
 }
@@ -220,12 +217,11 @@ where
     stack![
         base.into(),
         opaque(
-            mouse_area(center(opaque(content)).style(|_theme| {
+            mouse_area(center(opaque(content)).style(|theme| {
+                let mut bg = theme.palette().background;
+                bg.a = 0.8;
                 container::Style {
-                    background: Some(Background::Color(Color {
-                        a: 0.8,
-                        ..Color::BLACK
-                    })),
+                    background: Some(Background::Color(bg)),
                     ..container::Style::default()
                 }
             }))
@@ -238,8 +234,8 @@ where
 pub fn go_home_button<'a>() -> Button<'a, Message> {
     Button::new(svg_from_icon_data(IconName::Home.get()))
         .on_press(Message::GoToPage(Page::Home))
-        .style(move |_, _| button::Style {
-            background: Some(iced::Background::Color(Color::from_rgb(0.9, 0.1, 0.1))),
+        .style(|theme, _| button::Style {
+            background: Some(Background::Color(theme.palette().danger)),
             ..Default::default()
         })
 }

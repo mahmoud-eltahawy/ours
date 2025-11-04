@@ -1,11 +1,13 @@
-use crate::main_window::home::go_home_button;
-use crate::{Message, main_window::MainWindowMessage, svg_from_icon_data};
+use crate::home::go_home_button;
+use crate::{Message, svg_from_icon_data};
 use common::assets::IconName;
 use grpc::client::RpcClient;
 use grpc::error::RpcError;
 use grpc::top::{Selected, Unit};
+use iced::theme::Palette;
+use iced::widget::container;
 use iced::{
-    Border, Color, Element, Length,
+    Border, Element, Length,
     border::Radius,
     mouse::Interaction,
     widget::{Button, Container, MouseArea, Row, Text, button::Style, mouse_area, row, scrollable},
@@ -44,7 +46,7 @@ pub enum ClientMessage {
 
 impl From<ClientMessage> for Message {
     fn from(value: ClientMessage) -> Self {
-        Message::MainWindow(MainWindowMessage::Client(value))
+        Message::Client(value)
     }
 }
 
@@ -70,13 +72,16 @@ impl ClientState {
             })
             .wrap();
         let units = Container::new(units)
-            .style(|_| iced::widget::container::Style {
-                border: Border {
-                    color: Color::WHITE,
-                    width: 2.,
-                    radius: Radius::new(20),
-                },
-                ..Default::default()
+            .style(|theme| {
+                let Palette { primary, .. } = theme.palette();
+                container::Style {
+                    border: Border {
+                        width: 1.,
+                        radius: Radius::new(20),
+                        color: primary,
+                    },
+                    ..Default::default()
+                }
             })
             .padding(10.);
         scrollable(units).width(Length::Fill)
@@ -88,13 +93,16 @@ impl ClientState {
         let selector = self.select_button();
         let download = self.download_button();
         Container::new(row![selector, back, home, download].spacing(5.).wrap())
-            .style(|_| iced::widget::container::Style {
-                border: Border {
-                    color: Color::WHITE,
-                    width: 2.,
-                    radius: Radius::new(20),
-                },
-                ..Default::default()
+            .style(|theme| {
+                let Palette { primary, .. } = theme.palette();
+                container::Style {
+                    border: Border {
+                        width: 1.,
+                        radius: Radius::new(20),
+                        color: primary,
+                    },
+                    ..Default::default()
+                }
             })
             .center_x(Length::Fill)
             .padding(12.)
@@ -137,15 +145,19 @@ impl UnitViews for Unit {
         let svg = svg_from_icon_data(self.icon());
         let text = Text::new(self.name());
         let row = row![svg, text].spacing(4.);
-        mouse_area(Button::new(row).style(|_, _| {
+        mouse_area(Button::new(row).style(|theme, _| {
             let selected = selected.is_selected(self);
+            let Palette {
+                background,
+                primary,
+                ..
+            } = theme.palette();
             Style {
                 border: Border {
-                    color: if selected { Color::WHITE } else { Color::BLACK },
-                    width: 5.,
+                    color: if selected { primary } else { background },
+                    width: 1.,
                     radius: Radius::new(5.),
                 },
-                text_color: Color::WHITE,
                 ..Default::default()
             }
         }))
@@ -158,11 +170,10 @@ impl UnitViews for Unit {
 fn svg_button<'a>(icon: &'a [u8]) -> Button<'a, Message> {
     Button::new(svg_from_icon_data(icon))
         .style(|_, _| Style {
-            background: Some(iced::Background::Color(Color::BLACK)),
             border: Border {
-                color: Color::WHITE,
-                width: 2.,
+                width: 1.,
                 radius: Radius::new(2.),
+                ..Default::default()
             },
             ..Default::default()
         })

@@ -48,7 +48,7 @@ impl RpcClient {
         Ok(units)
     }
 
-    pub async fn download(self, target: PathBuf) -> Result<(), RpcError> {
+    pub async fn download_file(self, target: PathBuf) -> Result<(), RpcError> {
         let req = DownloadRequest {
             path: target.to_str().unwrap().to_string(),
         };
