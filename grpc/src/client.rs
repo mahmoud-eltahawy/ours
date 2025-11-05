@@ -54,7 +54,7 @@ impl RpcClient {
         };
         let mut client = self.client.lock().await;
         let mut stream = client.download(req).await?.into_inner();
-        let target = home_dir().unwrap().join("Downloads").join(target);
+        let target = home_dir().unwrap().join("Downloads").join(&target);
         create_dir_all(target.parent().map(|x| x.to_path_buf()).unwrap_or_default()).await?;
         let mut file = File::create(target).await?;
         while let Some(DownloadResponse { data }) = stream.message().await? {

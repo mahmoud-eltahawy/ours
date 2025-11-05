@@ -6,6 +6,7 @@ use grpc::client::RpcClient;
 use grpc::error::RpcError;
 use grpc::top::{Selected, Unit};
 use iced::Task;
+use iced::task::Handle;
 use iced::theme::Palette;
 use iced::widget::container;
 use iced::{
@@ -21,7 +22,57 @@ pub struct ClientState {
     pub grpc: Option<RpcClient>,
     pub target: PathBuf,
     pub select: Selected,
-    pub units: Vec<grpc::top::Unit>,
+    pub units: Vec<Unit>,
+    downloads: Downloads,
+}
+
+#[derive(Default, Debug)]
+struct Downloads {
+    pub waiting: Vec<PathBuf>,
+    pub progressing: Vec<Option<(PathBuf, Handle)>>,
+    pub finished: Vec<PathBuf>,
+    pub failed: Vec<(PathBuf, RpcError)>,
+}
+
+impl Downloads {
+    fn fill_turn(&mut self, grpc: RpcClient) -> Option<(Task<Result<(), RpcError>>, usize)> {
+        match self.waiting.pop() {
+            Some(path) => {
+                let (t, h) = Task::future(grpc.clone().download_file(path.clone())).abortable();
+                self.progressing.push(Some((path, h)));
+                Some((t, self.progressing.len() - 1))
+            }
+            None => None,
+        }
+    }
+
+    fn tick_next(&mut self, grpc: RpcClient) -> Option<Task<Message>> {
+        self.fill_turn(grpc).map(|(task, index)| {
+            task.map(move |result| ClientMessage::TickNextDownload { result, index }.into())
+        })
+    }
+    fn tick_available(&mut self, grpc: RpcClient) -> Task<Message> {
+        let mut xs = Vec::new();
+
+        while let Some(task) = self.tick_next(grpc.clone()) {
+            xs.push(task);
+        }
+        Task::batch(xs)
+    }
+    fn fail(&mut self, index: usize, err: RpcError) {
+        let target = self.progressing[index].clone().map(|x| x.0);
+        if let Some(target) = target {
+            self.failed.push((target, err));
+        }
+        self.progressing[index] = None;
+    }
+    fn finish(&mut self, index: usize) {
+        let target = self.progressing[index].clone().map(|x| x.0);
+        if let Some(target) = target {
+            self.finished.push(target);
+        }
+        self.progressing[index] = None;
+    }
 }
 
 impl ClientState {
@@ -31,19 +82,25 @@ impl ClientState {
             target: PathBuf::new(),
             units: Vec::new(),
             select: Selected::default(),
+            downloads: Downloads::default(),
         }
     }
 }
 
 #[derive(Clone)]
 pub enum ClientMessage {
-    RefreshUnits(Result<Vec<grpc::top::Unit>, RpcError>),
+    RefreshUnits(Result<Vec<Unit>, RpcError>),
     PrepareGrpc(Result<RpcClient, RpcError>),
     UnitClick(Unit),
     UnitDoubleClick(Unit),
-    QueueDownloadFromSelected,
+    QueueDownloadFromSelectedStart,
+    QueueDownloadFromSelected(Result<Vec<PathBuf>, RpcError>),
     ToggleSelectMode,
     GoToPath(PathBuf),
+    TickNextDownload {
+        result: Result<(), RpcError>,
+        index: usize,
+    },
 }
 
 impl From<ClientMessage> for Message {
@@ -112,7 +169,7 @@ impl ClientState {
 
     fn download_button(&self) -> Button<'_, Message> {
         svg_button(IconName::Download.get())
-            .on_press(ClientMessage::QueueDownloadFromSelected.into())
+            .on_press(ClientMessage::QueueDownloadFromSelectedStart.into())
     }
 
     fn select_button(&self) -> Button<'_, Message> {
@@ -220,27 +277,18 @@ impl State {
                 }
                 Task::none()
             }
-            ClientMessage::UnitDoubleClick(unit) => {
-                match (unit.kind, &state.grpc) {
-                    (UnitKind::Folder, Some(grpc)) => {
-                        state.target = unit.path.clone();
-                        Task::perform(grpc.clone().ls(unit.path.clone()), move |xs| {
-                            ClientMessage::RefreshUnits(xs).into()
-                        })
-                    }
-                    (_, Some(grpc)) => {
-                        //TODO : double click on files should open preview them not to download them
-                        Task::perform(grpc.clone().download_file(unit.path), |x| {
-                            println!("{:#?}", x);
-                            ClientMessage::QueueDownloadFromSelected.into()
-                        })
-                    }
-                    _ => {
-                        println!("opening file {unit:#?} is not supported yet");
-                        Task::none()
-                    }
+            ClientMessage::UnitDoubleClick(unit) => match (unit.kind, &state.grpc) {
+                (UnitKind::Folder, Some(grpc)) => {
+                    state.target = unit.path.clone();
+                    Task::perform(grpc.clone().ls(unit.path.clone()), move |xs| {
+                        ClientMessage::RefreshUnits(xs).into()
+                    })
                 }
-            }
+                _ => {
+                    println!("opening file {unit:#?} is not supported yet");
+                    Task::none()
+                }
+            },
             ClientMessage::ToggleSelectMode => {
                 if state.select.on {
                     state.select.clear();
@@ -258,7 +306,76 @@ impl State {
                     None => Task::none(),
                 }
             }
-            ClientMessage::QueueDownloadFromSelected => unimplemented!(),
+            ClientMessage::QueueDownloadFromSelectedStart => {
+                let units = state.select.units.clone();
+                let Some(grpc) = &state.grpc else {
+                    return Task::none();
+                };
+                state.select.clear();
+                let fut = get_download_paths(grpc.clone(), units);
+                Task::perform(fut, |x| ClientMessage::QueueDownloadFromSelected(x).into())
+            }
+            ClientMessage::QueueDownloadFromSelected(paths) => {
+                let paths = match paths {
+                    Ok(paths) => paths,
+                    Err(err) => {
+                        dbg!(err);
+                        return Task::none();
+                    }
+                };
+                state.downloads.waiting.extend(paths);
+                dbg!(&state.downloads);
+
+                let Some(grpc) = state.grpc.clone() else {
+                    return Task::none();
+                };
+
+                state.downloads.tick_available(grpc)
+            }
+            ClientMessage::TickNextDownload { result, index } => {
+                match result {
+                    Ok(()) => {
+                        state.downloads.finish(index);
+                    }
+                    Err(err) => {
+                        dbg!(&err);
+                        state.downloads.fail(index, err);
+                    }
+                }
+                let Some(grpc) = state.grpc.clone() else {
+                    return Task::none();
+                };
+                dbg!(&state.downloads);
+                state.downloads.tick_available(grpc)
+            }
         }
     }
+}
+
+#[async_recursion::async_recursion]
+async fn get_download_paths(grpc: RpcClient, units: Vec<Unit>) -> Result<Vec<PathBuf>, RpcError> {
+    let mut res = Vec::new();
+    for unit in units {
+        match unit.kind {
+            UnitKind::Folder => {
+                let in_units = grpc.clone().ls(unit.path.clone()).await?;
+                let mut folders = Vec::new();
+                for in_unit in in_units {
+                    match in_unit.kind {
+                        UnitKind::Folder => {
+                            folders.push(in_unit);
+                        }
+                        _ => {
+                            res.push(in_unit.path.clone());
+                        }
+                    }
+                }
+                res.extend(get_download_paths(grpc.clone(), folders).await?);
+            }
+            _ => {
+                res.push(unit.path.clone());
+            }
+        };
+    }
+    Ok(res)
 }
