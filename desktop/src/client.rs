@@ -28,19 +28,65 @@ pub struct ClientState {
 
 #[derive(Default, Debug)]
 struct Downloads {
-    pub waiting: Vec<PathBuf>,
-    pub progressing: Vec<Option<(PathBuf, Handle)>>,
-    pub finished: Vec<PathBuf>,
-    pub failed: Vec<(PathBuf, RpcError)>,
+    progressing_count: usize,
+    files: Vec<Download>,
+}
+
+#[derive(Default, Debug)]
+struct Download {
+    path: PathBuf,
+    state: DownloadState,
+}
+
+impl From<PathBuf> for Download {
+    fn from(value: PathBuf) -> Self {
+        Self {
+            path: value,
+            state: DownloadState::Waiting,
+        }
+    }
+}
+
+#[derive(Default, Debug, Clone)]
+enum DownloadState {
+    #[default]
+    Waiting,
+    Progressing(Handle),
+    Finished,
+    Failed(RpcError),
 }
 
 impl Downloads {
+    fn progress(&mut self, index: usize, handle: Handle) {
+        self.progressing_count += 1;
+        self.files[index].state = DownloadState::Progressing(handle);
+    }
+    fn finish(&mut self, index: usize) {
+        self.progressing_count -= 1;
+        self.files[index].state = DownloadState::Finished;
+    }
+    fn fail(&mut self, index: usize, err: RpcError) {
+        self.progressing_count -= 1;
+        self.files[index].state = DownloadState::Failed(err);
+    }
+    fn first_waiting(&mut self) -> Option<(&Download, usize)> {
+        for (i, value) in self.files.iter().enumerate() {
+            if matches!(value.state, DownloadState::Waiting) {
+                return Some((value, i));
+            }
+        }
+        None
+    }
     fn fill_turn(&mut self, grpc: RpcClient) -> Option<(Task<Result<(), RpcError>>, usize)> {
-        match self.waiting.pop() {
-            Some(path) => {
-                let (t, h) = Task::future(grpc.clone().download_file(path.clone())).abortable();
-                self.progressing.push(Some((path, h)));
-                Some((t, self.progressing.len() - 1))
+        if self.progressing_count >= 5 {
+            return None;
+        }
+        match self.first_waiting() {
+            Some((download, index)) => {
+                let (task, handle) =
+                    Task::future(grpc.clone().download_file(download.path.clone())).abortable();
+                self.progress(index, handle);
+                Some((task, index))
             }
             None => None,
         }
@@ -58,20 +104,6 @@ impl Downloads {
             xs.push(task);
         }
         Task::batch(xs)
-    }
-    fn fail(&mut self, index: usize, err: RpcError) {
-        let target = self.progressing[index].clone().map(|x| x.0);
-        if let Some(target) = target {
-            self.failed.push((target, err));
-        }
-        self.progressing[index] = None;
-    }
-    fn finish(&mut self, index: usize) {
-        let target = self.progressing[index].clone().map(|x| x.0);
-        if let Some(target) = target {
-            self.finished.push(target);
-        }
-        self.progressing[index] = None;
     }
 }
 
@@ -323,7 +355,10 @@ impl State {
                         return Task::none();
                     }
                 };
-                state.downloads.waiting.extend(paths);
+                state
+                    .downloads
+                    .files
+                    .extend(paths.into_iter().map(Download::from));
                 dbg!(&state.downloads);
 
                 let Some(grpc) = state.grpc.clone() else {
