@@ -352,7 +352,6 @@ impl State {
     }
 }
 
-#[async_recursion::async_recursion]
 async fn get_download_paths(grpc: RpcClient, units: Vec<Unit>) -> Result<Vec<PathBuf>, RpcError> {
     let mut res = Vec::new();
     for unit in units {
@@ -370,7 +369,7 @@ async fn get_download_paths(grpc: RpcClient, units: Vec<Unit>) -> Result<Vec<Pat
                         }
                     }
                 }
-                res.extend(get_download_paths(grpc.clone(), folders).await?);
+                res.extend(Box::pin(get_download_paths(grpc.clone(), folders)).await?);
             }
             _ => {
                 res.push(unit.path.clone());
