@@ -1,3 +1,4 @@
+use crate::client::downloads::Downloads;
 use crate::home::go_home_button;
 use crate::{Message, Page, State, svg_from_icon_data};
 use common::assets::IconName;
@@ -5,17 +6,20 @@ use grpc::UnitKind;
 use grpc::client::RpcClient;
 use grpc::error::RpcError;
 use grpc::top::{Selected, Unit};
+use iced::Alignment;
 use iced::Task;
-use iced::task::Handle;
 use iced::theme::Palette;
-use iced::widget::container;
+use iced::widget::{Column, container};
 use iced::{
     Border, Element, Length,
     border::Radius,
     mouse::Interaction,
     widget::{Button, Container, MouseArea, Row, Text, button::Style, mouse_area, row, scrollable},
 };
+
 use std::path::PathBuf;
+
+mod downloads;
 
 #[derive(Default)]
 pub struct ClientState {
@@ -24,87 +28,6 @@ pub struct ClientState {
     pub select: Selected,
     pub units: Vec<Unit>,
     downloads: Downloads,
-}
-
-#[derive(Default, Debug)]
-struct Downloads {
-    progressing_count: usize,
-    files: Vec<Download>,
-}
-
-#[derive(Default, Debug)]
-struct Download {
-    path: PathBuf,
-    state: DownloadState,
-}
-
-impl From<PathBuf> for Download {
-    fn from(value: PathBuf) -> Self {
-        Self {
-            path: value,
-            state: DownloadState::Waiting,
-        }
-    }
-}
-
-#[derive(Default, Debug, Clone)]
-enum DownloadState {
-    #[default]
-    Waiting,
-    Progressing(Handle),
-    Finished,
-    Failed(RpcError),
-}
-
-impl Downloads {
-    fn progress(&mut self, index: usize, handle: Handle) {
-        self.progressing_count += 1;
-        self.files[index].state = DownloadState::Progressing(handle);
-    }
-    fn finish(&mut self, index: usize) {
-        self.progressing_count -= 1;
-        self.files[index].state = DownloadState::Finished;
-    }
-    fn fail(&mut self, index: usize, err: RpcError) {
-        self.progressing_count -= 1;
-        self.files[index].state = DownloadState::Failed(err);
-    }
-    fn first_waiting(&mut self) -> Option<(&Download, usize)> {
-        for (i, value) in self.files.iter().enumerate() {
-            if matches!(value.state, DownloadState::Waiting) {
-                return Some((value, i));
-            }
-        }
-        None
-    }
-    fn fill_turn(&mut self, grpc: RpcClient) -> Option<(Task<Result<(), RpcError>>, usize)> {
-        if self.progressing_count >= 5 {
-            return None;
-        }
-        match self.first_waiting() {
-            Some((download, index)) => {
-                let (task, handle) =
-                    Task::future(grpc.clone().download_file(download.path.clone())).abortable();
-                self.progress(index, handle);
-                Some((task, index))
-            }
-            None => None,
-        }
-    }
-
-    fn tick_next(&mut self, grpc: RpcClient) -> Option<Task<Message>> {
-        self.fill_turn(grpc).map(|(task, index)| {
-            task.map(move |result| ClientMessage::TickNextDownload { result, index }.into())
-        })
-    }
-    fn tick_available(&mut self, grpc: RpcClient) -> Task<Message> {
-        let mut xs = Vec::new();
-
-        while let Some(task) = self.tick_next(grpc.clone()) {
-            xs.push(task);
-        }
-        Task::batch(xs)
-    }
 }
 
 impl ClientState {
@@ -199,9 +122,12 @@ impl ClientState {
             .padding(12.)
     }
 
-    fn download_button(&self) -> Button<'_, Message> {
-        svg_button(IconName::Download.get())
-            .on_press(ClientMessage::QueueDownloadFromSelectedStart.into())
+    fn download_button(&self) -> Column<'_, Message> {
+        let ad = self.downloads.active_count();
+        let active_downloads = (ad != 0).then_some(Text::new(ad));
+        let button = svg_button(IconName::Download.get())
+            .on_press(ClientMessage::QueueDownloadFromSelectedStart.into());
+        iced::widget::column![button, active_downloads].align_x(Alignment::Center)
     }
 
     fn select_button(&self) -> Button<'_, Message> {
@@ -355,10 +281,7 @@ impl State {
                         return Task::none();
                     }
                 };
-                state
-                    .downloads
-                    .files
-                    .extend(paths.into_iter().map(Download::from));
+                state.downloads.wait(paths);
                 dbg!(&state.downloads);
 
                 let Some(grpc) = state.grpc.clone() else {
