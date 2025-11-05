@@ -1,9 +1,10 @@
-use std::net::{AddrParseError, IpAddr};
+use std::net::{AddrParseError, IpAddr, SocketAddr};
 
-use crate::{Message, Page, svg_from_icon_data};
+use crate::{Message, Page, State, client::ClientMessage, svg_from_icon_data};
 use common::assets::IconName;
+use grpc::client::RpcClient;
 use iced::{
-    Alignment, Background, Border, Element, Length,
+    Alignment, Background, Border, Element, Length, Task,
     border::Radius,
     theme::Palette,
     widget::{
@@ -237,4 +238,46 @@ pub fn go_home_button<'a>() -> Button<'a, Message> {
             background: Some(Background::Color(theme.palette().danger)),
             ..Default::default()
         })
+}
+
+impl State {
+    pub fn handle_home_msg(&mut self, msg: HomeMessage) -> Task<Message> {
+        let state = &mut self.home;
+        match msg {
+            HomeMessage::PortNewInput(port) => {
+                match port {
+                    Ok(port) => {
+                        state.url_form.port = port;
+                    }
+                    Err(err) => {
+                        dbg!(err);
+                    }
+                }
+                Task::none()
+            }
+            HomeMessage::IpNewInput {
+                valid_ip,
+                input_value,
+            } => {
+                state.url_form.ip = input_value;
+                match valid_ip {
+                    Ok(valid_ip) => {
+                        state.url_form.valid_ip = Some(valid_ip);
+                    }
+                    Err(err) => {
+                        dbg!(err);
+                    }
+                }
+                Task::none()
+            }
+            HomeMessage::SubmitInput(ip_addr, port) => {
+                Task::future(RpcClient::new(SocketAddr::new(ip_addr, port)))
+                    .map(|x| ClientMessage::PrepareGrpc(x).into())
+            }
+            HomeMessage::ToggleInputModal => {
+                state.show_form = !state.show_form;
+                Task::none()
+            }
+        }
+    }
 }

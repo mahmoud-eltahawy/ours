@@ -2,11 +2,11 @@
 members = [
     "common",
     "server",
-    "ours",
     "assets",
     "delivery",
     "web",
-    "grpc", "desktop",
+    "grpc",
+    "desktop",
 ]
 resolver = "2"
 

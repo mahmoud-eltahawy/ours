@@ -1,9 +1,11 @@
 use crate::home::go_home_button;
-use crate::{Message, svg_from_icon_data};
+use crate::{Message, Page, State, svg_from_icon_data};
 use common::assets::IconName;
+use grpc::UnitKind;
 use grpc::client::RpcClient;
 use grpc::error::RpcError;
 use grpc::top::{Selected, Unit};
+use iced::Task;
 use iced::theme::Palette;
 use iced::widget::container;
 use iced::{
@@ -180,4 +182,83 @@ fn svg_button<'a>(icon: &'a [u8]) -> Button<'a, Message> {
             ..Default::default()
         })
         .padding(7.)
+}
+
+impl State {
+    pub fn handle_client_msg(&mut self, msg: ClientMessage) -> Task<Message> {
+        let state = &mut self.client;
+        match msg {
+            ClientMessage::PrepareGrpc(rpc_client) => match rpc_client {
+                Ok(grpc) => {
+                    *state = ClientState::new(grpc.clone());
+                    self.page = Page::Client;
+                    self.home.show_form = false;
+                    Task::future(grpc.ls(PathBuf::new()))
+                        .map(|x| ClientMessage::RefreshUnits(x).into())
+                }
+                Err(err) => {
+                    dbg!(err);
+                    Task::none()
+                }
+            },
+            ClientMessage::RefreshUnits(units) => {
+                match units {
+                    Ok(units) => {
+                        state.units = units;
+                    }
+                    Err(err) => {
+                        dbg!(err);
+                    }
+                }
+                Task::none()
+            }
+            ClientMessage::UnitClick(unit) => {
+                if state.select.on {
+                    state.select.toggle_unit_selection(&unit);
+                } else {
+                    state.select.toggle_unit_alone_selection(&unit);
+                }
+                Task::none()
+            }
+            ClientMessage::UnitDoubleClick(unit) => {
+                match (unit.kind, &state.grpc) {
+                    (UnitKind::Folder, Some(grpc)) => {
+                        state.target = unit.path.clone();
+                        Task::perform(grpc.clone().ls(unit.path.clone()), move |xs| {
+                            ClientMessage::RefreshUnits(xs).into()
+                        })
+                    }
+                    (_, Some(grpc)) => {
+                        //TODO : double click on files should open preview them not to download them
+                        Task::perform(grpc.clone().download_file(unit.path), |x| {
+                            println!("{:#?}", x);
+                            ClientMessage::QueueDownloadFromSelected.into()
+                        })
+                    }
+                    _ => {
+                        println!("opening file {unit:#?} is not supported yet");
+                        Task::none()
+                    }
+                }
+            }
+            ClientMessage::ToggleSelectMode => {
+                if state.select.on {
+                    state.select.clear();
+                } else {
+                    state.select.on = true;
+                }
+                Task::none()
+            }
+            ClientMessage::GoToPath(path) => {
+                state.target = path.clone();
+                match &state.grpc {
+                    Some(grpc) => Task::perform(grpc.clone().ls(path), |xs| {
+                        ClientMessage::RefreshUnits(xs).into()
+                    }),
+                    None => Task::none(),
+                }
+            }
+            ClientMessage::QueueDownloadFromSelected => unimplemented!(),
+        }
+    }
 }

@@ -1,5 +1,5 @@
 [package]
-name = "desktop"
+name = "ours-cli"
 version.workspace = true
 edition.workspace = true
 

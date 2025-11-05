@@ -1,11 +1,12 @@
 use common::Origin;
 use get_port::Ops;
+use iced::Task;
 use std::env::home_dir;
 use std::net::IpAddr;
 use std::path::PathBuf;
 
-use crate::Message;
 use crate::home::go_home_button;
+use crate::{Message, State};
 use iced::{
     Alignment::Center,
     Background, Border, Element, Length, Shadow, Theme, Vector,
@@ -262,4 +263,36 @@ pub async fn serve(target_path: PathBuf, tonic_port: Option<u16>, axum_port: Opt
     let two = grpc::server::RpcServer::new(target_path.clone(), tonic_port);
     let two = two.serve();
     let (_, _) = tokio::join!(one, two);
+}
+
+impl State {
+    pub fn handle_server_msg(&mut self, msg: ServerMessage) -> Task<Message> {
+        let state = &mut self.server;
+        match msg {
+            ServerMessage::Launch => {
+                state.working_process = Some(tokio::spawn(serve(
+                    state.target_path.clone(),
+                    state.tonic_port,
+                    state.axum_port,
+                )));
+                Task::none()
+            }
+            ServerMessage::Stop => {
+                if let Some(x) = &state.working_process {
+                    x.abort();
+                    state.working_process = None;
+                }
+                Task::none()
+            }
+            ServerMessage::PickTarget => {
+                Task::perform(which_target(), |x| ServerMessage::TargetPicked(x).into())
+            }
+            ServerMessage::TargetPicked(path_buf) => {
+                if let Some(path_buf) = path_buf {
+                    state.target_path = path_buf;
+                }
+                Task::none()
+            }
+        }
+    }
 }

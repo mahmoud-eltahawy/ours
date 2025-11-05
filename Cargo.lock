@@ -1003,20 +1003,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "desktop"
-version = "0.1.0"
-dependencies = [
- "common",
- "get-port",
- "grpc",
- "iced",
- "local-ip-address",
- "rfd",
- "server",
- "tokio",
-]
-
-[[package]]
 name = "digest"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3493,18 +3479,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "ours"
+name = "ours-cli"
 version = "0.1.0"
 dependencies = [
- "assets",
- "async-recursion",
  "common",
- "delivery",
  "get-port",
  "grpc",
  "iced",
  "local-ip-address",
- "reqwest",
  "rfd",
  "server",
  "tokio",
@@ -4105,14 +4087,12 @@ dependencies = [
  "sync_wrapper",
  "tokio",
  "tokio-native-tls",
- "tokio-util",
  "tower",
  "tower-http",
  "tower-service",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
- "wasm-streams",
  "web-sys",
 ]
 
