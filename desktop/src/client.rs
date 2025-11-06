@@ -299,7 +299,6 @@ impl State {
                     }
                 };
                 state.downloads.wait(paths);
-                dbg!(&state.downloads);
 
                 let Some(grpc) = state.grpc.clone() else {
                     return Task::none();
@@ -320,7 +319,6 @@ impl State {
                 let Some(grpc) = state.grpc.clone() else {
                     return Task::none();
                 };
-                dbg!(&state.downloads);
                 state.downloads.tick_available(grpc)
             }
             ClientMessage::ToggleDownloadPreview => {
@@ -330,7 +328,10 @@ impl State {
             ClientMessage::CancelDownloadProgress(index, handle) => {
                 handle.abort();
                 state.downloads.cancel(index);
-                Task::none()
+                let Some(grpc) = state.grpc.clone() else {
+                    return Task::none();
+                };
+                state.downloads.tick_available(grpc)
             }
         }
     }

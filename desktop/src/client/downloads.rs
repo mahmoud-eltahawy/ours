@@ -183,21 +183,60 @@ impl Downloads {
         if self.failed_count == 0 {
             return None;
         }
-        let content = Text::new("failed");
+        let title = Text::new("failed downloads");
+        let content = column![title];
+        let content = self
+            .files
+            .iter()
+            .filter_map(|download| match &download.state {
+                DownloadState::Failed(err) => {
+                    let txt = Text::new(format!("=> {:#?} because of {:#?}", download.path, err));
+                    Some(txt)
+                }
+                _ => None,
+            })
+            .fold(content, |acc, x| acc.push(x));
+        let content = scrollable(content.spacing(3.));
         Some(content.into())
     }
     pub fn finished_view(&self) -> Option<Element<'_, Message>> {
         if self.finished_count == 0 {
             return None;
         }
-        let content = Text::new("finished");
+        let title = Text::new("finished downloads");
+        let content = column![title];
+        let content = self
+            .files
+            .iter()
+            .filter_map(|download| match download.state {
+                DownloadState::Finished => {
+                    let txt = Text::new(format!("=> {:#?}", download.path));
+                    Some(txt)
+                }
+                _ => None,
+            })
+            .fold(content, |acc, x| acc.push(x));
+        let content = scrollable(content.spacing(3.));
         Some(content.into())
     }
     pub fn canceled_view(&self) -> Option<Element<'_, Message>> {
         if self.canceled_count == 0 {
             return None;
         }
-        let content = Text::new("canceled");
+        let title = Text::new("canceled downloads");
+        let content = column![title];
+        let content = self
+            .files
+            .iter()
+            .filter_map(|download| match download.state {
+                DownloadState::Canceled => {
+                    let txt = Text::new(format!("=> {:#?}", download.path));
+                    Some(txt)
+                }
+                _ => None,
+            })
+            .fold(content, |acc, x| acc.push(x));
+        let content = scrollable(content.spacing(3.));
         Some(content.into())
     }
 }
