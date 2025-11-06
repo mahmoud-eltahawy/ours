@@ -1,7 +1,8 @@
-use crate::{Message, State};
+use crate::{Message, State, client::svg_button};
+use common::assets::IconName;
 use grpc::{UnitKind, client::RpcClient, error::RpcError, top::Unit};
 use iced::{
-    Background, Border, Element, Task, Theme,
+    Alignment, Background, Border, Element, Task, Theme,
     border::Radius,
     task::Handle,
     widget::{Button, Container, Text, column, container, row, scrollable},
@@ -29,6 +30,8 @@ pub enum DownloadMessage {
         index: usize,
     },
     CancelProgress(usize, Handle),
+    UpgradePriorty(usize),
+    DowngradePriorty(usize),
 }
 
 impl State {
@@ -87,11 +90,19 @@ impl State {
                 };
                 state.downloads.tick_available(grpc)
             }
+            DownloadMessage::UpgradePriorty(index) => {
+                state.downloads.upgrade_waiting(index);
+                Task::none()
+            }
+            DownloadMessage::DowngradePriorty(index) => {
+                state.downloads.downgrade_waiting(index);
+                Task::none()
+            }
         }
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct Download {
     pub path: PathBuf,
     pub state: DownloadState,
@@ -123,6 +134,24 @@ impl Downloads {
     }
     pub fn active_count(&self) -> usize {
         self.progressing_count + self.waiting_count
+    }
+    fn upgrade_waiting(&mut self, index: usize) {
+        let prev = self.files.get(index - 1);
+        if prev.is_none() || prev.is_some_and(|x| !matches!(x.state, DownloadState::Waiting)) {
+            return;
+        }
+        let temp = self.files[index].clone();
+        self.files[index] = self.files[index - 1].clone();
+        self.files[index - 1] = temp;
+    }
+    fn downgrade_waiting(&mut self, index: usize) {
+        let next = self.files.get(index + 1);
+        if next.is_none() || next.is_some_and(|x| !matches!(x.state, DownloadState::Waiting)) {
+            return;
+        }
+        let temp = self.files[index].clone();
+        self.files[index] = self.files[index + 1].clone();
+        self.files[index + 1] = temp;
     }
     pub fn progress(&mut self, index: usize, handle: Handle) {
         self.waiting_count -= 1;
@@ -218,9 +247,9 @@ impl Downloads {
             .filter_map(|(index, download)| match &download.state {
                 DownloadState::Progressing(handle) => {
                     let txt = Text::new(format!("=> {:#?}", download.path));
-                    let button = Button::new("cancel")
+                    let button = Button::new(svg_button(IconName::Close.get()))
                         .on_press(DownloadMessage::CancelProgress(index, handle.clone()).into());
-                    let row = row![txt, button].spacing(5.);
+                    let row = row![txt, button].align_y(Alignment::Center).spacing(5.);
                     Some(row)
                 }
                 _ => None,
@@ -239,10 +268,19 @@ impl Downloads {
         let content = self
             .files
             .iter()
-            .filter_map(|download| match download.state {
+            .enumerate()
+            .filter_map(|(index, download)| match download.state {
                 DownloadState::Waiting => {
+                    let up = Button::new(svg_button(IconName::Up.get()))
+                        .on_press(DownloadMessage::UpgradePriorty(index).into());
+                    let down = Button::new(svg_button(IconName::Down.get()))
+                        .on_press(DownloadMessage::DowngradePriorty(index).into());
+                    let change_priorty = column![up, down].align_x(Alignment::Center).spacing(2.);
                     let txt = Text::new(format!("=> {:#?}", download.path));
-                    Some(txt)
+                    let content = row![txt, change_priorty]
+                        .align_y(Alignment::Center)
+                        .spacing(3.);
+                    Some(content)
                 }
                 _ => None,
             })

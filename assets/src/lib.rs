@@ -11,7 +11,7 @@ macro_rules! build_icons_defs {
             )*
         }
 
-        pub const ICONS: [&[u8]; 11] = [
+        pub const ICONS: [&[u8]; 13] = [
             $(
                 include_bytes!(concat!("../static/", stringify!($name), ".svg")),
             )*
@@ -20,7 +20,7 @@ macro_rules! build_icons_defs {
     };
 }
 
-build_icons_defs!(Folder; File; Video; Audio; Select; Close; Expand; Collapse; Download; Home; Upload);
+build_icons_defs!(Folder; File; Video; Audio; Select; Close; Expand; Collapse; Download; Home; Upload;Up;Down);
 
 impl From<u8> for IconName {
     fn from(value: u8) -> Self {
