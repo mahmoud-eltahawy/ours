@@ -1,4 +1,4 @@
-use crate::client::downloads::Downloads;
+use crate::client::downloads::{DownloadMessage, Downloads};
 use crate::home::{go_home_button, modal};
 use crate::{Message, Page, State, svg_from_icon_data};
 use common::assets::IconName;
@@ -8,7 +8,6 @@ use grpc::error::RpcError;
 use grpc::top::{Selected, Unit};
 use iced::Alignment;
 use iced::Task;
-use iced::task::Handle;
 use iced::theme::Palette;
 use iced::widget::{Column, container};
 use iced::{
@@ -17,7 +16,6 @@ use iced::{
     mouse::Interaction,
     widget::{Button, Container, MouseArea, Row, Text, button::Style, mouse_area, row, scrollable},
 };
-
 use std::path::PathBuf;
 
 mod downloads;
@@ -49,16 +47,15 @@ pub enum ClientMessage {
     PrepareGrpc(Result<RpcClient, RpcError>),
     UnitClick(Unit),
     UnitDoubleClick(Unit),
-    QueueDownloadFromSelectedStart,
-    QueueDownloadFromSelected(Result<Vec<PathBuf>, RpcError>),
     ToggleSelectMode,
     GoToPath(PathBuf),
-    TickNextDownload {
-        result: Result<(), RpcError>,
-        index: usize,
-    },
-    ToggleDownloadPreview,
-    CancelDownloadProgress(usize, Handle),
+    Download(DownloadMessage),
+}
+
+impl From<DownloadMessage> for Message {
+    fn from(value: DownloadMessage) -> Self {
+        Message::Client(ClientMessage::Download(value))
+    }
 }
 
 impl From<ClientMessage> for Message {
@@ -83,7 +80,7 @@ impl ClientState {
             modal(
                 res,
                 self.downloads.view(),
-                ClientMessage::ToggleDownloadPreview.into(),
+                DownloadMessage::TogglePreview.into(),
             )
         } else {
             res
@@ -139,9 +136,9 @@ impl ClientState {
         let ad = self.downloads.active_count();
         let active_downloads = (ad != 0).then_some(Text::new(ad));
         let msg: Message = if self.select.on && !self.select.units.is_empty() {
-            ClientMessage::QueueDownloadFromSelectedStart.into()
+            DownloadMessage::QueueFromSelectedStart.into()
         } else {
-            ClientMessage::ToggleDownloadPreview.into()
+            DownloadMessage::TogglePreview.into()
         };
         let button = svg_button(IconName::Download.get()).on_press(msg);
         iced::widget::column![button, active_downloads].align_x(Alignment::Center)
@@ -281,85 +278,7 @@ impl State {
                     None => Task::none(),
                 }
             }
-            ClientMessage::QueueDownloadFromSelectedStart => {
-                let units = state.select.units.clone();
-                let Some(grpc) = &state.grpc else {
-                    return Task::none();
-                };
-                state.select.clear();
-                let fut = get_download_paths(grpc.clone(), units);
-                Task::perform(fut, |x| ClientMessage::QueueDownloadFromSelected(x).into())
-            }
-            ClientMessage::QueueDownloadFromSelected(paths) => {
-                let paths = match paths {
-                    Ok(paths) => paths,
-                    Err(err) => {
-                        dbg!(err);
-                        return Task::none();
-                    }
-                };
-                state.downloads.wait(paths);
-
-                let Some(grpc) = state.grpc.clone() else {
-                    return Task::none();
-                };
-
-                state.downloads.tick_available(grpc)
-            }
-            ClientMessage::TickNextDownload { result, index } => {
-                match result {
-                    Ok(()) => {
-                        state.downloads.finish(index);
-                    }
-                    Err(err) => {
-                        dbg!(&err);
-                        state.downloads.fail(index, err);
-                    }
-                }
-                let Some(grpc) = state.grpc.clone() else {
-                    return Task::none();
-                };
-                state.downloads.tick_available(grpc)
-            }
-            ClientMessage::ToggleDownloadPreview => {
-                state.downloads.show_preview = !state.downloads.show_preview;
-                Task::none()
-            }
-            ClientMessage::CancelDownloadProgress(index, handle) => {
-                handle.abort();
-                state.downloads.cancel(index);
-                let Some(grpc) = state.grpc.clone() else {
-                    return Task::none();
-                };
-                state.downloads.tick_available(grpc)
-            }
+            ClientMessage::Download(msg) => self.handle_downloads_msg(msg),
         }
     }
-}
-
-async fn get_download_paths(grpc: RpcClient, units: Vec<Unit>) -> Result<Vec<PathBuf>, RpcError> {
-    let mut res = Vec::new();
-    for unit in units {
-        match unit.kind {
-            UnitKind::Folder => {
-                let in_units = grpc.clone().ls(unit.path.clone()).await?;
-                let mut folders = Vec::new();
-                for in_unit in in_units {
-                    match in_unit.kind {
-                        UnitKind::Folder => {
-                            folders.push(in_unit);
-                        }
-                        _ => {
-                            res.push(in_unit.path.clone());
-                        }
-                    }
-                }
-                res.extend(Box::pin(get_download_paths(grpc.clone(), folders)).await?);
-            }
-            _ => {
-                res.push(unit.path.clone());
-            }
-        };
-    }
-    Ok(res)
 }

@@ -1,5 +1,5 @@
-use crate::{Message, client::ClientMessage};
-use grpc::{client::RpcClient, error::RpcError};
+use crate::{Message, State};
+use grpc::{UnitKind, client::RpcClient, error::RpcError, top::Unit};
 use iced::{
     Background, Border, Element, Task, Theme,
     border::Radius,
@@ -17,6 +17,78 @@ pub struct Downloads {
     pub failed_count: usize,
     pub canceled_count: usize,
     pub files: Vec<Download>,
+}
+
+#[derive(Clone)]
+pub enum DownloadMessage {
+    TogglePreview,
+    QueueFromSelectedStart,
+    QueueFromSelected(Result<Vec<PathBuf>, RpcError>),
+    TickNext {
+        result: Result<(), RpcError>,
+        index: usize,
+    },
+    CancelProgress(usize, Handle),
+}
+
+impl State {
+    pub fn handle_downloads_msg(&mut self, msg: DownloadMessage) -> Task<Message> {
+        let state = &mut self.client;
+        match msg {
+            DownloadMessage::QueueFromSelectedStart => {
+                let units = state.select.units.clone();
+                let Some(grpc) = &state.grpc else {
+                    return Task::none();
+                };
+                state.select.clear();
+                let fut = get_download_paths(grpc.clone(), units);
+                Task::perform(fut, |x| DownloadMessage::QueueFromSelected(x).into())
+            }
+            DownloadMessage::QueueFromSelected(paths) => {
+                let paths = match paths {
+                    Ok(paths) => paths,
+                    Err(err) => {
+                        dbg!(err);
+                        return Task::none();
+                    }
+                };
+                state.downloads.wait(paths);
+
+                let Some(grpc) = state.grpc.clone() else {
+                    return Task::none();
+                };
+
+                state.downloads.tick_available(grpc)
+            }
+            DownloadMessage::TickNext { result, index } => {
+                match result {
+                    Ok(()) => {
+                        state.downloads.finish(index);
+                    }
+                    Err(err) => {
+                        dbg!(&err);
+                        state.downloads.fail(index, err);
+                    }
+                }
+                let Some(grpc) = state.grpc.clone() else {
+                    return Task::none();
+                };
+                state.downloads.tick_available(grpc)
+            }
+            DownloadMessage::TogglePreview => {
+                state.downloads.show_preview = !state.downloads.show_preview;
+                Task::none()
+            }
+            DownloadMessage::CancelProgress(index, handle) => {
+                handle.abort();
+                state.downloads.cancel(index);
+                let Some(grpc) = state.grpc.clone() else {
+                    return Task::none();
+                };
+                state.downloads.tick_available(grpc)
+            }
+        }
+    }
 }
 
 #[derive(Default, Debug)]
@@ -97,7 +169,7 @@ impl Downloads {
 
     pub fn tick_next(&mut self, grpc: RpcClient) -> Option<Task<Message>> {
         self.fill_turn(grpc).map(|(task, index)| {
-            task.map(move |result| ClientMessage::TickNextDownload { result, index }.into())
+            task.map(move |result| DownloadMessage::TickNext { result, index }.into())
         })
     }
     pub fn tick_available(&mut self, grpc: RpcClient) -> Task<Message> {
@@ -146,9 +218,8 @@ impl Downloads {
             .filter_map(|(index, download)| match &download.state {
                 DownloadState::Progressing(handle) => {
                     let txt = Text::new(format!("=> {:#?}", download.path));
-                    let button = Button::new("cancel").on_press(
-                        ClientMessage::CancelDownloadProgress(index, handle.clone()).into(),
-                    );
+                    let button = Button::new("cancel")
+                        .on_press(DownloadMessage::CancelProgress(index, handle.clone()).into());
                     let row = row![txt, button].spacing(5.);
                     Some(row)
                 }
@@ -239,4 +310,31 @@ impl Downloads {
         let content = scrollable(content.spacing(3.));
         Some(content.into())
     }
+}
+
+async fn get_download_paths(grpc: RpcClient, units: Vec<Unit>) -> Result<Vec<PathBuf>, RpcError> {
+    let mut res = Vec::new();
+    for unit in units {
+        match unit.kind {
+            UnitKind::Folder => {
+                let in_units = grpc.clone().ls(unit.path.clone()).await?;
+                let mut folders = Vec::new();
+                for in_unit in in_units {
+                    match in_unit.kind {
+                        UnitKind::Folder => {
+                            folders.push(in_unit);
+                        }
+                        _ => {
+                            res.push(in_unit.path.clone());
+                        }
+                    }
+                }
+                res.extend(Box::pin(get_download_paths(grpc.clone(), folders)).await?);
+            }
+            _ => {
+                res.push(unit.path.clone());
+            }
+        };
+    }
+    Ok(res)
 }
