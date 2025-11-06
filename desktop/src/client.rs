@@ -8,6 +8,7 @@ use grpc::error::RpcError;
 use grpc::top::{Selected, Unit};
 use iced::Alignment;
 use iced::Task;
+use iced::task::Handle;
 use iced::theme::Palette;
 use iced::widget::{Column, container};
 use iced::{
@@ -57,6 +58,7 @@ pub enum ClientMessage {
         index: usize,
     },
     ToggleDownloadPreview,
+    CancelDownloadProgress(usize, Handle),
 }
 
 impl From<ClientMessage> for Message {
@@ -323,6 +325,11 @@ impl State {
             }
             ClientMessage::ToggleDownloadPreview => {
                 state.downloads.show_preview = !state.downloads.show_preview;
+                Task::none()
+            }
+            ClientMessage::CancelDownloadProgress(index, handle) => {
+                handle.abort();
+                state.downloads.cancel(index);
                 Task::none()
             }
         }

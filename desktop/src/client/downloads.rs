@@ -4,7 +4,7 @@ use iced::{
     Background, Border, Element, Task, Theme,
     border::Radius,
     task::Handle,
-    widget::{Container, Text, column, container, scrollable},
+    widget::{Button, Container, Text, column, container, row, scrollable},
 };
 use std::path::PathBuf;
 
@@ -15,6 +15,7 @@ pub struct Downloads {
     pub waiting_count: usize,
     pub finished_count: usize,
     pub failed_count: usize,
+    pub canceled_count: usize,
     pub files: Vec<Download>,
 }
 
@@ -40,6 +41,7 @@ pub enum DownloadState {
     Progressing(Handle),
     Finished,
     Failed(RpcError),
+    Canceled,
 }
 
 impl Downloads {
@@ -64,6 +66,11 @@ impl Downloads {
         self.progressing_count -= 1;
         self.finished_count += 1;
         self.files[index].state = DownloadState::Failed(err);
+    }
+    pub fn cancel(&mut self, index: usize) {
+        self.progressing_count -= 1;
+        self.canceled_count += 1;
+        self.files[index].state = DownloadState::Canceled;
     }
     pub fn first_waiting(&mut self) -> Option<(&Download, usize)> {
         for (i, value) in self.files.iter().enumerate() {
@@ -108,8 +115,10 @@ impl Downloads {
         let waiting = self.waiting_view();
         let failed = self.failed_view();
         let finished = self.finished_view();
-        let content =
-            scrollable(column![title, progressing, waiting, failed, finished].spacing(20.));
+        let canceled = self.canceled_view();
+        let content = scrollable(
+            column![title, progressing, waiting, failed, finished, canceled].spacing(20.),
+        );
         Container::new(content)
             .style(|theme: &Theme| container::Style {
                 border: Border {
@@ -127,8 +136,26 @@ impl Downloads {
         if self.progressing_count == 0 {
             return None;
         }
-        let content = Text::new("progressing");
-        Some(content.into())
+
+        let title = Text::new("in progress downloads");
+        let content = column![title];
+        let content = self
+            .files
+            .iter()
+            .enumerate()
+            .filter_map(|(index, download)| match &download.state {
+                DownloadState::Progressing(handle) => {
+                    let txt = Text::new(format!("=> {:#?}", download.path));
+                    let button = Button::new("cancel").on_press(
+                        ClientMessage::CancelDownloadProgress(index, handle.clone()).into(),
+                    );
+                    let row = row![txt, button].spacing(5.);
+                    Some(row)
+                }
+                _ => None,
+            })
+            .fold(content, |acc, x| acc.push(x));
+        Some(content.spacing(3.).into())
     }
 
     pub fn waiting_view(&self) -> Option<Element<'_, Message>> {
@@ -150,6 +177,13 @@ impl Downloads {
             return None;
         }
         let content = Text::new("finished");
+        Some(content.into())
+    }
+    pub fn canceled_view(&self) -> Option<Element<'_, Message>> {
+        if self.canceled_count == 0 {
+            return None;
+        }
+        let content = Text::new("canceled");
         Some(content.into())
     }
 }
