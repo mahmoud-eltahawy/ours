@@ -2,7 +2,7 @@ use crate::{Message, State, client::svg_button};
 use common::assets::IconName;
 use grpc::{UnitKind, client::RpcClient, error::RpcError, top::Unit};
 use iced::{
-    Alignment, Background, Border, Element, Task, Theme,
+    Alignment, Background, Border, Element, Length, Task, Theme,
     border::Radius,
     task::Handle,
     widget::{Button, Column, Container, Text, column, container, row, scrollable},
@@ -226,7 +226,10 @@ impl Downloads {
         let finished = self.finished_view();
         let canceled = self.canceled_view();
         let content = scrollable(
-            column![title, progressing, waiting, failed, finished, canceled].spacing(20.),
+            column![title, progressing, waiting, failed, finished, canceled]
+                .width(Length::Shrink)
+                .align_x(Alignment::Center)
+                .spacing(20.),
         );
         Container::new(content)
             .style(|theme: &Theme| container::Style {
@@ -238,6 +241,7 @@ impl Downloads {
                 background: Some(Background::Color(theme.palette().background)),
                 ..Default::default()
             })
+            .padding(12.)
             .into()
     }
 

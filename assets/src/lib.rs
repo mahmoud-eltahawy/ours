@@ -6,7 +6,7 @@ pub const ICONS_SIZE: usize = 14;
 
 macro_rules! build_icons_defs {
     ($($name:ident);*) => {
-        #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
+        #[derive(Debug, Clone)]
         pub enum IconName {
             $(
                 $name,

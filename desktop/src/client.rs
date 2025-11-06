@@ -1,20 +1,25 @@
-use crate::client::downloads::{DownloadMessage, Downloads};
-use crate::home::{go_home_button, modal};
-use crate::{Message, Page, State, svg_from_icon_data};
+use crate::{
+    Message, Page, State,
+    client::downloads::{DownloadMessage, Downloads},
+    home::{go_home_button, modal},
+    svg_from_icon_data,
+};
 use common::assets::IconName;
-use grpc::UnitKind;
-use grpc::client::RpcClient;
-use grpc::error::RpcError;
-use grpc::top::{Selected, Unit};
-use iced::Alignment;
-use iced::Task;
-use iced::theme::Palette;
-use iced::widget::{Column, container};
+use grpc::{
+    UnitKind,
+    client::RpcClient,
+    error::RpcError,
+    top::{Selected, Unit},
+};
 use iced::{
-    Border, Element, Length,
+    Alignment, Border, Element, Length, Task,
     border::Radius,
     mouse::Interaction,
-    widget::{Button, Container, MouseArea, Row, Text, button::Style, mouse_area, row, scrollable},
+    theme::Palette,
+    widget::{
+        Button, Column, Container, MouseArea, Row, Text, button::Style, container, mouse_area, row,
+        scrollable,
+    },
 };
 use std::path::PathBuf;
 
@@ -107,8 +112,10 @@ impl ClientState {
                     ..Default::default()
                 }
             })
+            .height(Length::Fill)
+            .width(Length::Fill)
             .padding(10.);
-        scrollable(units).width(Length::Fill)
+        scrollable(units).height(Length::Fill).width(Length::Fill)
     }
 
     fn tools_bar(&self) -> Container<'_, Message> {
