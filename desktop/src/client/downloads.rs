@@ -155,14 +155,28 @@ impl Downloads {
                 _ => None,
             })
             .fold(content, |acc, x| acc.push(x));
-        Some(content.spacing(3.).into())
+        let content = scrollable(content.spacing(3.));
+        Some(content.into())
     }
 
     pub fn waiting_view(&self) -> Option<Element<'_, Message>> {
         if self.waiting_count == 0 {
             return None;
         }
-        let content = Text::new("waiting");
+        let title = Text::new("waiting downloads");
+        let content = column![title];
+        let content = self
+            .files
+            .iter()
+            .filter_map(|download| match download.state {
+                DownloadState::Waiting => {
+                    let txt = Text::new(format!("=> {:#?}", download.path));
+                    Some(txt)
+                }
+                _ => None,
+            })
+            .fold(content, |acc, x| acc.push(x));
+        let content = scrollable(content.spacing(3.));
         Some(content.into())
     }
     pub fn failed_view(&self) -> Option<Element<'_, Message>> {
