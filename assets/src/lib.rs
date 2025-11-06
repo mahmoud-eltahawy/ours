@@ -2,6 +2,8 @@ pub const FAVICON: &[u8] = include_bytes!("../static/favicon.ico.gz");
 pub const TAILWINDJS: &[u8] = include_bytes!("../static/tailwind.js.gz");
 pub const HTMXJS: &[u8] = include_bytes!("../static/htmx.js.gz");
 
+pub const ICONS_SIZE: usize = 14;
+
 macro_rules! build_icons_defs {
     ($($name:ident);*) => {
         #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
@@ -11,7 +13,7 @@ macro_rules! build_icons_defs {
             )*
         }
 
-        pub const ICONS: [&[u8]; 13] = [
+        pub const ICONS: [&[u8]; ICONS_SIZE] = [
             $(
                 include_bytes!(concat!("../static/", stringify!($name), ".svg")),
             )*
@@ -20,7 +22,7 @@ macro_rules! build_icons_defs {
     };
 }
 
-build_icons_defs!(Folder; File; Video; Audio; Select; Close; Expand; Collapse; Download; Home; Upload;Up;Down);
+build_icons_defs!(Folder; File; Video; Audio; Select; Close; Expand; Collapse; Download; Home; Upload;Up;Down;Retry);
 
 impl From<u8> for IconName {
     fn from(value: u8) -> Self {
