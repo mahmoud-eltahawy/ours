@@ -191,6 +191,7 @@ fn form_style(theme: &iced::Theme) -> container::Style {
             radius: Radius::new(22.),
             color: theme.palette().primary,
         },
+        background: Some(Background::Color(theme.palette().background)),
         ..Default::default()
     }
 }
@@ -219,7 +220,8 @@ where
         base.into(),
         opaque(
             mouse_area(center(opaque(content)).style(|theme| {
-                let bg = theme.palette().background;
+                let mut bg = theme.palette().background;
+                bg.a = 0.8;
                 container::Style {
                     background: Some(Background::Color(bg)),
                     ..container::Style::default()

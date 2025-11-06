@@ -1,12 +1,20 @@
 use crate::{Message, client::ClientMessage};
 use grpc::{client::RpcClient, error::RpcError};
-use iced::{Task, task::Handle};
+use iced::{
+    Background, Border, Element, Task, Theme,
+    border::Radius,
+    task::Handle,
+    widget::{Container, Text, column, container, scrollable},
+};
 use std::path::PathBuf;
 
 #[derive(Default, Debug)]
 pub struct Downloads {
+    pub show_preview: bool,
     pub progressing_count: usize,
     pub waiting_count: usize,
+    pub finished_count: usize,
+    pub failed_count: usize,
     pub files: Vec<Download>,
 }
 
@@ -49,10 +57,12 @@ impl Downloads {
     }
     pub fn finish(&mut self, index: usize) {
         self.progressing_count -= 1;
+        self.finished_count += 1;
         self.files[index].state = DownloadState::Finished;
     }
     pub fn fail(&mut self, index: usize, err: RpcError) {
         self.progressing_count -= 1;
+        self.finished_count += 1;
         self.files[index].state = DownloadState::Failed(err);
     }
     pub fn first_waiting(&mut self) -> Option<(&Download, usize)> {
@@ -90,5 +100,56 @@ impl Downloads {
             xs.push(task);
         }
         Task::batch(xs)
+    }
+
+    pub fn view(&self) -> Element<'_, Message> {
+        let title = Text::new("Downloads");
+        let progressing = self.progressing_view();
+        let waiting = self.waiting_view();
+        let failed = self.failed_view();
+        let finished = self.finished_view();
+        let content =
+            scrollable(column![title, progressing, waiting, failed, finished].spacing(20.));
+        Container::new(content)
+            .style(|theme: &Theme| container::Style {
+                border: Border {
+                    width: 2.,
+                    color: theme.palette().primary,
+                    radius: Radius::new(8.),
+                },
+                background: Some(Background::Color(theme.palette().background)),
+                ..Default::default()
+            })
+            .into()
+    }
+
+    pub fn progressing_view(&self) -> Option<Element<'_, Message>> {
+        if self.progressing_count == 0 {
+            return None;
+        }
+        let content = Text::new("progressing");
+        Some(content.into())
+    }
+
+    pub fn waiting_view(&self) -> Option<Element<'_, Message>> {
+        if self.waiting_count == 0 {
+            return None;
+        }
+        let content = Text::new("waiting");
+        Some(content.into())
+    }
+    pub fn failed_view(&self) -> Option<Element<'_, Message>> {
+        if self.failed_count == 0 {
+            return None;
+        }
+        let content = Text::new("failed");
+        Some(content.into())
+    }
+    pub fn finished_view(&self) -> Option<Element<'_, Message>> {
+        if self.finished_count == 0 {
+            return None;
+        }
+        let content = Text::new("finished");
+        Some(content.into())
     }
 }

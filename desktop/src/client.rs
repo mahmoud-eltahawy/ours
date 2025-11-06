@@ -1,5 +1,5 @@
 use crate::client::downloads::Downloads;
-use crate::home::go_home_button;
+use crate::home::{go_home_button, modal};
 use crate::{Message, Page, State, svg_from_icon_data};
 use common::assets::IconName;
 use grpc::UnitKind;
@@ -56,6 +56,7 @@ pub enum ClientMessage {
         result: Result<(), RpcError>,
         index: usize,
     },
+    ToggleDownloadPreview,
 }
 
 impl From<ClientMessage> for Message {
@@ -71,10 +72,20 @@ impl ClientState {
         let all = iced::widget::column![tools, units]
             .spacing(10.)
             .width(Length::Fill);
-        Container::new(all)
+        let res = Container::new(all)
             .padding(10.)
             .center_x(Length::Fill)
-            .into()
+            .into();
+
+        if self.downloads.show_preview {
+            modal(
+                res,
+                self.downloads.view(),
+                ClientMessage::ToggleDownloadPreview.into(),
+            )
+        } else {
+            res
+        }
     }
 
     fn units(&self) -> scrollable::Scrollable<'_, Message> {
@@ -125,8 +136,12 @@ impl ClientState {
     fn download_button(&self) -> Column<'_, Message> {
         let ad = self.downloads.active_count();
         let active_downloads = (ad != 0).then_some(Text::new(ad));
-        let button = svg_button(IconName::Download.get())
-            .on_press(ClientMessage::QueueDownloadFromSelectedStart.into());
+        let msg: Message = if self.select.on && !self.select.units.is_empty() {
+            ClientMessage::QueueDownloadFromSelectedStart.into()
+        } else {
+            ClientMessage::ToggleDownloadPreview.into()
+        };
+        let button = svg_button(IconName::Download.get()).on_press(msg);
         iced::widget::column![button, active_downloads].align_x(Alignment::Center)
     }
 
@@ -305,6 +320,10 @@ impl State {
                 };
                 dbg!(&state.downloads);
                 state.downloads.tick_available(grpc)
+            }
+            ClientMessage::ToggleDownloadPreview => {
+                state.downloads.show_preview = !state.downloads.show_preview;
+                Task::none()
             }
         }
     }
