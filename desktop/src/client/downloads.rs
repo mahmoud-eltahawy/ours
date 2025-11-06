@@ -5,19 +5,19 @@ use iced::{
     Alignment, Background, Border, Element, Task, Theme,
     border::Radius,
     task::Handle,
-    widget::{Button, Container, Text, column, container, row, scrollable},
+    widget::{Button, Column, Container, Text, column, container, row, scrollable},
 };
 use std::path::PathBuf;
 
 #[derive(Default, Debug)]
 pub struct Downloads {
     pub show_preview: bool,
-    pub progressing_count: usize,
-    pub waiting_count: usize,
-    pub finished_count: usize,
-    pub failed_count: usize,
-    pub canceled_count: usize,
-    pub files: Vec<Download>,
+    progressing_count: usize,
+    waiting_count: usize,
+    finished_count: usize,
+    failed_count: usize,
+    canceled_count: usize,
+    files: Vec<Download>,
 }
 
 #[derive(Clone)]
@@ -104,8 +104,8 @@ impl State {
 
 #[derive(Default, Debug, Clone)]
 pub struct Download {
-    pub path: PathBuf,
-    pub state: DownloadState,
+    path: PathBuf,
+    state: DownloadState,
 }
 
 impl From<PathBuf> for Download {
@@ -128,16 +128,25 @@ pub enum DownloadState {
 }
 
 impl Downloads {
-    pub fn wait(&mut self, paths: Vec<PathBuf>) {
+    fn wait(&mut self, paths: Vec<PathBuf>) {
         self.waiting_count += paths.len();
         self.files.extend(paths.into_iter().map(Download::from));
     }
     pub fn active_count(&self) -> usize {
         self.progressing_count + self.waiting_count
     }
+    fn is_upgradable(&self, index: usize) -> bool {
+        self.files
+            .get(index - 1)
+            .is_some_and(|x| matches!(x.state, DownloadState::Waiting))
+    }
+    fn is_downgradable(&self, index: usize) -> bool {
+        self.files
+            .get(index + 1)
+            .is_some_and(|x| matches!(x.state, DownloadState::Waiting))
+    }
     fn upgrade_waiting(&mut self, index: usize) {
-        let prev = self.files.get(index - 1);
-        if prev.is_none() || prev.is_some_and(|x| !matches!(x.state, DownloadState::Waiting)) {
+        if !self.is_upgradable(index) {
             return;
         }
         let temp = self.files[index].clone();
@@ -145,35 +154,34 @@ impl Downloads {
         self.files[index - 1] = temp;
     }
     fn downgrade_waiting(&mut self, index: usize) {
-        let next = self.files.get(index + 1);
-        if next.is_none() || next.is_some_and(|x| !matches!(x.state, DownloadState::Waiting)) {
+        if !self.is_downgradable(index) {
             return;
         }
         let temp = self.files[index].clone();
         self.files[index] = self.files[index + 1].clone();
         self.files[index + 1] = temp;
     }
-    pub fn progress(&mut self, index: usize, handle: Handle) {
+    fn progress(&mut self, index: usize, handle: Handle) {
         self.waiting_count -= 1;
         self.progressing_count += 1;
         self.files[index].state = DownloadState::Progressing(handle);
     }
-    pub fn finish(&mut self, index: usize) {
+    fn finish(&mut self, index: usize) {
         self.progressing_count -= 1;
         self.finished_count += 1;
         self.files[index].state = DownloadState::Finished;
     }
-    pub fn fail(&mut self, index: usize, err: RpcError) {
+    fn fail(&mut self, index: usize, err: RpcError) {
         self.progressing_count -= 1;
         self.finished_count += 1;
         self.files[index].state = DownloadState::Failed(err);
     }
-    pub fn cancel(&mut self, index: usize) {
+    fn cancel(&mut self, index: usize) {
         self.progressing_count -= 1;
         self.canceled_count += 1;
         self.files[index].state = DownloadState::Canceled;
     }
-    pub fn first_waiting(&mut self) -> Option<(&Download, usize)> {
+    fn first_waiting(&mut self) -> Option<(&Download, usize)> {
         for (i, value) in self.files.iter().enumerate() {
             if matches!(value.state, DownloadState::Waiting) {
                 return Some((value, i));
@@ -181,7 +189,7 @@ impl Downloads {
         }
         None
     }
-    pub fn fill_turn(&mut self, grpc: RpcClient) -> Option<(Task<Result<(), RpcError>>, usize)> {
+    fn fill_turn(&mut self, grpc: RpcClient) -> Option<(Task<Result<(), RpcError>>, usize)> {
         if self.progressing_count >= 5 {
             return None;
         }
@@ -196,12 +204,12 @@ impl Downloads {
         }
     }
 
-    pub fn tick_next(&mut self, grpc: RpcClient) -> Option<Task<Message>> {
+    fn tick_next(&mut self, grpc: RpcClient) -> Option<Task<Message>> {
         self.fill_turn(grpc).map(|(task, index)| {
             task.map(move |result| DownloadMessage::TickNext { result, index }.into())
         })
     }
-    pub fn tick_available(&mut self, grpc: RpcClient) -> Task<Message> {
+    fn tick_available(&mut self, grpc: RpcClient) -> Task<Message> {
         let mut xs = Vec::new();
 
         while let Some(task) = self.tick_next(grpc.clone()) {
@@ -233,7 +241,7 @@ impl Downloads {
             .into()
     }
 
-    pub fn progressing_view(&self) -> Option<Element<'_, Message>> {
+    fn progressing_view(&self) -> Option<Element<'_, Message>> {
         if self.progressing_count == 0 {
             return None;
         }
@@ -259,7 +267,7 @@ impl Downloads {
         Some(content.into())
     }
 
-    pub fn waiting_view(&self) -> Option<Element<'_, Message>> {
+    fn waiting_view(&self) -> Option<Element<'_, Message>> {
         if self.waiting_count == 0 {
             return None;
         }
@@ -270,45 +278,34 @@ impl Downloads {
             .iter()
             .enumerate()
             .filter_map(|(index, download)| match download.state {
-                DownloadState::Waiting => {
-                    let up = Button::new(svg_button(IconName::Up.get()))
-                        .on_press(DownloadMessage::UpgradePriorty(index).into());
-                    let down = Button::new(svg_button(IconName::Down.get()))
-                        .on_press(DownloadMessage::DowngradePriorty(index).into());
-                    let change_priorty = column![up, down].align_x(Alignment::Center).spacing(2.);
-                    let txt = Text::new(format!("=> {:#?}", download.path));
-                    let content = row![txt, change_priorty]
-                        .align_y(Alignment::Center)
-                        .spacing(3.);
-                    Some(content)
-                }
+                DownloadState::Waiting => self.waiting_download(index),
                 _ => None,
             })
             .fold(content, |acc, x| acc.push(x));
         let content = scrollable(content.spacing(3.));
         Some(content.into())
     }
-    pub fn failed_view(&self) -> Option<Element<'_, Message>> {
-        if self.failed_count == 0 {
-            return None;
-        }
-        let title = Text::new("failed downloads");
-        let content = column![title];
-        let content = self
-            .files
-            .iter()
-            .filter_map(|download| match &download.state {
-                DownloadState::Failed(err) => {
-                    let txt = Text::new(format!("=> {:#?} because of {:#?}", download.path, err));
-                    Some(txt)
-                }
-                _ => None,
-            })
-            .fold(content, |acc, x| acc.push(x));
-        let content = scrollable(content.spacing(3.));
-        Some(content.into())
+
+    fn waiting_download(&self, index: usize) -> Option<row::Row<'_, Message>> {
+        let txt = Text::new(format!("=> {:#?}", self.files[index].path));
+        let priorty = self.waiting_download_priority(index);
+        let content = row![txt, priorty].align_y(Alignment::Center).spacing(3.);
+        Some(content)
     }
-    pub fn finished_view(&self) -> Option<Element<'_, Message>> {
+
+    fn waiting_download_priority(&self, index: usize) -> Column<'_, Message> {
+        let up = Button::new(svg_button(IconName::Up.get())).on_press_maybe(
+            self.is_upgradable(index)
+                .then_some(DownloadMessage::UpgradePriorty(index).into()),
+        );
+        let down = Button::new(svg_button(IconName::Down.get())).on_press_maybe(
+            self.is_downgradable(index)
+                .then_some(DownloadMessage::DowngradePriorty(index).into()),
+        );
+        column![up, down].align_x(Alignment::Center).spacing(2.)
+    }
+
+    fn finished_view(&self) -> Option<Element<'_, Message>> {
         if self.finished_count == 0 {
             return None;
         }
@@ -328,7 +325,27 @@ impl Downloads {
         let content = scrollable(content.spacing(3.));
         Some(content.into())
     }
-    pub fn canceled_view(&self) -> Option<Element<'_, Message>> {
+    fn failed_view(&self) -> Option<Element<'_, Message>> {
+        if self.failed_count == 0 {
+            return None;
+        }
+        let title = Text::new("failed downloads");
+        let content = column![title];
+        let content = self
+            .files
+            .iter()
+            .filter_map(|download| match &download.state {
+                DownloadState::Failed(err) => {
+                    let txt = Text::new(format!("=> {:#?} because of {:#?}", download.path, err));
+                    Some(txt)
+                }
+                _ => None,
+            })
+            .fold(content, |acc, x| acc.push(x));
+        let content = scrollable(content.spacing(3.));
+        Some(content.into())
+    }
+    fn canceled_view(&self) -> Option<Element<'_, Message>> {
         if self.canceled_count == 0 {
             return None;
         }
