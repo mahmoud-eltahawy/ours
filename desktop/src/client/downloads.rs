@@ -1,13 +1,22 @@
 use crate::{Message, State, client::svg_button};
 use common::assets::IconName;
-use grpc::{UnitKind, client::RpcClient, error::RpcError, top::Unit};
+use grpc::{
+    UnitKind,
+    client::{DownloadResponse, RpcClient},
+    error::RpcError,
+    top::Unit,
+};
 use iced::{
     Alignment, Background, Border, Element, Length, Task, Theme,
     border::Radius,
-    task::Handle,
-    widget::{Button, Column, Container, Text, column, container, row, scrollable},
+    task::{Handle, Straw, sipper},
+    widget::{Button, Column, Container, Text, column, container, progress_bar, row, scrollable},
 };
-use std::path::PathBuf;
+use std::{env::home_dir, path::PathBuf};
+use tokio::{
+    fs::{File, create_dir_all},
+    io::AsyncWriteExt,
+};
 
 #[derive(Default, Debug)]
 pub struct Downloads {
@@ -25,10 +34,7 @@ pub enum DownloadMessage {
     TogglePreview,
     QueueFromSelectedStart,
     QueueFromSelected(Result<Vec<PathBuf>, RpcError>),
-    TickNext {
-        result: Result<(), RpcError>,
-        index: usize,
-    },
+    Tick(DownloadProgress),
     CancelProgress(usize, Handle),
     UpgradePriorty(usize),
     DowngradePriorty(usize),
@@ -63,21 +69,29 @@ impl State {
 
                 state.downloads.tick_available(grpc)
             }
-            DownloadMessage::TickNext { result, index } => {
-                match result {
-                    Ok(()) => {
-                        state.downloads.finish(index);
-                    }
-                    Err(err) => {
-                        dbg!(&err);
+            DownloadMessage::Tick(download_progress) => match download_progress {
+                DownloadProgress::Begin { index, total_size } => {
+                    state.downloads.files[index].total_size = total_size;
+                    Task::none()
+                }
+                DownloadProgress::Progressed { index, by } => {
+                    state.downloads.files[index].sended += by;
+                    Task::none()
+                }
+                DownloadProgress::Finish(index) => {
+                    state.downloads.finish(index);
+                    Task::none()
+                }
+                DownloadProgress::Close { index, result } => {
+                    if let Err(err) = result {
                         state.downloads.fail(index, err);
                     }
+                    let Some(grpc) = state.grpc.clone() else {
+                        return Task::none();
+                    };
+                    state.downloads.tick_available(grpc)
                 }
-                let Some(grpc) = state.grpc.clone() else {
-                    return Task::none();
-                };
-                state.downloads.tick_available(grpc)
-            }
+            },
             DownloadMessage::TogglePreview => {
                 state.downloads.show_preview = !state.downloads.show_preview;
                 Task::none()
@@ -106,6 +120,8 @@ impl State {
 pub struct Download {
     path: PathBuf,
     state: DownloadState,
+    total_size: u64,
+    sended: usize,
 }
 
 impl From<PathBuf> for Download {
@@ -113,6 +129,8 @@ impl From<PathBuf> for Download {
         Self {
             path: value,
             state: DownloadState::Waiting,
+            total_size: 0,
+            sended: 0,
         }
     }
 }
@@ -189,30 +207,32 @@ impl Downloads {
         }
         None
     }
-    fn fill_turn(&mut self, grpc: RpcClient) -> Option<(Task<Result<(), RpcError>>, usize)> {
+    fn fill_turn(&mut self, grpc: RpcClient) -> Option<Task<DownloadProgress>> {
         if self.progressing_count >= 5 {
             return None;
         }
         match self.first_waiting() {
             Some((download, index)) => {
-                let (task, handle) =
-                    Task::future(grpc.clone().download_file(download.path.clone())).abortable();
+                let (task, handle) = Task::sip(
+                    download_file(grpc.clone(), index, download.path.clone()),
+                    |progress| progress,
+                    move |x| DownloadProgress::Close { index, result: x },
+                )
+                .abortable();
+
                 self.progress(index, handle);
-                Some((task, index))
+                Some(task)
             }
             None => None,
         }
     }
 
-    fn tick_next(&mut self, grpc: RpcClient) -> Option<Task<Message>> {
-        self.fill_turn(grpc).map(|(task, index)| {
-            task.map(move |result| DownloadMessage::TickNext { result, index }.into())
-        })
-    }
     fn tick_available(&mut self, grpc: RpcClient) -> Task<Message> {
         let mut xs = Vec::new();
 
-        while let Some(task) = self.tick_next(grpc.clone()) {
+        while let Some(task) = self.fill_turn(grpc.clone()).map(|task| {
+            task.map(move |download_progress| DownloadMessage::Tick(download_progress).into())
+        }) {
             xs.push(task);
         }
         Task::batch(xs)
@@ -259,9 +279,12 @@ impl Downloads {
             .filter_map(|(index, download)| match &download.state {
                 DownloadState::Progressing(handle) => {
                     let txt = Text::new(format!("=> {:#?}", download.path));
+                    let progress_bar =
+                        progress_bar(0.0..=(download.total_size as f32), download.sended as f32);
+                    let left = column![txt, progress_bar];
                     let button = Button::new(svg_button(IconName::Close.get()))
                         .on_press(DownloadMessage::CancelProgress(index, handle.clone()).into());
-                    let row = row![txt, button].align_y(Alignment::Center).spacing(5.);
+                    let row = row![left, button].align_y(Alignment::Center).spacing(5.);
                     Some(row)
                 }
                 _ => None,
@@ -396,4 +419,54 @@ async fn get_download_paths(grpc: RpcClient, units: Vec<Unit>) -> Result<Vec<Pat
         };
     }
     Ok(res)
+}
+
+#[derive(Clone)]
+pub enum DownloadProgress {
+    Begin {
+        index: usize,
+        total_size: u64,
+    },
+    Progressed {
+        index: usize,
+        by: usize,
+    },
+    Finish(usize),
+    Close {
+        index: usize,
+        result: Result<(), RpcError>,
+    },
+}
+
+fn download_file(
+    grpc: RpcClient,
+    index: usize,
+    target: PathBuf,
+) -> impl Straw<(), DownloadProgress, RpcError> {
+    sipper(async move |mut sender| {
+        let (size, mut stream) = grpc.download_stream(&target).await?;
+        sender
+            .send(DownloadProgress::Begin {
+                index,
+                total_size: size,
+            })
+            .await;
+
+        let target = home_dir().unwrap().join("Downloads").join(&target);
+        create_dir_all(target.parent().map(|x| x.to_path_buf()).unwrap_or_default()).await?;
+        let mut file = File::create(target).await?;
+        while let Some(DownloadResponse { data }) = stream.message().await? {
+            file.write_all(&data).await?;
+            file.flush().await?;
+            sender
+                .send(DownloadProgress::Progressed {
+                    index,
+                    by: data.len(),
+                })
+                .await;
+        }
+        sender.send(DownloadProgress::Finish(index)).await;
+
+        Ok(())
+    })
 }

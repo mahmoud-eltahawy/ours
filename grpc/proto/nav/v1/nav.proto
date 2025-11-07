@@ -3,6 +3,7 @@ package nav.v1;
 
 service NavService {
   rpc Ls (LsRequest) returns (LsResponse) {}
+  rpc FileSize(FileSizeRequest) returns (FileSizeResponse) {}
   rpc Download(DownloadRequest) returns (stream DownloadResponse) {}
   rpc Upload(stream UploadRequest) returns (UploadResponse) {}
 }
@@ -17,6 +18,14 @@ message LsResponse {
 
 message DownloadRequest {
   string path = 1;
+}
+
+message FileSizeRequest {
+  string path = 1;
+}
+
+message FileSizeResponse {
+  uint64 size =1;
 }
 
 

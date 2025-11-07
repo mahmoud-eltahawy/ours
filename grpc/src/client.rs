@@ -1,15 +1,17 @@
 use crate::{
     error::RpcError,
-    nav::{DownloadRequest, DownloadResponse, LsRequest, nav_service_client::NavServiceClient},
+    nav::{DownloadRequest, FileSizeRequest, LsRequest, nav_service_client::NavServiceClient},
     top,
 };
-use std::{env::home_dir, net::SocketAddr, path::PathBuf, sync::Arc};
-use tokio::{
-    fs::{File, create_dir_all},
-    io::AsyncWriteExt,
-    sync::Mutex,
+use std::{
+    net::SocketAddr,
+    path::{Path, PathBuf},
+    sync::Arc,
 };
-use tonic::transport::Channel;
+use tokio::sync::Mutex;
+use tonic::{Streaming, transport::Channel};
+
+pub use crate::nav::DownloadResponse;
 
 #[derive(Clone, Debug)]
 pub struct RpcClient {
@@ -48,19 +50,16 @@ impl RpcClient {
         Ok(units)
     }
 
-    pub async fn download_file(self, target: PathBuf) -> Result<(), RpcError> {
-        let req = DownloadRequest {
-            path: target.to_str().unwrap().to_string(),
-        };
+    pub async fn download_stream(
+        self,
+        target: &Path,
+    ) -> Result<(u64, Streaming<DownloadResponse>), RpcError> {
+        let path = target.to_str().unwrap().to_string();
+        let req = DownloadRequest { path: path.clone() };
         let mut client = self.client.lock().await;
-        let mut stream = client.download(req).await?.into_inner();
-        let target = home_dir().unwrap().join("Downloads").join(&target);
-        create_dir_all(target.parent().map(|x| x.to_path_buf()).unwrap_or_default()).await?;
-        let mut file = File::create(target).await?;
-        while let Some(DownloadResponse { data }) = stream.message().await? {
-            file.write_all(&data).await?;
-            file.flush().await?;
-        }
-        Ok(())
+        let stream = client.download(req).await?.into_inner();
+        let req = FileSizeRequest { path };
+        let size = client.file_size(req).await?.into_inner().size;
+        Ok((size, stream))
     }
 }

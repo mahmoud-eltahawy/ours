@@ -1,5 +1,8 @@
 use super::nav::nav_service_server::NavService;
-use crate::nav::{DownloadRequest, DownloadResponse, UploadRequest, UploadResponse};
+use crate::nav::{
+    DownloadRequest, DownloadResponse, FileSizeRequest, FileSizeResponse, UploadRequest,
+    UploadResponse,
+};
 use crate::{
     error::RpcError,
     nav::{LsRequest, LsResponse, Unit, UnitKind, nav_service_server::NavServiceServer},
@@ -60,6 +63,16 @@ impl NavService for RpcServer {
             units.push(unit);
         }
         Ok(Response::new(LsResponse { units }))
+    }
+
+    async fn file_size(
+        &self,
+        req: Request<FileSizeRequest>,
+    ) -> Result<Response<FileSizeResponse>, Status> {
+        let Ok(path) = req.into_inner().path.parse::<PathBuf>();
+        let path = self.target_dir.join(path);
+        let len = File::open(path).await?.metadata().await?.len();
+        Ok(Response::new(FileSizeResponse { size: len }))
     }
 
     type DownloadStream = Pin<Box<dyn Stream<Item = Result<DownloadResponse, Status>> + Send>>;
