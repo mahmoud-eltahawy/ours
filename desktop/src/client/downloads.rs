@@ -71,7 +71,7 @@ impl State {
             }
             DownloadMessage::Tick(download_progress) => match download_progress {
                 DownloadProgress::Begin { index, total_size } => {
-                    state.downloads.files[index].total_size = total_size;
+                    state.downloads.files[index].total_size = total_size as usize;
                     Task::none()
                 }
                 DownloadProgress::Progressed { index, by } => {
@@ -120,7 +120,7 @@ impl State {
 pub struct Download {
     path: PathBuf,
     state: DownloadState,
-    total_size: u64,
+    total_size: usize,
     sended: usize,
 }
 
@@ -247,7 +247,6 @@ impl Downloads {
         let canceled = self.canceled_view();
         let content = scrollable(
             column![title, progressing, waiting, failed, finished, canceled]
-                .width(Length::Shrink)
                 .align_x(Alignment::Center)
                 .spacing(20.),
         );
@@ -270,6 +269,22 @@ impl Downloads {
             return None;
         }
 
+        fn format_size(x: usize) -> String {
+            const KB: usize = 1024;
+            const MB: usize = KB * KB;
+            const GB: usize = MB * MB;
+
+            if (0..KB).contains(&x) {
+                format!("{x} B")
+            } else if (KB..MB).contains(&x) {
+                format!("{} KB", x / KB)
+            } else if (MB..GB).contains(&x) {
+                format!("{} MB", x / MB)
+            } else {
+                format!("{} GB", x / GB)
+            }
+        }
+
         let title = Text::new("in progress downloads");
         let content = column![title];
         let content = self
@@ -278,11 +293,23 @@ impl Downloads {
             .enumerate()
             .filter_map(|(index, download)| match &download.state {
                 DownloadState::Progressing(handle) => {
-                    let txt = Text::new(format!("=> {:#?}", download.path));
+                    let txt = Text::new(format!(
+                        "{:#?}, {} of {},{:.2}%",
+                        download.path,
+                        format_size(download.sended),
+                        format_size(download.total_size),
+                        (download.sended as f32 / download.total_size as f32) * 100.0
+                    ));
                     let progress_bar =
                         progress_bar(0.0..=(download.total_size as f32), download.sended as f32);
-                    let left = column![txt, progress_bar];
+                    let left = column![txt, progress_bar].align_x(Alignment::Center);
                     let button = Button::new(svg_button(IconName::Close.get()))
+                        .height(Length::Fixed(80.))
+                        .style(|_, _| iced::widget::button::Style {
+                            background: None,
+                            ..Default::default()
+                        })
+                        .clip(false)
                         .on_press(DownloadMessage::CancelProgress(index, handle.clone()).into());
                     let row = row![left, button].align_y(Alignment::Center).spacing(5.);
                     Some(row)
