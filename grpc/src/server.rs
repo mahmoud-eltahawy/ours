@@ -108,6 +108,7 @@ impl NavService for RpcServer {
             Box::pin(output_stream) as Self::DownloadStream
         ))
     }
+
     async fn upload(
         &self,
         req: Request<Streaming<UploadRequest>>,
@@ -120,16 +121,10 @@ impl RpcServer {
     pub fn new(target_dir: PathBuf, port: u16) -> Self {
         Self { target_dir, port }
     }
-    pub async fn serve(&self) -> Result<(), RpcError> {
-        let Self { target_dir, port } = self;
-        let rpc_service = RpcServer {
-            target_dir: target_dir.to_path_buf(),
-            port: *port,
-        };
-
-        let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), *port);
+    pub async fn serve(self) -> Result<(), RpcError> {
+        let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), self.port);
         Server::builder()
-            .add_service(NavServiceServer::new(rpc_service))
+            .add_service(NavServiceServer::new(self))
             .serve(addr)
             .await?;
 

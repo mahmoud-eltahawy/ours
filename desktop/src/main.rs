@@ -1,3 +1,4 @@
+use get_port::Ops;
 use iced::{
     Task, Theme,
     widget::{Svg, svg},
@@ -33,7 +34,6 @@ fn main() {
         .unwrap();
 }
 
-#[derive(Default)]
 struct State {
     page: Page,
     pub home: HomeState,
@@ -57,9 +57,16 @@ impl State {
         Theme::Dracula
     }
     fn new() -> Self {
-        State {
+        let local_ip = local_ip_address::local_ip().unwrap();
+        let tonic_port = get_port::tcp::TcpPort::any(&local_ip.to_string()).unwrap();
+        let axum_port =
+            get_port::tcp::TcpPort::except(&local_ip.to_string(), vec![tonic_port]).unwrap();
+
+        Self {
             page: Default::default(),
-            ..Default::default()
+            home: Default::default(),
+            server: ServerState::new(local_ip, tonic_port, axum_port),
+            client: Default::default(),
         }
     }
     fn update(&mut self, msg: Message) -> Task<Message> {
