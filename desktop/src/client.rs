@@ -215,6 +215,7 @@ fn svg_button<'a>(icon: &'a [u8]) -> Button<'a, Message> {
                 radius: Radius::new(2.),
                 ..Default::default()
             },
+            background: None,
             ..Default::default()
         })
         .padding(7.)

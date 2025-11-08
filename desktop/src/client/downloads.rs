@@ -10,11 +10,14 @@ use iced::{
     Alignment, Background, Border, Element, Length, Task, Theme,
     border::Radius,
     task::{Handle, Straw, sipper},
-    widget::{Button, Column, Container, Text, column, container, progress_bar, row, scrollable},
+    widget::{Column, Container, Text, column, container, progress_bar, row, scrollable},
 };
-use std::{env::home_dir, path::PathBuf};
+use std::{
+    env::home_dir,
+    path::{Path, PathBuf},
+};
 use tokio::{
-    fs::{File, create_dir_all},
+    fs::{File, create_dir_all, remove_file},
     io::AsyncWriteExt,
 };
 
@@ -36,8 +39,11 @@ pub enum DownloadMessage {
     QueueFromSelected(Result<Vec<PathBuf>, RpcError>),
     Tick(DownloadProgress),
     CancelProgress(usize, Handle),
+    ProgressCanceled(usize),
     UpgradePriorty(usize),
     DowngradePriorty(usize),
+    RetryCanceled(usize),
+    RetryFailed(usize),
 }
 
 impl State {
@@ -98,6 +104,12 @@ impl State {
             }
             DownloadMessage::CancelProgress(index, handle) => {
                 handle.abort();
+                Task::perform(
+                    remove_file(join_downloads(&state.downloads.files[index].path)),
+                    move |_| DownloadMessage::ProgressCanceled(index).into(),
+                )
+            }
+            DownloadMessage::ProgressCanceled(index) => {
                 state.downloads.cancel(index);
                 let Some(grpc) = state.grpc.clone() else {
                     return Task::none();
@@ -111,6 +123,20 @@ impl State {
             DownloadMessage::DowngradePriorty(index) => {
                 state.downloads.downgrade_waiting(index);
                 Task::none()
+            }
+            DownloadMessage::RetryCanceled(index) => {
+                state.downloads.retry_canceled(index);
+                let Some(grpc) = state.grpc.clone() else {
+                    return Task::none();
+                };
+                state.downloads.tick_available(grpc)
+            }
+            DownloadMessage::RetryFailed(index) => {
+                state.downloads.retry_failed(index);
+                let Some(grpc) = state.grpc.clone() else {
+                    return Task::none();
+                };
+                state.downloads.tick_available(grpc)
             }
         }
     }
@@ -191,13 +217,27 @@ impl Downloads {
     }
     fn fail(&mut self, index: usize, err: RpcError) {
         self.progressing_count -= 1;
-        self.finished_count += 1;
+        self.failed_count += 1;
         self.files[index].state = DownloadState::Failed(err);
     }
+
+    fn retry_canceled(&mut self, index: usize) {
+        self.waiting_count += 1;
+        self.canceled_count -= 1;
+        self.files[index].state = DownloadState::Waiting;
+    }
+
+    fn retry_failed(&mut self, index: usize) {
+        self.waiting_count += 1;
+        self.failed_count -= 1;
+        self.files[index].state = DownloadState::Waiting;
+    }
+
     fn cancel(&mut self, index: usize) {
         self.progressing_count -= 1;
         self.canceled_count += 1;
         self.files[index].state = DownloadState::Canceled;
+        self.files[index].sended = 0;
     }
     fn first_waiting(&mut self) -> Option<(&Download, usize)> {
         for (i, value) in self.files.iter().enumerate() {
@@ -303,12 +343,8 @@ impl Downloads {
                     let progress_bar =
                         progress_bar(0.0..=(download.total_size as f32), download.sended as f32);
                     let left = column![txt, progress_bar].align_x(Alignment::Center);
-                    let button = Button::new(svg_button(IconName::Close.get()))
+                    let button = svg_button(IconName::Close.get())
                         .height(Length::Fixed(80.))
-                        .style(|_, _| iced::widget::button::Style {
-                            background: None,
-                            ..Default::default()
-                        })
                         .clip(false)
                         .on_press(DownloadMessage::CancelProgress(index, handle.clone()).into());
                     let row = row![left, button].align_y(Alignment::Center).spacing(5.);
@@ -348,11 +384,11 @@ impl Downloads {
     }
 
     fn waiting_download_priority(&self, index: usize) -> Column<'_, Message> {
-        let up = Button::new(svg_button(IconName::Up.get())).on_press_maybe(
+        let up = svg_button(IconName::Up.get()).on_press_maybe(
             self.is_upgradable(index)
                 .then_some(DownloadMessage::UpgradePriorty(index).into()),
         );
-        let down = Button::new(svg_button(IconName::Down.get())).on_press_maybe(
+        let down = svg_button(IconName::Down.get()).on_press_maybe(
             self.is_downgradable(index)
                 .then_some(DownloadMessage::DowngradePriorty(index).into()),
         );
@@ -388,10 +424,13 @@ impl Downloads {
         let content = self
             .files
             .iter()
-            .filter_map(|download| match &download.state {
+            .enumerate()
+            .filter_map(|(index, download)| match &download.state {
                 DownloadState::Failed(err) => {
                     let txt = Text::new(format!("=> {:#?} because of {:#?}", download.path, err));
-                    Some(txt)
+                    let retry_btn = svg_button(IconName::Retry.get())
+                        .on_press(DownloadMessage::RetryFailed(index).into());
+                    Some(row![txt, retry_btn])
                 }
                 _ => None,
             })
@@ -408,10 +447,13 @@ impl Downloads {
         let content = self
             .files
             .iter()
-            .filter_map(|download| match download.state {
+            .enumerate()
+            .filter_map(|(index, download)| match download.state {
                 DownloadState::Canceled => {
                     let txt = Text::new(format!("=> {:#?}", download.path));
-                    Some(txt)
+                    let retry_btn = svg_button(IconName::Retry.get())
+                        .on_press(DownloadMessage::RetryCanceled(index).into());
+                    Some(row![txt, retry_btn])
                 }
                 _ => None,
             })
@@ -465,6 +507,10 @@ pub enum DownloadProgress {
     },
 }
 
+fn join_downloads(path: &Path) -> PathBuf {
+    home_dir().unwrap().join("Downloads").join(path)
+}
+
 fn download_file(
     grpc: RpcClient,
     index: usize,
@@ -479,21 +525,35 @@ fn download_file(
             })
             .await;
 
-        let target = home_dir().unwrap().join("Downloads").join(&target);
+        let target = join_downloads(&target);
         create_dir_all(target.parent().map(|x| x.to_path_buf()).unwrap_or_default()).await?;
-        let mut file = File::create(target).await?;
-        while let Some(DownloadResponse { data }) = stream.message().await? {
-            file.write_all(&data).await?;
-            file.flush().await?;
-            sender
-                .send(DownloadProgress::Progressed {
-                    index,
-                    by: data.len(),
-                })
-                .await;
+        let _ = remove_file(&target).await;
+        let mut file = File::create(&target).await?;
+        loop {
+            match stream.message().await {
+                Ok(dr) => {
+                    match dr {
+                        Some(DownloadResponse { data }) => {
+                            file.write_all(&data).await?;
+                            file.flush().await?;
+                            sender
+                                .send(DownloadProgress::Progressed {
+                                    index,
+                                    by: data.len(),
+                                })
+                                .await;
+                        }
+                        None => {
+                            sender.send(DownloadProgress::Finish(index)).await;
+                            return Ok(());
+                        }
+                    };
+                }
+                Err(status) => {
+                    remove_file(&target).await?;
+                    return Err(RpcError::TonicStatus(status));
+                }
+            }
         }
-        sender.send(DownloadProgress::Finish(index)).await;
-
-        Ok(())
     })
 }
