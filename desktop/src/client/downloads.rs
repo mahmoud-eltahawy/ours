@@ -24,11 +24,13 @@ use tokio::{
 #[derive(Default, Debug)]
 pub struct Downloads {
     pub show_preview: bool,
-    progressing_count: usize,
-    waiting_count: usize,
-    finished_count: usize,
-    failed_count: usize,
-    canceled_count: usize,
+    progressing: Vec<(usize, Handle)>,
+    waiting: Vec<usize>,
+    resumable: Vec<usize>,
+    finished: Vec<usize>,
+    paused: Vec<usize>,
+    failed: Vec<(usize, RpcError)>,
+    canceled: Vec<usize>,
     files: Vec<Download>,
 }
 
@@ -39,6 +41,8 @@ pub enum DownloadMessage {
     QueueFromSelected(Result<Vec<PathBuf>, RpcError>),
     Tick(DownloadProgress),
     CancelProgress(usize, Handle),
+    Pause(usize, Handle),
+    Resume(usize),
     ProgressCanceled(usize),
     UpgradePriorty(usize),
     DowngradePriorty(usize),
@@ -67,7 +71,7 @@ impl State {
                         return Task::none();
                     }
                 };
-                state.downloads.wait(paths);
+                state.downloads.waitlist(paths);
 
                 let Some(grpc) = state.grpc.clone() else {
                     return Task::none();
@@ -88,7 +92,7 @@ impl State {
                     state.downloads.finish(index);
                     Task::none()
                 }
-                DownloadProgress::Close { index, result } => {
+                DownloadProgress::CheckDownloadResult { index, result } => {
                     if let Err(err) = result {
                         state.downloads.fail(index, err);
                     }
@@ -108,6 +112,18 @@ impl State {
                     remove_file(join_downloads(&state.downloads.files[index].path)),
                     move |_| DownloadMessage::ProgressCanceled(index).into(),
                 )
+            }
+            DownloadMessage::Pause(index, handle) => {
+                handle.abort();
+                state.downloads.pause(index);
+                Task::none()
+            }
+            DownloadMessage::Resume(index) => {
+                state.downloads.resume(index);
+                let Some(grpc) = state.grpc.clone() else {
+                    return Task::none();
+                };
+                state.downloads.tick_available(grpc)
             }
             DownloadMessage::ProgressCanceled(index) => {
                 state.downloads.cancel(index);
@@ -145,7 +161,6 @@ impl State {
 #[derive(Default, Debug, Clone)]
 pub struct Download {
     path: PathBuf,
-    state: DownloadState,
     total_size: usize,
     sended: usize,
 }
@@ -154,123 +169,135 @@ impl From<PathBuf> for Download {
     fn from(value: PathBuf) -> Self {
         Self {
             path: value,
-            state: DownloadState::Waiting,
             total_size: 0,
             sended: 0,
         }
     }
 }
 
-#[derive(Default, Debug, Clone)]
-pub enum DownloadState {
-    #[default]
-    Waiting,
-    Progressing(Handle),
-    Finished,
-    Failed(RpcError),
-    Canceled,
+enum Turn {
+    Waiting(usize),
+    Resumable(usize),
 }
 
 impl Downloads {
-    fn wait(&mut self, paths: Vec<PathBuf>) {
-        self.waiting_count += paths.len();
+    fn waitlist(&mut self, paths: Vec<PathBuf>) {
+        let before_len = self.files.len();
         self.files.extend(paths.into_iter().map(Download::from));
+        let after_len = self.files.len();
+        self.waiting.extend(before_len..after_len);
     }
     pub fn active_count(&self) -> usize {
-        self.progressing_count + self.waiting_count
+        self.progressing.len() + self.waiting.len() + self.resumable.len()
     }
     fn is_upgradable(&self, index: usize) -> bool {
-        self.files
-            .get(index - 1)
-            .is_some_and(|x| matches!(x.state, DownloadState::Waiting))
+        self.waiting.contains(&index) && self.waiting[0] != index
     }
     fn is_downgradable(&self, index: usize) -> bool {
-        self.files
-            .get(index + 1)
-            .is_some_and(|x| matches!(x.state, DownloadState::Waiting))
+        self.waiting.contains(&index) && self.waiting[self.waiting.len() - 1] != index
     }
     fn upgrade_waiting(&mut self, index: usize) {
         if !self.is_upgradable(index) {
             return;
         }
-        let temp = self.files[index].clone();
-        self.files[index] = self.files[index - 1].clone();
-        self.files[index - 1] = temp;
+        let index_index = self.waiting.iter().position(|x| *x == index).unwrap();
+        let target_index = index_index - 1;
+        let target = self.waiting[target_index];
+        self.waiting[index_index] = target;
+        self.waiting[target_index] = index;
     }
     fn downgrade_waiting(&mut self, index: usize) {
         if !self.is_downgradable(index) {
             return;
         }
-        let temp = self.files[index].clone();
-        self.files[index] = self.files[index + 1].clone();
-        self.files[index + 1] = temp;
+        let index_index = self.waiting.iter().position(|x| *x == index).unwrap();
+        let target_index = index_index + 1;
+        let target = self.waiting[target_index];
+        self.waiting[index_index] = target;
+        self.waiting[target_index] = index;
     }
     fn progress(&mut self, index: usize, handle: Handle) {
-        self.waiting_count -= 1;
-        self.progressing_count += 1;
-        self.files[index].state = DownloadState::Progressing(handle);
+        self.waiting.retain(|x| *x != index);
+        self.progressing.push((index, handle));
     }
     fn finish(&mut self, index: usize) {
-        self.progressing_count -= 1;
-        self.finished_count += 1;
-        self.files[index].state = DownloadState::Finished;
+        self.progressing.retain(|x| x.0 != index);
+        self.finished.push(index);
     }
+
+    fn pause(&mut self, index: usize) {
+        self.progressing.retain(|x| x.0 != index);
+        self.paused.push(index);
+    }
+
+    fn resume(&mut self, index: usize) {
+        self.resumable.push(index);
+        self.paused.retain(|x| *x != index);
+    }
+
     fn fail(&mut self, index: usize, err: RpcError) {
-        self.progressing_count -= 1;
-        self.failed_count += 1;
-        self.files[index].state = DownloadState::Failed(err);
+        self.progressing.retain(|x| x.0 != index);
+        self.failed.push((index, err));
+        self.files[index].sended = 0;
     }
 
     fn retry_canceled(&mut self, index: usize) {
-        self.waiting_count += 1;
-        self.canceled_count -= 1;
-        self.files[index].state = DownloadState::Waiting;
+        self.waiting.push(index);
+        self.canceled.retain(|x| *x != index);
     }
 
     fn retry_failed(&mut self, index: usize) {
-        self.waiting_count += 1;
-        self.failed_count -= 1;
-        self.files[index].state = DownloadState::Waiting;
+        self.waiting.push(index);
+        self.failed.retain(|x| x.0 != index);
     }
 
     fn cancel(&mut self, index: usize) {
-        self.progressing_count -= 1;
-        self.canceled_count += 1;
-        self.files[index].state = DownloadState::Canceled;
+        self.progressing.retain(|x| x.0 != index);
+        self.canceled.push(index);
         self.files[index].sended = 0;
     }
-    fn first_waiting(&mut self) -> Option<(&Download, usize)> {
-        for (i, value) in self.files.iter().enumerate() {
-            if matches!(value.state, DownloadState::Waiting) {
-                return Some((value, i));
-            }
+    fn next_turn(&self) -> Option<Turn> {
+        if let Some(index) = self.resumable.first() {
+            Some(Turn::Resumable(*index))
+        } else {
+            self.waiting.first().map(|index| Turn::Waiting(*index))
         }
-        None
     }
-    fn fill_turn(&mut self, grpc: RpcClient) -> Option<Task<DownloadProgress>> {
-        if self.progressing_count >= 5 {
+    fn turn_task(&mut self, grpc: RpcClient) -> Option<Task<DownloadProgress>> {
+        if self.progressing.len() >= 5 {
             return None;
         }
-        match self.first_waiting() {
-            Some((download, index)) => {
+        match self.next_turn()? {
+            Turn::Waiting(index) => {
+                let download = &self.files[index];
                 let (task, handle) = Task::sip(
                     download_file(grpc.clone(), index, download.path.clone()),
                     |progress| progress,
-                    move |x| DownloadProgress::Close { index, result: x },
+                    move |x| DownloadProgress::CheckDownloadResult { index, result: x },
                 )
                 .abortable();
 
                 self.progress(index, handle);
                 Some(task)
             }
-            None => None,
+            Turn::Resumable(index) => {
+                let download = &self.files[index];
+                let (task, handle) = Task::sip(
+                    resume_file(grpc.clone(), index, download.sended, download.path.clone()),
+                    |progress| progress,
+                    move |x| DownloadProgress::CheckDownloadResult { index, result: x },
+                )
+                .abortable();
+                self.progress(index, handle);
+                Some(task)
+            }
         }
     }
 
     fn tick_available(&mut self, grpc: RpcClient) -> Task<Message> {
         let mut xs = Vec::new();
 
-        while let Some(task) = self.fill_turn(grpc.clone()).map(|task| {
+        while let Some(task) = self.turn_task(grpc.clone()).map(|task| {
             task.map(move |download_progress| DownloadMessage::Tick(download_progress).into())
         }) {
             xs.push(task);
@@ -284,11 +311,20 @@ impl Downloads {
         let waiting = self.waiting_view();
         let failed = self.failed_view();
         let finished = self.finished_view();
+        let paused = self.paused_view();
         let canceled = self.canceled_view();
         let content = scrollable(
-            column![title, progressing, waiting, failed, finished, canceled]
-                .align_x(Alignment::Center)
-                .spacing(20.),
+            column![
+                title,
+                progressing,
+                waiting,
+                failed,
+                finished,
+                paused,
+                canceled
+            ]
+            .align_x(Alignment::Center)
+            .spacing(20.),
         );
         Container::new(content)
             .style(|theme: &Theme| container::Style {
@@ -305,7 +341,7 @@ impl Downloads {
     }
 
     fn progressing_view(&self) -> Option<Element<'_, Message>> {
-        if self.progressing_count == 0 {
+        if self.progressing.is_empty() {
             return None;
         }
 
@@ -328,29 +364,26 @@ impl Downloads {
         let title = Text::new("in progress downloads");
         let content = column![title];
         let content = self
-            .files
+            .progressing
             .iter()
-            .enumerate()
-            .filter_map(|(index, download)| match &download.state {
-                DownloadState::Progressing(handle) => {
-                    let txt = Text::new(format!(
-                        "{:#?}, {} of {},{:.2}%",
-                        download.path,
-                        format_size(download.sended),
-                        format_size(download.total_size),
-                        (download.sended as f32 / download.total_size as f32) * 100.0
-                    ));
-                    let progress_bar =
-                        progress_bar(0.0..=(download.total_size as f32), download.sended as f32);
-                    let left = column![txt, progress_bar].align_x(Alignment::Center);
-                    let button = svg_button(IconName::Close.get())
-                        .height(Length::Fixed(80.))
-                        .clip(false)
-                        .on_press(DownloadMessage::CancelProgress(index, handle.clone()).into());
-                    let row = row![left, button].align_y(Alignment::Center).spacing(5.);
-                    Some(row)
-                }
-                _ => None,
+            .map(|(index, handle)| {
+                let index = *index;
+                let download = &self.files[index];
+                let txt = Text::new(format!(
+                    "{:#?}, {} of {},{:.2}%",
+                    download.path,
+                    format_size(download.sended),
+                    format_size(download.total_size),
+                    (download.sended as f32 / download.total_size as f32) * 100.0
+                ));
+                let progress_bar =
+                    progress_bar(0.0..=(download.total_size as f32), download.sended as f32);
+                let left = column![txt, progress_bar].align_x(Alignment::Center);
+                let button = svg_button(IconName::Close.get())
+                    .height(Length::Fixed(80.))
+                    .clip(false)
+                    .on_press(DownloadMessage::CancelProgress(index, handle.clone()).into());
+                row![left, button].align_y(Alignment::Center).spacing(5.)
             })
             .fold(content, |acc, x| acc.push(x));
         let content = scrollable(content.spacing(3.));
@@ -358,29 +391,24 @@ impl Downloads {
     }
 
     fn waiting_view(&self) -> Option<Element<'_, Message>> {
-        if self.waiting_count == 0 {
+        if self.waiting.is_empty() {
             return None;
         }
         let title = Text::new("waiting downloads");
         let content = column![title];
         let content = self
-            .files
+            .waiting
             .iter()
-            .enumerate()
-            .filter_map(|(index, download)| match download.state {
-                DownloadState::Waiting => self.waiting_download(index),
-                _ => None,
-            })
+            .map(|index| self.waiting_download(*index))
             .fold(content, |acc, x| acc.push(x));
         let content = scrollable(content.spacing(3.));
         Some(content.into())
     }
 
-    fn waiting_download(&self, index: usize) -> Option<row::Row<'_, Message>> {
+    fn waiting_download(&self, index: usize) -> row::Row<'_, Message> {
         let txt = Text::new(format!("=> {:#?}", self.files[index].path));
         let priorty = self.waiting_download_priority(index);
-        let content = row![txt, priorty].align_y(Alignment::Center).spacing(3.);
-        Some(content)
+        row![txt, priorty].align_y(Alignment::Center).spacing(3.)
     }
 
     fn waiting_download_priority(&self, index: usize) -> Column<'_, Message> {
@@ -396,66 +424,80 @@ impl Downloads {
     }
 
     fn finished_view(&self) -> Option<Element<'_, Message>> {
-        if self.finished_count == 0 {
+        if self.finished.is_empty() {
             return None;
         }
         let title = Text::new("finished downloads");
         let content = column![title];
         let content = self
-            .files
+            .finished
             .iter()
-            .filter_map(|download| match download.state {
-                DownloadState::Finished => {
-                    let txt = Text::new(format!("=> {:#?}", download.path));
-                    Some(txt)
-                }
-                _ => None,
+            .map(|index| {
+                let download = &self.files[*index];
+                Text::new(format!("=> {:#?}", download.path))
             })
             .fold(content, |acc, x| acc.push(x));
         let content = scrollable(content.spacing(3.));
         Some(content.into())
     }
     fn failed_view(&self) -> Option<Element<'_, Message>> {
-        if self.failed_count == 0 {
+        if self.failed.is_empty() {
             return None;
         }
         let title = Text::new("failed downloads");
         let content = column![title];
         let content = self
-            .files
+            .failed
             .iter()
-            .enumerate()
-            .filter_map(|(index, download)| match &download.state {
-                DownloadState::Failed(err) => {
-                    let txt = Text::new(format!("=> {:#?} because of {:#?}", download.path, err));
-                    let retry_btn = svg_button(IconName::Retry.get())
-                        .on_press(DownloadMessage::RetryFailed(index).into());
-                    Some(row![txt, retry_btn])
-                }
-                _ => None,
+            .map(|(index, err)| {
+                let download = &self.files[*index];
+                let txt = Text::new(format!("=> {:#?} because of {:#?}", download.path, err));
+                let retry_btn = svg_button(IconName::Retry.get())
+                    .on_press(DownloadMessage::RetryFailed(*index).into());
+                row![txt, retry_btn]
             })
             .fold(content, |acc, x| acc.push(x));
         let content = scrollable(content.spacing(3.));
         Some(content.into())
     }
+
+    fn paused_view(&self) -> Option<Element<'_, Message>> {
+        if self.paused.is_empty() {
+            return None;
+        }
+        let title = Text::new("paused downloads");
+        let content = column![title];
+        let content = self
+            .paused
+            .iter()
+            .map(|index| {
+                let download = &self.files[*index];
+                let txt = Text::new(format!("=> {:#?}", download.path));
+                let retry_btn = svg_button(IconName::Retry.get())
+                    .on_press(DownloadMessage::Resume(*index).into());
+                row![txt, retry_btn]
+            })
+            .fold(content, |acc, x| acc.push(x));
+
+        let content = scrollable(content.spacing(3.));
+        Some(content.into())
+    }
+
     fn canceled_view(&self) -> Option<Element<'_, Message>> {
-        if self.canceled_count == 0 {
+        if self.canceled.is_empty() {
             return None;
         }
         let title = Text::new("canceled downloads");
         let content = column![title];
         let content = self
-            .files
+            .canceled
             .iter()
-            .enumerate()
-            .filter_map(|(index, download)| match download.state {
-                DownloadState::Canceled => {
-                    let txt = Text::new(format!("=> {:#?}", download.path));
-                    let retry_btn = svg_button(IconName::Retry.get())
-                        .on_press(DownloadMessage::RetryCanceled(index).into());
-                    Some(row![txt, retry_btn])
-                }
-                _ => None,
+            .map(|index| {
+                let download = &self.files[*index];
+                let txt = Text::new(format!("=> {:#?}", download.path));
+                let retry_btn = svg_button(IconName::Retry.get())
+                    .on_press(DownloadMessage::RetryCanceled(*index).into());
+                row![txt, retry_btn]
             })
             .fold(content, |acc, x| acc.push(x));
         let content = scrollable(content.spacing(3.));
@@ -501,7 +543,7 @@ pub enum DownloadProgress {
         by: usize,
     },
     Finish(usize),
-    Close {
+    CheckDownloadResult {
         index: usize,
         result: Result<(), RpcError>,
     },
@@ -529,6 +571,45 @@ fn download_file(
         create_dir_all(target.parent().map(|x| x.to_path_buf()).unwrap_or_default()).await?;
         let _ = remove_file(&target).await;
         let mut file = File::create(&target).await?;
+        loop {
+            match stream.message().await {
+                Ok(dr) => {
+                    match dr {
+                        Some(DownloadResponse { data }) => {
+                            file.write_all(&data).await?;
+                            file.flush().await?;
+                            sender
+                                .send(DownloadProgress::Progressed {
+                                    index,
+                                    by: data.len(),
+                                })
+                                .await;
+                        }
+                        None => {
+                            sender.send(DownloadProgress::Finish(index)).await;
+                            return Ok(());
+                        }
+                    };
+                }
+                Err(status) => {
+                    remove_file(&target).await?;
+                    return Err(RpcError::TonicStatus(status));
+                }
+            }
+        }
+    })
+}
+
+fn resume_file(
+    grpc: RpcClient,
+    index: usize,
+    progress_index: usize,
+    target: PathBuf,
+) -> impl Straw<(), DownloadProgress, RpcError> {
+    sipper(async move |mut sender| {
+        let mut stream = grpc.resume_stream(progress_index, &target).await?;
+        let target = join_downloads(&target);
+        let mut file = File::open(&target).await?;
         loop {
             match stream.message().await {
                 Ok(dr) => {

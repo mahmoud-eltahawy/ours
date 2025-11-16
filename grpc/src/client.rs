@@ -62,4 +62,12 @@ impl RpcClient {
         let size = client.file_size(req).await?.into_inner().size;
         Ok((size, stream))
     }
+
+    pub async fn resume_stream(
+        self,
+        progress_index: usize,
+        target: &Path,
+    ) -> Result<Streaming<DownloadResponse>, RpcError> {
+        todo!()
+    }
 }
