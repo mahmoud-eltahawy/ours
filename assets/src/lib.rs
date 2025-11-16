@@ -2,7 +2,8 @@ pub const FAVICON: &[u8] = include_bytes!("../static/favicon.ico.gz");
 pub const TAILWINDJS: &[u8] = include_bytes!("../static/tailwind.js.gz");
 pub const HTMXJS: &[u8] = include_bytes!("../static/htmx.js.gz");
 
-pub const ICONS_SIZE: usize = 14;
+//NOTE : increment this number on adding new icon
+pub const ICONS_SIZE: usize = 15;
 
 macro_rules! build_icons_defs {
     ($($name:ident);*) => {
@@ -22,7 +23,7 @@ macro_rules! build_icons_defs {
     };
 }
 
-build_icons_defs!(Folder; File; Video; Audio; Select; Close; Expand; Collapse; Download; Home; Upload;Up;Down;Retry);
+build_icons_defs!(Folder; File; Video; Audio; Select; Close; Expand; Collapse; Download; Home; Upload;Up;Down;Retry;Pause);
 
 impl From<u8> for IconName {
     fn from(value: u8) -> Self {

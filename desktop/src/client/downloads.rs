@@ -46,7 +46,7 @@ pub enum DownloadMessage {
     ProgressCanceled(usize),
     UpgradePriorty(usize),
     DowngradePriorty(usize),
-    RetryCanceled(usize),
+    CanceledToWait(usize),
     RetryFailed(usize),
 }
 
@@ -71,7 +71,7 @@ impl State {
                         return Task::none();
                     }
                 };
-                state.downloads.waitlist(paths);
+                state.downloads.waitlist_extend(paths);
 
                 let Some(grpc) = state.grpc.clone() else {
                     return Task::none();
@@ -89,12 +89,12 @@ impl State {
                     Task::none()
                 }
                 DownloadProgress::Finish(index) => {
-                    state.downloads.finish(index);
+                    state.downloads.finish_list(index);
                     Task::none()
                 }
                 DownloadProgress::CheckDownloadResult { index, result } => {
                     if let Err(err) = result {
-                        state.downloads.fail(index, err);
+                        state.downloads.progress_fail_list(index, err);
                     }
                     let Some(grpc) = state.grpc.clone() else {
                         return Task::none();
@@ -115,18 +115,18 @@ impl State {
             }
             DownloadMessage::Pause(index, handle) => {
                 handle.abort();
-                state.downloads.pause(index);
+                state.downloads.pause_list(index);
                 Task::none()
             }
             DownloadMessage::Resume(index) => {
-                state.downloads.resume(index);
+                state.downloads.resume_list(index);
                 let Some(grpc) = state.grpc.clone() else {
                     return Task::none();
                 };
                 state.downloads.tick_available(grpc)
             }
             DownloadMessage::ProgressCanceled(index) => {
-                state.downloads.cancel(index);
+                state.downloads.progress_cancel_list(index);
                 let Some(grpc) = state.grpc.clone() else {
                     return Task::none();
                 };
@@ -140,15 +140,15 @@ impl State {
                 state.downloads.downgrade_waiting(index);
                 Task::none()
             }
-            DownloadMessage::RetryCanceled(index) => {
-                state.downloads.retry_canceled(index);
+            DownloadMessage::CanceledToWait(index) => {
+                state.downloads.waiting_cancel_list(index);
                 let Some(grpc) = state.grpc.clone() else {
                     return Task::none();
                 };
                 state.downloads.tick_available(grpc)
             }
             DownloadMessage::RetryFailed(index) => {
-                state.downloads.retry_failed(index);
+                state.downloads.fail_wait_list(index);
                 let Some(grpc) = state.grpc.clone() else {
                     return Task::none();
                 };
@@ -181,7 +181,7 @@ enum Turn {
 }
 
 impl Downloads {
-    fn waitlist(&mut self, paths: Vec<PathBuf>) {
+    fn waitlist_extend(&mut self, paths: Vec<PathBuf>) {
         let before_len = self.files.len();
         self.files.extend(paths.into_iter().map(Download::from));
         let after_len = self.files.len();
@@ -216,42 +216,42 @@ impl Downloads {
         self.waiting[index_index] = target;
         self.waiting[target_index] = index;
     }
-    fn progress(&mut self, index: usize, handle: Handle) {
+    fn progress_list(&mut self, index: usize, handle: Handle) {
         self.waiting.retain(|x| *x != index);
         self.progressing.push((index, handle));
     }
-    fn finish(&mut self, index: usize) {
+    fn finish_list(&mut self, index: usize) {
         self.progressing.retain(|x| x.0 != index);
         self.finished.push(index);
     }
 
-    fn pause(&mut self, index: usize) {
+    fn pause_list(&mut self, index: usize) {
         self.progressing.retain(|x| x.0 != index);
         self.paused.push(index);
     }
 
-    fn resume(&mut self, index: usize) {
+    fn resume_list(&mut self, index: usize) {
         self.resumable.push(index);
         self.paused.retain(|x| *x != index);
     }
 
-    fn fail(&mut self, index: usize, err: RpcError) {
+    fn progress_fail_list(&mut self, index: usize, err: RpcError) {
         self.progressing.retain(|x| x.0 != index);
         self.failed.push((index, err));
         self.files[index].sended = 0;
     }
 
-    fn retry_canceled(&mut self, index: usize) {
-        self.waiting.push(index);
+    fn waiting_cancel_list(&mut self, index: usize) {
         self.canceled.retain(|x| *x != index);
-    }
-
-    fn retry_failed(&mut self, index: usize) {
         self.waiting.push(index);
-        self.failed.retain(|x| x.0 != index);
     }
 
-    fn cancel(&mut self, index: usize) {
+    fn fail_wait_list(&mut self, index: usize) {
+        self.failed.retain(|x| x.0 != index);
+        self.waiting.push(index);
+    }
+
+    fn progress_cancel_list(&mut self, index: usize) {
         self.progressing.retain(|x| x.0 != index);
         self.canceled.push(index);
         self.files[index].sended = 0;
@@ -277,7 +277,7 @@ impl Downloads {
                 )
                 .abortable();
 
-                self.progress(index, handle);
+                self.progress_list(index, handle);
                 Some(task)
             }
             Turn::Resumable(index) => {
@@ -288,7 +288,7 @@ impl Downloads {
                     move |x| DownloadProgress::CheckDownloadResult { index, result: x },
                 )
                 .abortable();
-                self.progress(index, handle);
+                self.progress_list(index, handle);
                 Some(task)
             }
         }
@@ -379,11 +379,16 @@ impl Downloads {
                 let progress_bar =
                     progress_bar(0.0..=(download.total_size as f32), download.sended as f32);
                 let left = column![txt, progress_bar].align_x(Alignment::Center);
-                let button = svg_button(IconName::Close.get())
+                let cancel = svg_button(IconName::Close.get())
                     .height(Length::Fixed(80.))
                     .clip(false)
                     .on_press(DownloadMessage::CancelProgress(index, handle.clone()).into());
-                row![left, button].align_y(Alignment::Center).spacing(5.)
+                let pause = svg_button(IconName::Pause.get())
+                    .height(Length::Fixed(80.))
+                    .clip(false)
+                    .on_press(DownloadMessage::Pause(index, handle.clone()).into());
+                let buttons = column![cancel, pause].spacing(3.);
+                row![left, buttons].align_y(Alignment::Center).spacing(5.)
             })
             .fold(content, |acc, x| acc.push(x));
         let content = scrollable(content.spacing(3.));
@@ -496,7 +501,7 @@ impl Downloads {
                 let download = &self.files[*index];
                 let txt = Text::new(format!("=> {:#?}", download.path));
                 let retry_btn = svg_button(IconName::Retry.get())
-                    .on_press(DownloadMessage::RetryCanceled(*index).into());
+                    .on_press(DownloadMessage::CanceledToWait(*index).into());
                 row![txt, retry_btn]
             })
             .fold(content, |acc, x| acc.push(x));
