@@ -6,15 +6,19 @@ use iced::{
 
 use iced::Element;
 
+use crate::{
+    client::downloads::{self, Downloads},
+    home::modal,
+};
+
 pub mod client;
 pub mod home;
 pub mod server;
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub enum Page {
-    #[default]
     Home,
-    Client,
+    Client(client::State),
     Server,
 }
 
@@ -30,7 +34,7 @@ struct State {
     page: Page,
     pub home: home::State,
     pub server: server::State,
-    pub client: client::State,
+    downloads: Downloads,
 }
 
 #[derive(Clone)]
@@ -55,10 +59,10 @@ impl State {
             get_port::tcp::TcpPort::except(&local_ip.to_string(), vec![tonic_port]).unwrap();
 
         Self {
-            page: Default::default(),
+            page: Page::Home,
             home: Default::default(),
             server: server::State::new(local_ip, tonic_port, axum_port),
-            client: Default::default(),
+            downloads: Downloads::default(),
         }
     }
     fn update(&mut self, msg: Message) -> Task<Message> {
@@ -74,10 +78,21 @@ impl State {
     }
 
     pub fn view<'a>(&'a self) -> Element<'a, Message> {
-        match self.page {
+        match &self.page {
             Page::Home => self.home.view(),
             Page::Server => self.server.view(),
-            Page::Client => self.client.view(),
+            Page::Client(client) => {
+                let res = client.view(&self.downloads);
+                if self.downloads.show_preview {
+                    modal(
+                        res,
+                        self.downloads.view(),
+                        downloads::Message::TogglePreview.into(),
+                    )
+                } else {
+                    res
+                }
+            }
         }
     }
 }

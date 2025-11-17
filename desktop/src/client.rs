@@ -1,9 +1,4 @@
-use crate::{
-    Page,
-    client::downloads::Downloads,
-    home::{go_home_button, modal},
-    svg_from_icon_data,
-};
+use crate::{Page, client::downloads::Downloads, home::go_home_button, svg_from_icon_data};
 use common::assets::IconName;
 use grpc::{
     UnitKind,
@@ -23,25 +18,23 @@ use iced::{
 };
 use std::path::PathBuf;
 
-mod downloads;
+pub mod downloads;
 
-#[derive(Default)]
+#[derive(Clone)]
 pub struct State {
-    pub grpc: Option<RpcClient>,
+    pub grpc: RpcClient,
     pub target: PathBuf,
     pub select: Selected,
     pub units: Vec<Unit>,
-    downloads: Downloads,
 }
 
 impl State {
     pub fn new(grpc: RpcClient) -> Self {
         Self {
-            grpc: Some(grpc),
+            grpc,
             target: PathBuf::new(),
             units: Vec::new(),
             select: Selected::default(),
-            downloads: Downloads::default(),
         }
     }
 }
@@ -49,7 +42,6 @@ impl State {
 #[derive(Clone)]
 pub enum Message {
     RefreshUnits(Result<Vec<Unit>, RpcError>),
-    PrepareGrpc(Result<RpcClient, RpcError>),
     UnitClick(Unit),
     UnitDoubleClick(Unit),
     ToggleSelectMode,
@@ -64,26 +56,16 @@ impl From<Message> for crate::Message {
 }
 
 impl State {
-    pub fn view<'a>(&'a self) -> Element<'a, crate::Message> {
-        let tools = self.tools_bar();
+    pub fn view<'a>(&'a self, downloads: &Downloads) -> Element<'a, crate::Message> {
+        let tools = self.tools_bar(downloads);
         let units = self.units();
         let all = iced::widget::column![tools, units]
             .spacing(10.)
             .width(Length::Fill);
-        let res = Container::new(all)
+        Container::new(all)
             .padding(10.)
             .center_x(Length::Fill)
-            .into();
-
-        if self.downloads.show_preview {
-            modal(
-                res,
-                self.downloads.view(),
-                downloads::Message::TogglePreview.into(),
-            )
-        } else {
-            res
-        }
+            .into()
     }
 
     fn units(&self) -> scrollable::Scrollable<'_, crate::Message> {
@@ -112,11 +94,11 @@ impl State {
         scrollable(units).height(Length::Fill).width(Length::Fill)
     }
 
-    fn tools_bar(&self) -> Container<'_, crate::Message> {
+    fn tools_bar(&self, downloads: &Downloads) -> Container<'_, crate::Message> {
         let home = self.home_button();
         let back = self.back_button();
         let selector = self.select_button();
-        let download = self.download_button();
+        let download = self.download_button(downloads);
         Container::new(row![selector, back, home, download].spacing(5.).wrap())
             .style(|theme| {
                 let Palette { primary, .. } = theme.palette();
@@ -133,8 +115,8 @@ impl State {
             .padding(12.)
     }
 
-    fn download_button(&self) -> Column<'_, crate::Message> {
-        let ad = self.downloads.active_count();
+    fn download_button(&self, downloads: &Downloads) -> Column<'_, crate::Message> {
+        let ad = downloads.active_count();
         let active_downloads = (ad != 0).then_some(Text::new(ad));
         let msg: crate::Message = if self.select.on && !self.select.units.is_empty() {
             downloads::Message::QueueFromSelectedStart.into()
@@ -216,21 +198,10 @@ fn svg_button<'a>(icon: &'a [u8]) -> Button<'a, crate::Message> {
 
 impl crate::State {
     pub fn handle_client_msg(&mut self, msg: Message) -> Task<crate::Message> {
-        let grpc = self.client.grpc.clone();
-        let state = &mut self.client;
+        let Page::Client(state) = &mut self.page else {
+            unreachable!()
+        };
         match msg {
-            Message::PrepareGrpc(rpc_client) => match rpc_client {
-                Ok(grpc) => {
-                    *state = State::new(grpc.clone());
-                    self.page = Page::Client;
-                    self.home.show_form = false;
-                    Task::future(grpc.ls(PathBuf::new())).map(|x| Message::RefreshUnits(x).into())
-                }
-                Err(err) => {
-                    dbg!(err);
-                    Task::none()
-                }
-            },
             Message::RefreshUnits(units) => {
                 match units {
                     Ok(units) => {
@@ -250,10 +221,10 @@ impl crate::State {
                 }
                 Task::none()
             }
-            Message::UnitDoubleClick(unit) => match (unit.kind, &grpc) {
-                (UnitKind::Folder, Some(grpc)) => {
+            Message::UnitDoubleClick(unit) => match unit.kind {
+                UnitKind::Folder => {
                     state.target = unit.path.clone();
-                    Task::perform(grpc.clone().ls(unit.path.clone()), move |xs| {
+                    Task::perform(state.grpc.clone().ls(unit.path.clone()), move |xs| {
                         Message::RefreshUnits(xs).into()
                     })
                 }
@@ -272,17 +243,14 @@ impl crate::State {
             }
             Message::GoToPath(path) => {
                 state.target = path.clone();
-                match &grpc {
-                    Some(grpc) => {
-                        Task::perform(grpc.clone().ls(path), |xs| Message::RefreshUnits(xs).into())
-                    }
-                    None => Task::none(),
-                }
+                Task::perform(state.grpc.clone().ls(path), |xs| {
+                    Message::RefreshUnits(xs).into()
+                })
             }
-            Message::Download(msg) => match &grpc {
-                Some(grpc) => self.handle_downloads_msg(msg, grpc.clone()),
-                None => Task::none(),
-            },
+            Message::Download(msg) => {
+                let grpc = state.grpc.clone();
+                self.handle_downloads_msg(msg, grpc)
+            }
         }
     }
 }

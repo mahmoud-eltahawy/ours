@@ -1,5 +1,5 @@
 use crate::{
-    State,
+    Page,
     client::{self, svg_button},
 };
 use common::assets::IconName;
@@ -24,7 +24,7 @@ use tokio::{
     io::AsyncWriteExt,
 };
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct Downloads {
     pub show_preview: bool,
     progressing: Vec<(usize, Handle)>,
@@ -59,9 +59,11 @@ impl From<Message> for crate::Message {
     }
 }
 
-impl State {
+impl crate::State {
     pub fn handle_downloads_msg(&mut self, msg: Message, grpc: RpcClient) -> Task<crate::Message> {
-        let state = &mut self.client;
+        let Page::Client(state) = &mut self.page else {
+            unreachable!()
+        };
         match msg {
             Message::QueueFromSelectedStart => {
                 let units = state.select.units.clone();
@@ -77,68 +79,68 @@ impl State {
                         return Task::none();
                     }
                 };
-                state.downloads.waitlist_extend(paths);
-                state.downloads.tick_available(grpc)
+                self.downloads.waitlist_extend(paths);
+                self.downloads.tick_available(grpc)
             }
             Message::Tick(download_progress) => match download_progress {
                 DownloadProgress::Begin { index, total_size } => {
-                    state.downloads.files[index].total_size = total_size as usize;
+                    self.downloads.files[index].total_size = total_size as usize;
                     Task::none()
                 }
                 DownloadProgress::Progressed { index, by } => {
-                    state.downloads.files[index].sended += by;
+                    self.downloads.files[index].sended += by;
                     Task::none()
                 }
                 DownloadProgress::Finish(index) => {
-                    state.downloads.finish_list(index);
+                    self.downloads.finish_list(index);
                     Task::none()
                 }
                 DownloadProgress::CheckDownloadResult { index, result } => {
                     if let Err(err) = result {
-                        state.downloads.progress_fail_list(index, err);
+                        self.downloads.progress_fail_list(index, err);
                     }
-                    state.downloads.tick_available(grpc)
+                    self.downloads.tick_available(grpc)
                 }
             },
             Message::TogglePreview => {
-                state.downloads.show_preview = !state.downloads.show_preview;
+                self.downloads.show_preview = !self.downloads.show_preview;
                 Task::none()
             }
             Message::CancelProgress(index, handle) => {
                 handle.abort();
                 Task::perform(
-                    remove_file(join_downloads(&state.downloads.files[index].path)),
+                    remove_file(join_downloads(&self.downloads.files[index].path)),
                     move |_| Message::ProgressCanceled(index).into(),
                 )
             }
             Message::Pause(index, handle) => {
                 handle.abort();
-                state.downloads.pause_list(index);
-                state.downloads.tick_available(grpc)
+                self.downloads.pause_list(index);
+                self.downloads.tick_available(grpc)
             }
             Message::Resume(index) => {
-                state.downloads.resume_list(index);
-                state.downloads.tick_available(grpc)
+                self.downloads.resume_list(index);
+                self.downloads.tick_available(grpc)
             }
             Message::ProgressCanceled(index) => {
-                state.downloads.progress_cancel_list(index);
-                state.downloads.tick_available(grpc)
+                self.downloads.progress_cancel_list(index);
+                self.downloads.tick_available(grpc)
             }
             Message::UpgradePriorty(index) => {
-                state.downloads.upgrade_waiting(index);
+                self.downloads.upgrade_waiting(index);
                 Task::none()
             }
             Message::DowngradePriorty(index) => {
-                state.downloads.downgrade_waiting(index);
+                self.downloads.downgrade_waiting(index);
                 Task::none()
             }
             Message::CanceledToWait(index) => {
-                state.downloads.waiting_cancel_list(index);
-                state.downloads.tick_available(grpc)
+                self.downloads.waiting_cancel_list(index);
+                self.downloads.tick_available(grpc)
             }
             Message::RetryFailed(index) => {
-                state.downloads.fail_wait_list(index);
-                state.downloads.tick_available(grpc)
+                self.downloads.fail_wait_list(index);
+                self.downloads.tick_available(grpc)
             }
         }
     }

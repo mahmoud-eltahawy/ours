@@ -1,8 +1,11 @@
-use std::net::{AddrParseError, IpAddr, SocketAddr};
+use std::{
+    net::{AddrParseError, IpAddr, SocketAddr},
+    path::PathBuf,
+};
 
 use crate::{Page, client, svg_from_icon_data};
 use common::assets::IconName;
-use grpc::client::RpcClient;
+use grpc::{client::RpcClient, error::RpcError};
 use iced::{
     Alignment, Background, Border, Element, Length, Task,
     border::Radius,
@@ -34,6 +37,7 @@ pub enum Message {
         input_value: String,
     },
     SubmitInput(IpAddr, u16),
+    PrepareGrpc(Result<RpcClient, RpcError>),
     ToggleInputModal,
 }
 
@@ -274,8 +278,20 @@ impl crate::State {
             }
             Message::SubmitInput(ip_addr, port) => {
                 Task::future(RpcClient::new(SocketAddr::new(ip_addr, port)))
-                    .map(|x| client::Message::PrepareGrpc(x).into())
+                    .map(|x| Message::PrepareGrpc(x).into())
             }
+            Message::PrepareGrpc(rpc_client) => match rpc_client {
+                Ok(grpc) => {
+                    self.page = Page::Client(client::State::new(grpc.clone()));
+                    self.home.show_form = false;
+                    Task::future(grpc.ls(PathBuf::new()))
+                        .map(|x| client::Message::RefreshUnits(x).into())
+                }
+                Err(err) => {
+                    dbg!(err);
+                    Task::none()
+                }
+            },
             Message::ToggleInputModal => {
                 state.show_form = !state.show_form;
                 Task::none()
