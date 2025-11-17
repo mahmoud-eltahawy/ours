@@ -2,7 +2,7 @@ use crate::{Message, State, client::svg_button};
 use common::assets::IconName;
 use grpc::{
     UnitKind,
-    client::{DownloadResponse, RpcClient},
+    client::{DownloadResponse, ResumeDownloadResponse, RpcClient},
     error::RpcError,
     top::Unit,
 };
@@ -17,7 +17,7 @@ use std::{
     path::{Path, PathBuf},
 };
 use tokio::{
-    fs::{File, create_dir_all, remove_file},
+    fs::{File, OpenOptions, create_dir_all, remove_file},
     io::AsyncWriteExt,
 };
 
@@ -116,7 +116,10 @@ impl State {
             DownloadMessage::Pause(index, handle) => {
                 handle.abort();
                 state.downloads.pause_list(index);
-                Task::none()
+                let Some(grpc) = state.grpc.clone() else {
+                    return Task::none();
+                };
+                state.downloads.tick_available(grpc)
             }
             DownloadMessage::Resume(index) => {
                 state.downloads.resume_list(index);
@@ -216,8 +219,12 @@ impl Downloads {
         self.waiting[index_index] = target;
         self.waiting[target_index] = index;
     }
-    fn progress_list(&mut self, index: usize, handle: Handle) {
+    fn wait_progress_list(&mut self, index: usize, handle: Handle) {
         self.waiting.retain(|x| *x != index);
+        self.progressing.push((index, handle));
+    }
+    fn resumable_progress_list(&mut self, index: usize, handle: Handle) {
+        self.resumable.retain(|x| *x != index);
         self.progressing.push((index, handle));
     }
     fn finish_list(&mut self, index: usize) {
@@ -277,7 +284,7 @@ impl Downloads {
                 )
                 .abortable();
 
-                self.progress_list(index, handle);
+                self.wait_progress_list(index, handle);
                 Some(task)
             }
             Turn::Resumable(index) => {
@@ -288,7 +295,7 @@ impl Downloads {
                     move |x| DownloadProgress::CheckDownloadResult { index, result: x },
                 )
                 .abortable();
-                self.progress_list(index, handle);
+                self.resumable_progress_list(index, handle);
                 Some(task)
             }
         }
@@ -401,6 +408,10 @@ impl Downloads {
         }
         let title = Text::new("waiting downloads");
         let content = column![title];
+        let content = match self.resumables() {
+            Some(rs) => content.push(rs),
+            None => content,
+        };
         let content = self
             .waiting
             .iter()
@@ -408,6 +419,20 @@ impl Downloads {
             .fold(content, |acc, x| acc.push(x));
         let content = scrollable(content.spacing(3.));
         Some(content.into())
+    }
+
+    fn resumables(&self) -> Option<Column<'_, Message>> {
+        if self.resumable.is_empty() {
+            return None;
+        }
+        let title = Text::new("resumable downloads");
+        let content = column![title];
+        let content = self
+            .resumable
+            .iter()
+            .map(|index| Text::new(format!("=> {:#?}", self.files[*index].path)))
+            .fold(content, |acc, x| acc.push(x));
+        Some(content)
     }
 
     fn waiting_download(&self, index: usize) -> row::Row<'_, Message> {
@@ -614,12 +639,12 @@ fn resume_file(
     sipper(async move |mut sender| {
         let mut stream = grpc.resume_stream(progress_index, &target).await?;
         let target = join_downloads(&target);
-        let mut file = File::open(&target).await?;
+        let mut file = OpenOptions::new().append(true).open(&target).await?;
         loop {
             match stream.message().await {
                 Ok(dr) => {
                     match dr {
-                        Some(DownloadResponse { data }) => {
+                        Some(ResumeDownloadResponse { data }) => {
                             file.write_all(&data).await?;
                             file.flush().await?;
                             sender
