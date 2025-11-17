@@ -1,6 +1,9 @@
 use crate::{
     error::RpcError,
-    nav::{DownloadRequest, FileSizeRequest, LsRequest, nav_service_client::NavServiceClient},
+    nav::{
+        DownloadRequest, FileSizeRequest, LsRequest, ResumeDownloadRequest,
+        nav_service_client::NavServiceClient,
+    },
     top,
 };
 use std::{
@@ -11,7 +14,7 @@ use std::{
 use tokio::sync::Mutex;
 use tonic::{Streaming, transport::Channel};
 
-pub use crate::nav::DownloadResponse;
+pub use crate::nav::{DownloadResponse, ResumeDownloadResponse};
 
 #[derive(Clone, Debug)]
 pub struct RpcClient {
@@ -67,7 +70,14 @@ impl RpcClient {
         self,
         progress_index: usize,
         target: &Path,
-    ) -> Result<Streaming<DownloadResponse>, RpcError> {
-        todo!()
+    ) -> Result<Streaming<ResumeDownloadResponse>, RpcError> {
+        let path = target.to_str().unwrap().to_string();
+        let req = ResumeDownloadRequest {
+            path: path.clone(),
+            progress_index: progress_index as u64,
+        };
+        let mut client = self.client.lock().await;
+        let stream = client.resume_download(req).await?.into_inner();
+        Ok(stream)
     }
 }

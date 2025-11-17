@@ -1,20 +1,21 @@
 use super::nav::nav_service_server::NavService;
 use crate::nav::{
-    DownloadRequest, DownloadResponse, FileSizeRequest, FileSizeResponse, UploadRequest,
-    UploadResponse,
+    DownloadRequest, DownloadResponse, FileSizeRequest, FileSizeResponse, ResumeDownloadRequest,
+    ResumeDownloadResponse, UploadRequest, UploadResponse,
 };
 use crate::{
     error::RpcError,
     nav::{LsRequest, LsResponse, Unit, UnitKind, nav_service_server::NavServiceServer},
 };
 use common::{AUDIO_X, VIDEO_X};
+use std::io::SeekFrom;
 use std::pin::Pin;
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
     path::PathBuf,
 };
 use tokio::fs::{self, File};
-use tokio::io::AsyncReadExt;
+use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tokio::sync::mpsc;
 use tokio_stream::Stream;
 use tokio_stream::wrappers::ReceiverStream;
@@ -106,6 +107,46 @@ impl NavService for RpcServer {
         let output_stream = ReceiverStream::new(rx);
         Ok(Response::new(
             Box::pin(output_stream) as Self::DownloadStream
+        ))
+    }
+
+    type ResumeDownloadStream =
+        Pin<Box<dyn Stream<Item = Result<ResumeDownloadResponse, Status>> + Send>>;
+    async fn resume_download(
+        &self,
+        req: Request<ResumeDownloadRequest>,
+    ) -> Result<Response<Self::ResumeDownloadStream>, Status> {
+        let ResumeDownloadRequest {
+            path,
+            progress_index,
+        } = req.into_inner();
+        let Ok(path) = path.parse::<PathBuf>();
+        let path = self.target_dir.join(path);
+        let mut file = File::open(path).await?;
+        file.seek(SeekFrom::Start(progress_index)).await?;
+        let (tx, rx) = mpsc::channel::<Result<ResumeDownloadResponse, Status>>(1024);
+        tokio::spawn(async move {
+            loop {
+                let mut buffer = bytes::BytesMut::with_capacity(1024);
+                let rb = match file.read_buf(&mut buffer).await {
+                    Ok(rb) => rb,
+                    Err(err) => {
+                        return tx.send(Err(err.into())).await;
+                    }
+                };
+                if rb == 0 {
+                    break;
+                }
+                tx.send(Ok(ResumeDownloadResponse {
+                    data: buffer.to_vec(),
+                }))
+                .await?;
+            }
+            Ok(())
+        });
+        let output_stream = ReceiverStream::new(rx);
+        Ok(Response::new(
+            Box::pin(output_stream) as Self::ResumeDownloadStream
         ))
     }
 

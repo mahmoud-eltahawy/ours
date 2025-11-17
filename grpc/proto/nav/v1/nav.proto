@@ -5,6 +5,7 @@ service NavService {
   rpc Ls (LsRequest) returns (LsResponse) {}
   rpc FileSize(FileSizeRequest) returns (FileSizeResponse) {}
   rpc Download(DownloadRequest) returns (stream DownloadResponse) {}
+  rpc ResumeDownload(ResumeDownloadRequest) returns (stream ResumeDownloadResponse) {}
   rpc Upload(stream UploadRequest) returns (UploadResponse) {}
 }
 
@@ -18,6 +19,15 @@ message LsResponse {
 
 message DownloadRequest {
   string path = 1;
+}
+
+message ResumeDownloadRequest {
+  string path = 1;
+  uint64 progress_index = 2;
+}
+
+message ResumeDownloadResponse {
+  bytes data = 1;
 }
 
 message FileSizeRequest {
