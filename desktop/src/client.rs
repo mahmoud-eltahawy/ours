@@ -1,6 +1,6 @@
 use crate::{
-    Message, Page, State,
-    client::downloads::{DownloadMessage, Downloads},
+    Page,
+    client::downloads::Downloads,
     home::{go_home_button, modal},
     svg_from_icon_data,
 };
@@ -26,7 +26,7 @@ use std::path::PathBuf;
 mod downloads;
 
 #[derive(Default)]
-pub struct ClientState {
+pub struct State {
     pub grpc: Option<RpcClient>,
     pub target: PathBuf,
     pub select: Selected,
@@ -34,7 +34,7 @@ pub struct ClientState {
     downloads: Downloads,
 }
 
-impl ClientState {
+impl State {
     pub fn new(grpc: RpcClient) -> Self {
         Self {
             grpc: Some(grpc),
@@ -47,30 +47,24 @@ impl ClientState {
 }
 
 #[derive(Clone)]
-pub enum ClientMessage {
+pub enum Message {
     RefreshUnits(Result<Vec<Unit>, RpcError>),
     PrepareGrpc(Result<RpcClient, RpcError>),
     UnitClick(Unit),
     UnitDoubleClick(Unit),
     ToggleSelectMode,
     GoToPath(PathBuf),
-    Download(DownloadMessage),
+    Download(downloads::Message),
 }
 
-impl From<DownloadMessage> for Message {
-    fn from(value: DownloadMessage) -> Self {
-        Message::Client(ClientMessage::Download(value))
+impl From<Message> for crate::Message {
+    fn from(value: Message) -> Self {
+        crate::Message::Client(value)
     }
 }
 
-impl From<ClientMessage> for Message {
-    fn from(value: ClientMessage) -> Self {
-        Message::Client(value)
-    }
-}
-
-impl ClientState {
-    pub fn view<'a>(&'a self) -> Element<'a, Message> {
+impl State {
+    pub fn view<'a>(&'a self) -> Element<'a, crate::Message> {
         let tools = self.tools_bar();
         let units = self.units();
         let all = iced::widget::column![tools, units]
@@ -85,14 +79,14 @@ impl ClientState {
             modal(
                 res,
                 self.downloads.view(),
-                DownloadMessage::TogglePreview.into(),
+                downloads::Message::TogglePreview.into(),
             )
         } else {
             res
         }
     }
 
-    fn units(&self) -> scrollable::Scrollable<'_, Message> {
+    fn units(&self) -> scrollable::Scrollable<'_, crate::Message> {
         let units = self
             .units
             .iter()
@@ -118,7 +112,7 @@ impl ClientState {
         scrollable(units).height(Length::Fill).width(Length::Fill)
     }
 
-    fn tools_bar(&self) -> Container<'_, Message> {
+    fn tools_bar(&self) -> Container<'_, crate::Message> {
         let home = self.home_button();
         let back = self.back_button();
         let selector = self.select_button();
@@ -139,47 +133,46 @@ impl ClientState {
             .padding(12.)
     }
 
-    fn download_button(&self) -> Column<'_, Message> {
+    fn download_button(&self) -> Column<'_, crate::Message> {
         let ad = self.downloads.active_count();
         let active_downloads = (ad != 0).then_some(Text::new(ad));
-        let msg: Message = if self.select.on && !self.select.units.is_empty() {
-            DownloadMessage::QueueFromSelectedStart.into()
+        let msg: crate::Message = if self.select.on && !self.select.units.is_empty() {
+            downloads::Message::QueueFromSelectedStart.into()
         } else {
-            DownloadMessage::TogglePreview.into()
+            downloads::Message::TogglePreview.into()
         };
         let button = svg_button(IconName::Download.get()).on_press(msg);
         iced::widget::column![button, active_downloads].align_x(Alignment::Center)
     }
 
-    fn select_button(&self) -> Button<'_, Message> {
+    fn select_button(&self) -> Button<'_, crate::Message> {
         svg_button(if self.select.on {
             IconName::Close.get()
         } else {
             IconName::Select.get()
         })
-        .on_press(ClientMessage::ToggleSelectMode.into())
+        .on_press(Message::ToggleSelectMode.into())
     }
-    fn back_button(&self) -> Button<'_, Message> {
+    fn back_button(&self) -> Button<'_, crate::Message> {
         let mut path = self.target.clone();
-        let msg = path.pop().then_some(ClientMessage::GoToPath(path).into());
+        let msg = path.pop().then_some(Message::GoToPath(path).into());
         Button::new("back").on_press_maybe(msg)
     }
-    fn home_button(&self) -> Button<'_, Message> {
+    fn home_button(&self) -> Button<'_, crate::Message> {
         if self.target == PathBuf::new() {
             go_home_button()
         } else {
-            svg_button(IconName::Home.get())
-                .on_press(ClientMessage::GoToPath(PathBuf::new()).into())
+            svg_button(IconName::Home.get()).on_press(Message::GoToPath(PathBuf::new()).into())
         }
     }
 }
 
 trait UnitViews {
-    fn button<'a>(&'a self, selected: &'a Selected) -> MouseArea<'a, Message>;
+    fn button<'a>(&'a self, selected: &'a Selected) -> MouseArea<'a, crate::Message>;
 }
 
 impl UnitViews for Unit {
-    fn button<'a>(&'a self, selected: &'a Selected) -> MouseArea<'a, Message> {
+    fn button<'a>(&'a self, selected: &'a Selected) -> MouseArea<'a, crate::Message> {
         let svg = svg_from_icon_data(self.icon());
         let text = Text::new(self.name());
         let row = row![svg, text].spacing(4.);
@@ -202,12 +195,12 @@ impl UnitViews for Unit {
             }
         }))
         .interaction(Interaction::Pointer)
-        .on_release(ClientMessage::UnitClick(self.clone()).into())
-        .on_double_click(ClientMessage::UnitDoubleClick(self.clone()).into())
+        .on_release(Message::UnitClick(self.clone()).into())
+        .on_double_click(Message::UnitDoubleClick(self.clone()).into())
     }
 }
 
-fn svg_button<'a>(icon: &'a [u8]) -> Button<'a, Message> {
+fn svg_button<'a>(icon: &'a [u8]) -> Button<'a, crate::Message> {
     Button::new(svg_from_icon_data(icon))
         .style(|_, _| Style {
             border: Border {
@@ -221,24 +214,24 @@ fn svg_button<'a>(icon: &'a [u8]) -> Button<'a, Message> {
         .padding(7.)
 }
 
-impl State {
-    pub fn handle_client_msg(&mut self, msg: ClientMessage) -> Task<Message> {
+impl crate::State {
+    pub fn handle_client_msg(&mut self, msg: Message) -> Task<crate::Message> {
+        let grpc = self.client.grpc.clone();
         let state = &mut self.client;
         match msg {
-            ClientMessage::PrepareGrpc(rpc_client) => match rpc_client {
+            Message::PrepareGrpc(rpc_client) => match rpc_client {
                 Ok(grpc) => {
-                    *state = ClientState::new(grpc.clone());
+                    *state = State::new(grpc.clone());
                     self.page = Page::Client;
                     self.home.show_form = false;
-                    Task::future(grpc.ls(PathBuf::new()))
-                        .map(|x| ClientMessage::RefreshUnits(x).into())
+                    Task::future(grpc.ls(PathBuf::new())).map(|x| Message::RefreshUnits(x).into())
                 }
                 Err(err) => {
                     dbg!(err);
                     Task::none()
                 }
             },
-            ClientMessage::RefreshUnits(units) => {
+            Message::RefreshUnits(units) => {
                 match units {
                     Ok(units) => {
                         state.units = units;
@@ -249,7 +242,7 @@ impl State {
                 }
                 Task::none()
             }
-            ClientMessage::UnitClick(unit) => {
+            Message::UnitClick(unit) => {
                 if state.select.on {
                     state.select.toggle_unit_selection(&unit);
                 } else {
@@ -257,11 +250,11 @@ impl State {
                 }
                 Task::none()
             }
-            ClientMessage::UnitDoubleClick(unit) => match (unit.kind, &state.grpc) {
+            Message::UnitDoubleClick(unit) => match (unit.kind, &grpc) {
                 (UnitKind::Folder, Some(grpc)) => {
                     state.target = unit.path.clone();
                     Task::perform(grpc.clone().ls(unit.path.clone()), move |xs| {
-                        ClientMessage::RefreshUnits(xs).into()
+                        Message::RefreshUnits(xs).into()
                     })
                 }
                 _ => {
@@ -269,7 +262,7 @@ impl State {
                     Task::none()
                 }
             },
-            ClientMessage::ToggleSelectMode => {
+            Message::ToggleSelectMode => {
                 if state.select.on {
                     state.select.clear();
                 } else {
@@ -277,16 +270,19 @@ impl State {
                 }
                 Task::none()
             }
-            ClientMessage::GoToPath(path) => {
+            Message::GoToPath(path) => {
                 state.target = path.clone();
-                match &state.grpc {
-                    Some(grpc) => Task::perform(grpc.clone().ls(path), |xs| {
-                        ClientMessage::RefreshUnits(xs).into()
-                    }),
+                match &grpc {
+                    Some(grpc) => {
+                        Task::perform(grpc.clone().ls(path), |xs| Message::RefreshUnits(xs).into())
+                    }
                     None => Task::none(),
                 }
             }
-            ClientMessage::Download(msg) => self.handle_downloads_msg(msg),
+            Message::Download(msg) => match &grpc {
+                Some(grpc) => self.handle_downloads_msg(msg, grpc.clone()),
+                None => Task::none(),
+            },
         }
     }
 }

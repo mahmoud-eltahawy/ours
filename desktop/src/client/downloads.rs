@@ -1,4 +1,7 @@
-use crate::{Message, State, client::svg_button};
+use crate::{
+    State,
+    client::{self, svg_button},
+};
 use common::assets::IconName;
 use grpc::{
     UnitKind,
@@ -35,7 +38,7 @@ pub struct Downloads {
 }
 
 #[derive(Clone)]
-pub enum DownloadMessage {
+pub enum Message {
     TogglePreview,
     QueueFromSelectedStart,
     QueueFromSelected(Result<Vec<PathBuf>, RpcError>),
@@ -50,20 +53,23 @@ pub enum DownloadMessage {
     RetryFailed(usize),
 }
 
+impl From<Message> for crate::Message {
+    fn from(value: Message) -> Self {
+        crate::Message::Client(client::Message::Download(value))
+    }
+}
+
 impl State {
-    pub fn handle_downloads_msg(&mut self, msg: DownloadMessage) -> Task<Message> {
+    pub fn handle_downloads_msg(&mut self, msg: Message, grpc: RpcClient) -> Task<crate::Message> {
         let state = &mut self.client;
         match msg {
-            DownloadMessage::QueueFromSelectedStart => {
+            Message::QueueFromSelectedStart => {
                 let units = state.select.units.clone();
-                let Some(grpc) = &state.grpc else {
-                    return Task::none();
-                };
                 state.select.clear();
                 let fut = get_download_paths(grpc.clone(), units);
-                Task::perform(fut, |x| DownloadMessage::QueueFromSelected(x).into())
+                Task::perform(fut, |x| Message::QueueFromSelected(x).into())
             }
-            DownloadMessage::QueueFromSelected(paths) => {
+            Message::QueueFromSelected(paths) => {
                 let paths = match paths {
                     Ok(paths) => paths,
                     Err(err) => {
@@ -72,14 +78,9 @@ impl State {
                     }
                 };
                 state.downloads.waitlist_extend(paths);
-
-                let Some(grpc) = state.grpc.clone() else {
-                    return Task::none();
-                };
-
                 state.downloads.tick_available(grpc)
             }
-            DownloadMessage::Tick(download_progress) => match download_progress {
+            Message::Tick(download_progress) => match download_progress {
                 DownloadProgress::Begin { index, total_size } => {
                     state.downloads.files[index].total_size = total_size as usize;
                     Task::none()
@@ -96,65 +97,47 @@ impl State {
                     if let Err(err) = result {
                         state.downloads.progress_fail_list(index, err);
                     }
-                    let Some(grpc) = state.grpc.clone() else {
-                        return Task::none();
-                    };
                     state.downloads.tick_available(grpc)
                 }
             },
-            DownloadMessage::TogglePreview => {
+            Message::TogglePreview => {
                 state.downloads.show_preview = !state.downloads.show_preview;
                 Task::none()
             }
-            DownloadMessage::CancelProgress(index, handle) => {
+            Message::CancelProgress(index, handle) => {
                 handle.abort();
                 Task::perform(
                     remove_file(join_downloads(&state.downloads.files[index].path)),
-                    move |_| DownloadMessage::ProgressCanceled(index).into(),
+                    move |_| Message::ProgressCanceled(index).into(),
                 )
             }
-            DownloadMessage::Pause(index, handle) => {
+            Message::Pause(index, handle) => {
                 handle.abort();
                 state.downloads.pause_list(index);
-                let Some(grpc) = state.grpc.clone() else {
-                    return Task::none();
-                };
                 state.downloads.tick_available(grpc)
             }
-            DownloadMessage::Resume(index) => {
+            Message::Resume(index) => {
                 state.downloads.resume_list(index);
-                let Some(grpc) = state.grpc.clone() else {
-                    return Task::none();
-                };
                 state.downloads.tick_available(grpc)
             }
-            DownloadMessage::ProgressCanceled(index) => {
+            Message::ProgressCanceled(index) => {
                 state.downloads.progress_cancel_list(index);
-                let Some(grpc) = state.grpc.clone() else {
-                    return Task::none();
-                };
                 state.downloads.tick_available(grpc)
             }
-            DownloadMessage::UpgradePriorty(index) => {
+            Message::UpgradePriorty(index) => {
                 state.downloads.upgrade_waiting(index);
                 Task::none()
             }
-            DownloadMessage::DowngradePriorty(index) => {
+            Message::DowngradePriorty(index) => {
                 state.downloads.downgrade_waiting(index);
                 Task::none()
             }
-            DownloadMessage::CanceledToWait(index) => {
+            Message::CanceledToWait(index) => {
                 state.downloads.waiting_cancel_list(index);
-                let Some(grpc) = state.grpc.clone() else {
-                    return Task::none();
-                };
                 state.downloads.tick_available(grpc)
             }
-            DownloadMessage::RetryFailed(index) => {
+            Message::RetryFailed(index) => {
                 state.downloads.fail_wait_list(index);
-                let Some(grpc) = state.grpc.clone() else {
-                    return Task::none();
-                };
                 state.downloads.tick_available(grpc)
             }
         }
@@ -301,18 +284,19 @@ impl Downloads {
         }
     }
 
-    fn tick_available(&mut self, grpc: RpcClient) -> Task<Message> {
+    fn tick_available(&mut self, grpc: RpcClient) -> Task<crate::Message> {
         let mut xs = Vec::new();
 
-        while let Some(task) = self.turn_task(grpc.clone()).map(|task| {
-            task.map(move |download_progress| DownloadMessage::Tick(download_progress).into())
-        }) {
+        while let Some(task) = self
+            .turn_task(grpc.clone())
+            .map(|task| task.map(move |download_progress| Message::Tick(download_progress).into()))
+        {
             xs.push(task);
         }
         Task::batch(xs)
     }
 
-    pub fn view(&self) -> Element<'_, Message> {
+    pub fn view(&self) -> Element<'_, crate::Message> {
         let title = Text::new("Downloads");
         let progressing = self.progressing_view();
         let waiting = self.waiting_view();
@@ -347,7 +331,7 @@ impl Downloads {
             .into()
     }
 
-    fn progressing_view(&self) -> Option<Element<'_, Message>> {
+    fn progressing_view(&self) -> Option<Element<'_, crate::Message>> {
         if self.progressing.is_empty() {
             return None;
         }
@@ -389,11 +373,11 @@ impl Downloads {
                 let cancel = svg_button(IconName::Close.get())
                     .height(Length::Fixed(80.))
                     .clip(false)
-                    .on_press(DownloadMessage::CancelProgress(index, handle.clone()).into());
+                    .on_press(Message::CancelProgress(index, handle.clone()).into());
                 let pause = svg_button(IconName::Pause.get())
                     .height(Length::Fixed(80.))
                     .clip(false)
-                    .on_press(DownloadMessage::Pause(index, handle.clone()).into());
+                    .on_press(Message::Pause(index, handle.clone()).into());
                 let buttons = column![cancel, pause].spacing(3.);
                 row![left, buttons].align_y(Alignment::Center).spacing(5.)
             })
@@ -402,7 +386,7 @@ impl Downloads {
         Some(content.into())
     }
 
-    fn waiting_view(&self) -> Option<Element<'_, Message>> {
+    fn waiting_view(&self) -> Option<Element<'_, crate::Message>> {
         if self.waiting.is_empty() {
             return None;
         }
@@ -421,7 +405,7 @@ impl Downloads {
         Some(content.into())
     }
 
-    fn resumables(&self) -> Option<Column<'_, Message>> {
+    fn resumables(&self) -> Option<Column<'_, crate::Message>> {
         if self.resumable.is_empty() {
             return None;
         }
@@ -435,25 +419,25 @@ impl Downloads {
         Some(content)
     }
 
-    fn waiting_download(&self, index: usize) -> row::Row<'_, Message> {
+    fn waiting_download(&self, index: usize) -> row::Row<'_, crate::Message> {
         let txt = Text::new(format!("=> {:#?}", self.files[index].path));
         let priorty = self.waiting_download_priority(index);
         row![txt, priorty].align_y(Alignment::Center).spacing(3.)
     }
 
-    fn waiting_download_priority(&self, index: usize) -> Column<'_, Message> {
+    fn waiting_download_priority(&self, index: usize) -> Column<'_, crate::Message> {
         let up = svg_button(IconName::Up.get()).on_press_maybe(
             self.is_upgradable(index)
-                .then_some(DownloadMessage::UpgradePriorty(index).into()),
+                .then_some(Message::UpgradePriorty(index).into()),
         );
         let down = svg_button(IconName::Down.get()).on_press_maybe(
             self.is_downgradable(index)
-                .then_some(DownloadMessage::DowngradePriorty(index).into()),
+                .then_some(Message::DowngradePriorty(index).into()),
         );
         column![up, down].align_x(Alignment::Center).spacing(2.)
     }
 
-    fn finished_view(&self) -> Option<Element<'_, Message>> {
+    fn finished_view(&self) -> Option<Element<'_, crate::Message>> {
         if self.finished.is_empty() {
             return None;
         }
@@ -470,7 +454,7 @@ impl Downloads {
         let content = scrollable(content.spacing(3.));
         Some(content.into())
     }
-    fn failed_view(&self) -> Option<Element<'_, Message>> {
+    fn failed_view(&self) -> Option<Element<'_, crate::Message>> {
         if self.failed.is_empty() {
             return None;
         }
@@ -482,8 +466,8 @@ impl Downloads {
             .map(|(index, err)| {
                 let download = &self.files[*index];
                 let txt = Text::new(format!("=> {:#?} because of {:#?}", download.path, err));
-                let retry_btn = svg_button(IconName::Retry.get())
-                    .on_press(DownloadMessage::RetryFailed(*index).into());
+                let retry_btn =
+                    svg_button(IconName::Retry.get()).on_press(Message::RetryFailed(*index).into());
                 row![txt, retry_btn]
             })
             .fold(content, |acc, x| acc.push(x));
@@ -491,7 +475,7 @@ impl Downloads {
         Some(content.into())
     }
 
-    fn paused_view(&self) -> Option<Element<'_, Message>> {
+    fn paused_view(&self) -> Option<Element<'_, crate::Message>> {
         if self.paused.is_empty() {
             return None;
         }
@@ -503,8 +487,8 @@ impl Downloads {
             .map(|index| {
                 let download = &self.files[*index];
                 let txt = Text::new(format!("=> {:#?}", download.path));
-                let retry_btn = svg_button(IconName::Retry.get())
-                    .on_press(DownloadMessage::Resume(*index).into());
+                let retry_btn =
+                    svg_button(IconName::Retry.get()).on_press(Message::Resume(*index).into());
                 row![txt, retry_btn]
             })
             .fold(content, |acc, x| acc.push(x));
@@ -513,7 +497,7 @@ impl Downloads {
         Some(content.into())
     }
 
-    fn canceled_view(&self) -> Option<Element<'_, Message>> {
+    fn canceled_view(&self) -> Option<Element<'_, crate::Message>> {
         if self.canceled.is_empty() {
             return None;
         }
@@ -526,7 +510,7 @@ impl Downloads {
                 let download = &self.files[*index];
                 let txt = Text::new(format!("=> {:#?}", download.path));
                 let retry_btn = svg_button(IconName::Retry.get())
-                    .on_press(DownloadMessage::CanceledToWait(*index).into());
+                    .on_press(Message::CanceledToWait(*index).into());
                 row![txt, retry_btn]
             })
             .fold(content, |acc, x| acc.push(x));

@@ -4,14 +4,6 @@ use iced::{
     widget::{Svg, svg},
 };
 
-use crate::{
-    client::ClientState,
-    home::HomeState,
-    server::{ServerMessage, ServerState},
-};
-
-use client::ClientMessage;
-use home::HomeMessage;
 use iced::Element;
 
 pub mod client;
@@ -36,17 +28,17 @@ fn main() {
 
 struct State {
     page: Page,
-    pub home: HomeState,
-    pub server: ServerState,
-    pub client: ClientState,
+    pub home: home::State,
+    pub server: server::State,
+    pub client: client::State,
 }
 
 #[derive(Clone)]
 pub enum Message {
     GoToPage(Page),
-    Home(HomeMessage),
-    Client(ClientMessage),
-    Server(ServerMessage),
+    Home(home::Message),
+    Client(client::Message),
+    Server(server::Message),
 }
 
 impl State {
@@ -65,7 +57,7 @@ impl State {
         Self {
             page: Default::default(),
             home: Default::default(),
-            server: ServerState::new(local_ip, tonic_port, axum_port),
+            server: server::State::new(local_ip, tonic_port, axum_port),
             client: Default::default(),
         }
     }

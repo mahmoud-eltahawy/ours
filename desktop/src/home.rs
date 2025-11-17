@@ -1,6 +1,6 @@
 use std::net::{AddrParseError, IpAddr, SocketAddr};
 
-use crate::{Message, Page, State, client::ClientMessage, svg_from_icon_data};
+use crate::{Page, client, svg_from_icon_data};
 use common::assets::IconName;
 use grpc::client::RpcClient;
 use iced::{
@@ -14,7 +14,7 @@ use iced::{
 };
 
 #[derive(Default)]
-pub struct HomeState {
+pub struct State {
     pub show_form: bool,
     pub url_form: UrlForm,
 }
@@ -27,7 +27,7 @@ pub struct UrlForm {
 }
 
 #[derive(Clone)]
-pub enum HomeMessage {
+pub enum Message {
     PortNewInput(Result<u16, std::num::ParseIntError>),
     IpNewInput {
         valid_ip: Result<IpAddr, AddrParseError>,
@@ -37,14 +37,14 @@ pub enum HomeMessage {
     ToggleInputModal,
 }
 
-impl From<HomeMessage> for Message {
-    fn from(value: HomeMessage) -> Self {
+impl From<Message> for crate::Message {
+    fn from(value: Message) -> Self {
         Self::Home(value)
     }
 }
 
-impl HomeState {
-    pub fn view<'a>(&'a self) -> Element<'a, Message> {
+impl State {
+    pub fn view<'a>(&'a self) -> Element<'a, crate::Message> {
         let title = Text::new("Choose app mode").size(80).center();
         let server_button = self.go_to_server_button();
         let client_button = self.go_to_client_button();
@@ -63,24 +63,24 @@ impl HomeState {
         modal(
             main_content,
             self.url_form.view(),
-            HomeMessage::ToggleInputModal.into(),
+            Message::ToggleInputModal.into(),
         )
     }
 
-    pub fn go_to_server_button<'a>(&'a self) -> Button<'a, Message> {
+    pub fn go_to_server_button<'a>(&'a self) -> Button<'a, crate::Message> {
         let content = Text::new("go to server mode").center().size(60);
         Button::new(content)
             .padding(30.)
             .style(move |theme, _| common_button_style(theme))
-            .on_press(Message::GoToPage(Page::Server))
+            .on_press(crate::Message::GoToPage(Page::Server))
     }
 
-    pub fn go_to_client_button<'a>(&'a self) -> Button<'a, Message> {
+    pub fn go_to_client_button<'a>(&'a self) -> Button<'a, crate::Message> {
         let content = Text::new("go to client mode").center().size(60);
         Button::new(content)
             .padding(30.)
             .style(move |theme, _| common_button_style(theme))
-            .on_press(HomeMessage::ToggleInputModal.into())
+            .on_press(Message::ToggleInputModal.into())
     }
 }
 
@@ -112,7 +112,7 @@ fn style_input(theme: &iced::Theme) -> Style {
 }
 
 impl UrlForm {
-    pub fn view(&self) -> Container<'_, Message> {
+    pub fn view(&self) -> Container<'_, crate::Message> {
         let title = Text::new("choose client address").size(50.).center();
         let ip_input = self.ip_input();
         let port_input = self.port_input();
@@ -129,16 +129,16 @@ impl UrlForm {
         Container::new(content).style(form_style).padding(20.)
     }
 
-    fn submit_button(&self) -> Button<'_, Message> {
+    fn submit_button(&self) -> Button<'_, crate::Message> {
         let content = Text::new("submit").size(60.).center();
         Button::new(content).on_press_maybe(
             self.valid_ip
-                .map(|ip| HomeMessage::SubmitInput(ip, self.port).into())
+                .map(|ip| Message::SubmitInput(ip, self.port).into())
                 .take_if(|_| self.port != 0),
         )
     }
 
-    fn port_input(&self) -> text_input::TextInput<'_, Message> {
+    fn port_input(&self) -> text_input::TextInput<'_, crate::Message> {
         text_input::TextInput::new(
             "insert port",
             &if self.port != 0 {
@@ -151,10 +151,10 @@ impl UrlForm {
         .padding(10.)
         .align_x(Alignment::Center)
         .style(|theme, _| style_input(theme))
-        .on_input(|x| HomeMessage::PortNewInput(x.parse::<u16>()).into())
+        .on_input(|x| Message::PortNewInput(x.parse::<u16>()).into())
     }
 
-    fn ip_input(&self) -> text_input::TextInput<'_, Message> {
+    fn ip_input(&self) -> text_input::TextInput<'_, crate::Message> {
         text_input::TextInput::new("insert ip", &self.ip.to_string())
             .size(30.)
             .padding(10.)
@@ -170,7 +170,7 @@ impl UrlForm {
                 }
             })
             .on_input(|x| {
-                HomeMessage::IpNewInput {
+                Message::IpNewInput {
                     valid_ip: x.parse::<IpAddr>(),
                     input_value: x,
                 }
@@ -178,9 +178,9 @@ impl UrlForm {
             })
     }
 
-    fn cancle_button(&self) -> Button<'_, Message> {
+    fn cancle_button(&self) -> Button<'_, crate::Message> {
         let cancel = Text::new("cancel").size(60.).center();
-        Button::new(cancel).on_press(HomeMessage::ToggleInputModal.into())
+        Button::new(cancel).on_press(Message::ToggleInputModal.into())
     }
 }
 
@@ -233,20 +233,20 @@ where
     .into()
 }
 
-pub fn go_home_button<'a>() -> Button<'a, Message> {
+pub fn go_home_button<'a>() -> Button<'a, crate::Message> {
     Button::new(svg_from_icon_data(IconName::Home.get()))
-        .on_press(Message::GoToPage(Page::Home))
+        .on_press(crate::Message::GoToPage(Page::Home))
         .style(|theme, _| button::Style {
             background: Some(Background::Color(theme.palette().danger)),
             ..Default::default()
         })
 }
 
-impl State {
-    pub fn handle_home_msg(&mut self, msg: HomeMessage) -> Task<Message> {
+impl crate::State {
+    pub fn handle_home_msg(&mut self, msg: Message) -> Task<crate::Message> {
         let state = &mut self.home;
         match msg {
-            HomeMessage::PortNewInput(port) => {
+            Message::PortNewInput(port) => {
                 match port {
                     Ok(port) => {
                         state.url_form.port = port;
@@ -257,7 +257,7 @@ impl State {
                 }
                 Task::none()
             }
-            HomeMessage::IpNewInput {
+            Message::IpNewInput {
                 valid_ip,
                 input_value,
             } => {
@@ -272,11 +272,11 @@ impl State {
                 }
                 Task::none()
             }
-            HomeMessage::SubmitInput(ip_addr, port) => {
+            Message::SubmitInput(ip_addr, port) => {
                 Task::future(RpcClient::new(SocketAddr::new(ip_addr, port)))
-                    .map(|x| ClientMessage::PrepareGrpc(x).into())
+                    .map(|x| client::Message::PrepareGrpc(x).into())
             }
-            HomeMessage::ToggleInputModal => {
+            Message::ToggleInputModal => {
                 state.show_form = !state.show_form;
                 Task::none()
             }

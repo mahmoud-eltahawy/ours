@@ -6,7 +6,6 @@ use std::net::IpAddr;
 use std::path::PathBuf;
 
 use crate::home::go_home_button;
-use crate::{Message, State};
 use iced::{
     Alignment::Center,
     Background, Border, Element, Length, Shadow, Theme, Vector,
@@ -22,7 +21,7 @@ use iced::{
 use rfd::AsyncFileDialog;
 use tokio::task::JoinHandle;
 
-pub struct ServerState {
+pub struct State {
     pub web_origin: Origin,
     pub rpc_server: RpcServer,
     pub tonic_qr: qr_code::Data,
@@ -31,20 +30,20 @@ pub struct ServerState {
 }
 
 #[derive(Debug, Clone)]
-pub enum ServerMessage {
+pub enum Message {
     Launch,
     Stop,
     PickTarget,
     TargetPicked(Option<PathBuf>),
 }
 
-impl From<ServerMessage> for Message {
-    fn from(value: ServerMessage) -> Self {
-        Message::Server(value)
+impl From<Message> for crate::Message {
+    fn from(value: Message) -> Self {
+        crate::Message::Server(value)
     }
 }
 
-impl ServerState {
+impl State {
     pub fn new(local_ip: IpAddr, tonic_port: u16, axum_port: u16) -> Self {
         let mut origin = Origin::new(local_ip, tonic_port);
         let tonic_url = qr_code::Data::new(origin.to_string()).unwrap();
@@ -63,8 +62,8 @@ impl ServerState {
     }
 }
 
-impl ServerState {
-    pub fn view<'a>(&'a self) -> Element<'a, Message> {
+impl State {
+    pub fn view<'a>(&'a self) -> Element<'a, crate::Message> {
         let home = go_home_button();
         let serve = self.serve_button();
         let tp = self.target_pick();
@@ -77,7 +76,7 @@ impl ServerState {
         Container::new(col).center_x(Length::Fill).into()
     }
 
-    fn serve_button(&self) -> Button<'_, Message> {
+    fn serve_button(&self) -> Button<'_, crate::Message> {
         let working = self.is_working();
         let h = 80.;
         let lt = if working { "stop" } else { "serve" };
@@ -116,8 +115,8 @@ impl ServerState {
         })
         .on_press({
             match &self.working_process {
-                Some(_) => ServerMessage::Stop,
-                None => ServerMessage::Launch,
+                Some(_) => Message::Stop,
+                None => Message::Launch,
             }
             .into()
         })
@@ -127,7 +126,7 @@ impl ServerState {
         self.working_process.is_some()
     }
 
-    fn target_pick(&self) -> Row<'_, Message> {
+    fn target_pick(&self) -> Row<'_, crate::Message> {
         let my_text = |x: String| text::Text::new(x).size(60).align_x(Center).center();
         let target = my_text(
             self.rpc_server
@@ -142,7 +141,7 @@ impl ServerState {
         row![target, or, pick].align_y(Center).spacing(20.)
     }
 
-    fn pick_button(&self) -> Button<'_, Message> {
+    fn pick_button(&self) -> Button<'_, crate::Message> {
         let working = self.is_working();
         let pt = text::Text::new("pick other target")
             .align_x(Center)
@@ -174,10 +173,10 @@ impl ServerState {
                     ..Default::default()
                 }
             })
-            .on_press_maybe((!working).then_some(ServerMessage::PickTarget.into()))
+            .on_press_maybe((!working).then_some(Message::PickTarget.into()))
     }
 
-    fn url_section(&self) -> Column<'_, Message> {
+    fn url_section(&self) -> Column<'_, crate::Message> {
         let my_text = |x: String| {
             text::Text::new(x)
                 .wrapping(Wrapping::Word)
@@ -224,11 +223,11 @@ pub async fn serve(target_path: PathBuf, tonic_port: u16, axum_port: u16) {
     let (_, _) = tokio::join!(one, two);
 }
 
-impl State {
-    pub fn handle_server_msg(&mut self, msg: ServerMessage) -> Task<Message> {
+impl crate::State {
+    pub fn handle_server_msg(&mut self, msg: Message) -> Task<crate::Message> {
         let state = &mut self.server;
         match msg {
-            ServerMessage::Launch => {
+            Message::Launch => {
                 state.working_process = Some(tokio::spawn(serve(
                     state.rpc_server.target_dir.clone(),
                     state.rpc_server.port,
@@ -236,17 +235,17 @@ impl State {
                 )));
                 Task::none()
             }
-            ServerMessage::Stop => {
+            Message::Stop => {
                 if let Some(x) = &state.working_process {
                     x.abort();
                     state.working_process = None;
                 }
                 Task::none()
             }
-            ServerMessage::PickTarget => {
-                Task::perform(which_target(), |x| ServerMessage::TargetPicked(x).into())
+            Message::PickTarget => {
+                Task::perform(which_target(), |x| Message::TargetPicked(x).into())
             }
-            ServerMessage::TargetPicked(path_buf) => {
+            Message::TargetPicked(path_buf) => {
                 if let Some(path_buf) = path_buf {
                     state.rpc_server.target_dir = path_buf;
                 }
