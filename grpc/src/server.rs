@@ -85,10 +85,10 @@ impl NavService for RpcServer {
         let path = self.target_dir.join(path);
         let file = File::open(path).await?;
         let mut file = BufReader::new(file);
-        let (tx, rx) = mpsc::channel::<Result<DownloadResponse, Status>>(1024);
+        let (tx, rx) = mpsc::channel::<Result<DownloadResponse, Status>>(100);
         tokio::spawn(async move {
+            let mut buffer = bytes::BytesMut::with_capacity(1024 * 1024);
             loop {
-                let mut buffer = bytes::BytesMut::with_capacity(1024);
                 let rb = match file.read_buf(&mut buffer).await {
                     Ok(rb) => rb,
                     Err(err) => {
@@ -102,6 +102,7 @@ impl NavService for RpcServer {
                     data: buffer.to_vec(),
                 }))
                 .await?;
+                buffer.clear();
             }
             Ok(())
         });
@@ -128,8 +129,8 @@ impl NavService for RpcServer {
         file.seek(SeekFrom::Start(progress_index)).await?;
         let (tx, rx) = mpsc::channel::<Result<ResumeDownloadResponse, Status>>(1024);
         tokio::spawn(async move {
+            let mut buffer = bytes::BytesMut::with_capacity(1024 * 1024);
             loop {
-                let mut buffer = bytes::BytesMut::with_capacity(1024);
                 let rb = match file.read_buf(&mut buffer).await {
                     Ok(rb) => rb,
                     Err(err) => {
@@ -143,6 +144,7 @@ impl NavService for RpcServer {
                     data: buffer.to_vec(),
                 }))
                 .await?;
+                buffer.clear();
             }
             Ok(())
         });
