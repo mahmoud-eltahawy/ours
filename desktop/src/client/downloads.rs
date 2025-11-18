@@ -18,6 +18,7 @@ use iced::{
 use std::{
     env::home_dir,
     path::{Path, PathBuf},
+    time::Instant,
 };
 use tokio::{
     fs::{File, OpenOptions, create_dir_all, remove_file},
@@ -27,7 +28,7 @@ use tokio::{
 #[derive(Default, Debug, Clone)]
 pub struct Downloads {
     pub show_preview: bool,
-    progressing: Vec<(usize, Handle)>,
+    progressing: Vec<Progressing>,
     waiting: Vec<usize>,
     resumable: Vec<usize>,
     finished: Vec<usize>,
@@ -35,6 +36,13 @@ pub struct Downloads {
     failed: Vec<(usize, RpcError)>,
     canceled: Vec<usize>,
     files: Vec<Download>,
+}
+
+#[derive(Debug, Clone)]
+struct Progressing {
+    index: usize,
+    handle: Handle,
+    start_instant: Instant,
 }
 
 #[derive(Clone)]
@@ -206,19 +214,27 @@ impl Downloads {
     }
     fn wait_progress_list(&mut self, index: usize, handle: Handle) {
         self.waiting.retain(|x| *x != index);
-        self.progressing.push((index, handle));
+        self.progressing.push(Progressing {
+            index,
+            handle,
+            start_instant: Instant::now(),
+        });
     }
     fn resumable_progress_list(&mut self, index: usize, handle: Handle) {
         self.resumable.retain(|x| *x != index);
-        self.progressing.push((index, handle));
+        self.progressing.push(Progressing {
+            index,
+            handle,
+            start_instant: Instant::now(),
+        });
     }
     fn finish_list(&mut self, index: usize) {
-        self.progressing.retain(|x| x.0 != index);
+        self.progressing.retain(|x| x.index != index);
         self.finished.push(index);
     }
 
     fn pause_list(&mut self, index: usize) {
-        self.progressing.retain(|x| x.0 != index);
+        self.progressing.retain(|x| x.index != index);
         self.paused.push(index);
     }
 
@@ -228,7 +244,7 @@ impl Downloads {
     }
 
     fn progress_fail_list(&mut self, index: usize, err: RpcError) {
-        self.progressing.retain(|x| x.0 != index);
+        self.progressing.retain(|x| x.index != index);
         self.failed.push((index, err));
         self.files[index].sended = 0;
     }
@@ -244,7 +260,7 @@ impl Downloads {
     }
 
     fn progress_cancel_list(&mut self, index: usize) {
-        self.progressing.retain(|x| x.0 != index);
+        self.progressing.retain(|x| x.index != index);
         self.canceled.push(index);
         self.files[index].sended = 0;
     }
@@ -359,30 +375,37 @@ impl Downloads {
         let content = self
             .progressing
             .iter()
-            .map(|(index, handle)| {
-                let index = *index;
-                let download = &self.files[index];
-                let txt = Text::new(format!(
-                    "{}, {} of {},{:.2}%",
-                    download.path.display(),
-                    format_size(download.sended),
-                    format_size(download.total_size),
-                    (download.sended as f32 / download.total_size as f32) * 100.0
-                ));
-                let progress_bar =
-                    progress_bar(0.0..=(download.total_size as f32), download.sended as f32);
-                let left = column![txt, progress_bar].align_x(Alignment::Center);
-                let cancel = svg_button(IconName::Close.get())
-                    .height(Length::Fixed(80.))
-                    .clip(false)
-                    .on_press(Message::CancelProgress(index, handle.clone()).into());
-                let pause = svg_button(IconName::Pause.get())
-                    .height(Length::Fixed(80.))
-                    .clip(false)
-                    .on_press(Message::Pause(index, handle.clone()).into());
-                let buttons = column![cancel, pause].spacing(3.);
-                row![left, buttons].align_y(Alignment::Center).spacing(5.)
-            })
+            .map(
+                |Progressing {
+                     index,
+                     handle,
+                     start_instant,
+                 }| {
+                    let index = *index;
+                    let download = &self.files[index];
+                    let txt = Text::new(format!(
+                        "{path}, {sended} of {total},{percent:.2}% passed time : {passed}second",
+                        path = download.path.display(),
+                        sended = format_size(download.sended),
+                        total = format_size(download.total_size),
+                        percent = (download.sended as f32 / download.total_size as f32) * 100.0,
+                        passed = start_instant.elapsed().as_secs(),
+                    ));
+                    let progress_bar =
+                        progress_bar(0.0..=(download.total_size as f32), download.sended as f32);
+                    let left = column![txt, progress_bar].align_x(Alignment::Center);
+                    let cancel = svg_button(IconName::Close.get())
+                        .height(Length::Fixed(80.))
+                        .clip(false)
+                        .on_press(Message::CancelProgress(index, handle.clone()).into());
+                    let pause = svg_button(IconName::Pause.get())
+                        .height(Length::Fixed(80.))
+                        .clip(false)
+                        .on_press(Message::Pause(index, handle.clone()).into());
+                    let right = column![cancel, pause].spacing(3.);
+                    row![left, right].align_y(Alignment::Center).spacing(5.)
+                },
+            )
             .fold(content, |acc, x| acc.push(x));
         let content = scrollable(content.spacing(3.));
         Some(content.into())
