@@ -21,7 +21,7 @@ use std::{
 };
 use tokio::{
     fs::{File, OpenOptions, create_dir_all, remove_file},
-    io::AsyncWriteExt,
+    io::{AsyncWriteExt, BufWriter},
 };
 
 #[derive(Default, Debug, Clone)]
@@ -590,7 +590,8 @@ fn download_file(
         let target = join_downloads(&target);
         create_dir_all(target.parent().map(|x| x.to_path_buf()).unwrap_or_default()).await?;
         let _ = remove_file(&target).await;
-        let mut file = File::create(&target).await?;
+        let file = File::create(&target).await?;
+        let mut file = BufWriter::new(file);
         loop {
             match stream.message().await {
                 Ok(dr) => {
@@ -629,7 +630,9 @@ fn resume_file(
     sipper(async move |mut sender| {
         let mut stream = grpc.resume_stream(progress_index, &target).await?;
         let target = join_downloads(&target);
-        let mut file = OpenOptions::new().append(true).open(&target).await?;
+        let file = OpenOptions::new().append(true).open(&target).await?;
+        let mut file = BufWriter::new(file);
+
         loop {
             match stream.message().await {
                 Ok(dr) => {

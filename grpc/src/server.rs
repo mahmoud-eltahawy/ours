@@ -15,7 +15,7 @@ use std::{
     path::PathBuf,
 };
 use tokio::fs::{self, File};
-use tokio::io::{AsyncReadExt, AsyncSeekExt};
+use tokio::io::{AsyncReadExt, AsyncSeekExt, BufReader};
 use tokio::sync::mpsc;
 use tokio_stream::Stream;
 use tokio_stream::wrappers::ReceiverStream;
@@ -83,7 +83,8 @@ impl NavService for RpcServer {
     ) -> Result<Response<Self::DownloadStream>, Status> {
         let Ok(path) = req.into_inner().path.parse::<PathBuf>();
         let path = self.target_dir.join(path);
-        let mut file = File::open(path).await?;
+        let file = File::open(path).await?;
+        let mut file = BufReader::new(file);
         let (tx, rx) = mpsc::channel::<Result<DownloadResponse, Status>>(1024);
         tokio::spawn(async move {
             loop {
@@ -122,7 +123,8 @@ impl NavService for RpcServer {
         } = req.into_inner();
         let Ok(path) = path.parse::<PathBuf>();
         let path = self.target_dir.join(path);
-        let mut file = File::open(path).await?;
+        let file = File::open(path).await?;
+        let mut file = BufReader::new(file);
         file.seek(SeekFrom::Start(progress_index)).await?;
         let (tx, rx) = mpsc::channel::<Result<ResumeDownloadResponse, Status>>(1024);
         tokio::spawn(async move {
