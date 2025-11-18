@@ -383,13 +383,14 @@ impl Downloads {
                  }| {
                     let index = *index;
                     let download = &self.files[index];
+                    let path = download.path.display();
+                    let sended = format_size(download.sended);
+                    let total = format_size(download.total_size);
+                    let percent = (download.sended as f32 / download.total_size as f32) * 100.0;
+                    let passed = start_instant.elapsed().as_secs();
+                    let total_time =((100 * passed) as f32 / percent) as u64;
                     let txt = Text::new(format!(
-                        "{path}, {sended} of {total},{percent:.2}% passed time : {passed}second",
-                        path = download.path.display(),
-                        sended = format_size(download.sended),
-                        total = format_size(download.total_size),
-                        percent = (download.sended as f32 / download.total_size as f32) * 100.0,
-                        passed = start_instant.elapsed().as_secs(),
+                        "{path}, {sended} of {total},{percent:.2}% passed time : {passed}second of total : {total_time} second",
                     ));
                     let progress_bar =
                         progress_bar(0.0..=(download.total_size as f32), download.sended as f32);
