@@ -363,8 +363,8 @@ impl Downloads {
                 let index = *index;
                 let download = &self.files[index];
                 let txt = Text::new(format!(
-                    "{:#?}, {} of {},{:.2}%",
-                    download.path,
+                    "{}, {} of {},{:.2}%",
+                    download.path.display(),
                     format_size(download.sended),
                     format_size(download.total_size),
                     (download.sended as f32 / download.total_size as f32) * 100.0
@@ -450,7 +450,7 @@ impl Downloads {
             .iter()
             .map(|index| {
                 let download = &self.files[*index];
-                Text::new(format!("=> {:#?}", download.path))
+                Text::new(format!("=> {}", download.path.display()))
             })
             .fold(content, |acc, x| acc.push(x));
         let content = scrollable(content.spacing(3.));
@@ -467,7 +467,11 @@ impl Downloads {
             .iter()
             .map(|(index, err)| {
                 let download = &self.files[*index];
-                let txt = Text::new(format!("=> {:#?} because of {:#?}", download.path, err));
+                let txt = Text::new(format!(
+                    "=> {} because of {:#?}",
+                    download.path.display(),
+                    err
+                ));
                 let retry_btn =
                     svg_button(IconName::Retry.get()).on_press(Message::RetryFailed(*index).into());
                 row![txt, retry_btn]
@@ -488,7 +492,7 @@ impl Downloads {
             .iter()
             .map(|index| {
                 let download = &self.files[*index];
-                let txt = Text::new(format!("=> {:#?}", download.path));
+                let txt = Text::new(format!("=> {}", download.path.display()));
                 let retry_btn =
                     svg_button(IconName::Retry.get()).on_press(Message::Resume(*index).into());
                 row![txt, retry_btn]
@@ -510,7 +514,7 @@ impl Downloads {
             .iter()
             .map(|index| {
                 let download = &self.files[*index];
-                let txt = Text::new(format!("=> {:#?}", download.path));
+                let txt = Text::new(format!("=> {}", download.path.display()));
                 let retry_btn = svg_button(IconName::Retry.get())
                     .on_press(Message::CanceledToWait(*index).into());
                 row![txt, retry_btn]
