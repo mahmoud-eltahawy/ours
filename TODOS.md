@@ -1,6 +1,6 @@
 # Desktop
 - [X] retry canceled && failed downloads
-- [] pause && resume downloads
+- [X] pause && resume downloads
 - [] display audio && video 
 - [] voice && maybe video chat rooms
 # Other
