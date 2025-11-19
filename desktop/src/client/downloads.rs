@@ -18,7 +18,7 @@ use iced::{
 use std::{
     env::home_dir,
     path::{Path, PathBuf},
-    time::Instant,
+    time::{Duration, Instant},
 };
 use tokio::{
     fs::{File, OpenOptions, create_dir_all, remove_file},
@@ -31,11 +31,17 @@ pub struct Downloads {
     progressing: Vec<Progressing>,
     waiting: Vec<usize>,
     resumable: Vec<usize>,
-    finished: Vec<usize>,
+    finished: Vec<Finished>,
     paused: Vec<usize>,
     failed: Vec<(usize, RpcError)>,
     canceled: Vec<usize>,
     files: Vec<Download>,
+}
+
+#[derive(Debug, Clone)]
+struct Finished {
+    index: usize,
+    duration: Duration,
 }
 
 #[derive(Debug, Clone)]
@@ -229,8 +235,14 @@ impl Downloads {
         });
     }
     fn finish_list(&mut self, index: usize) {
-        self.progressing.retain(|x| x.index != index);
-        self.finished.push(index);
+        let index_index = self
+            .progressing
+            .iter()
+            .position(|x| x.index == index)
+            .unwrap();
+        let duration = self.progressing[index_index].start_instant.elapsed();
+        self.progressing.remove(index_index);
+        self.finished.push(Finished { index, duration });
     }
 
     fn pause_list(&mut self, index: usize) {
@@ -472,9 +484,13 @@ impl Downloads {
         let content = self
             .finished
             .iter()
-            .map(|index| {
-                let download = &self.files[*index];
-                Text::new(format!("=> {}", download.path.display()))
+            .map(|finished| {
+                let download = &self.files[finished.index];
+                Text::new(format!(
+                    "=> {path} finished at {seconds}  seconds",
+                    path = download.path.display(),
+                    seconds = finished.duration.as_secs(),
+                ))
             })
             .fold(content, |acc, x| acc.push(x));
         let content = scrollable(content.spacing(3.));
