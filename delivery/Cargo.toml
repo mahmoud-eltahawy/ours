@@ -1,9 +1,0 @@
-[package]
-name = "delivery"
-version.workspace = true
-edition.workspace = true
-
-[dependencies]
-reqwest = { workspace = true , features = ["json","multipart"] }
-common.workspace = true
-grpc.workspace = true

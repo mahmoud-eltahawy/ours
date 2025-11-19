@@ -3,7 +3,6 @@ members = [
     "common",
     "server",
     "assets",
-    "delivery",
     "web",
     "grpc",
     "desktop",
@@ -20,8 +19,6 @@ serde_json = "1.0"
 tokio = "1"
 reqwest = "0.12"
 
-[workspace.dependencies.delivery]
-path = "./delivery"
 [workspace.dependencies.grpc]
 path = "./grpc"
 
