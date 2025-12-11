@@ -1,4 +1,5 @@
 use super::nav::nav_service_server::NavService;
+use crate::nav::upload_request::Data;
 use crate::nav::{
     DownloadRequest, DownloadResponse, FileSizeRequest, FileSizeResponse, ResumeDownloadRequest,
     ResumeDownloadResponse, UploadRequest, UploadResponse,
@@ -8,17 +9,18 @@ use crate::{
     nav::{LsRequest, LsResponse, Unit, UnitKind, nav_service_server::NavServiceServer},
 };
 use common::{AUDIO_X, VIDEO_X};
+use std::env::home_dir;
 use std::io::SeekFrom;
 use std::pin::Pin;
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
     path::PathBuf,
 };
-use tokio::fs::{self, File};
-use tokio::io::{AsyncReadExt, AsyncSeekExt, BufReader};
+use tokio::fs::{self, File, create_dir_all, remove_file};
+use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader, BufWriter};
 use tokio::sync::mpsc;
-use tokio_stream::Stream;
 use tokio_stream::wrappers::ReceiverStream;
+use tokio_stream::{Stream, StreamExt};
 use tonic::Streaming;
 use tonic::{Request, Response, Status, async_trait, transport::Server};
 
@@ -158,7 +160,28 @@ impl NavService for RpcServer {
         &self,
         req: Request<Streaming<UploadRequest>>,
     ) -> Result<Response<UploadResponse>, Status> {
-        unimplemented!()
+        let mut ri = req.into_inner();
+        let Some(UploadRequest {
+            data: Some(Data::Path(path)),
+        }) = ri.next().await.transpose()?
+        else {
+            return Err(Status::cancelled("must recieve first message as path"));
+        };
+        let Ok(path) = path.parse::<PathBuf>();
+        let path = home_dir().map(|x| x.join("Downloads")).unwrap().join(path);
+        create_dir_all(&path).await?;
+        let _ = remove_file(&path).await;
+        let file = File::create(&path).await?;
+        let mut file = BufWriter::new(file);
+
+        while let Some(UploadRequest {
+            data: Some(Data::Chunk(data)),
+        }) = ri.next().await.transpose()?
+        {
+            file.write_all(&data).await?;
+            file.flush().await?;
+        }
+        Ok(Response::new(UploadResponse {}))
     }
 }
 

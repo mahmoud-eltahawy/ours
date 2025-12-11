@@ -38,19 +38,18 @@ message FileSizeResponse {
   uint64 size =1;
 }
 
-
 message DownloadResponse {
   bytes data = 1;
 }
 
 message UploadRequest {
-  bool ok = 1;
+  oneof data {
+    string path = 1;
+    bytes chunk = 2;
+  }  
 }
 
-
-message UploadResponse {
-  string path = 1;
-}
+message UploadResponse {}
 
 message Unit {
   string path = 1;
