@@ -1,8 +1,8 @@
 use crate::{
     error::RpcError,
     nav::{
-        DownloadRequest, FileSizeRequest, LsRequest, ResumeDownloadRequest,
-        nav_service_client::NavServiceClient,
+        DownloadRequest, FileSizeRequest, LsRequest, ResumeDownloadRequest, UploadMetadata,
+        UploadRequest, nav_service_client::NavServiceClient, upload_request::Data,
     },
     top,
 };
@@ -11,7 +11,12 @@ use std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
-use tokio::sync::Mutex;
+use tokio::{
+    fs::File,
+    io::{AsyncReadExt, BufReader},
+    sync::{Mutex, mpsc},
+};
+use tokio_stream::wrappers::ReceiverStream;
 use tonic::{Streaming, transport::Channel};
 
 pub use crate::nav::{DownloadResponse, ResumeDownloadResponse};
@@ -79,5 +84,63 @@ impl RpcClient {
         let mut client = self.client.lock().await;
         let stream = client.resume_download(req).await?.into_inner();
         Ok(stream)
+    }
+
+    pub async fn upload(
+        self,
+        location_path: PathBuf,
+        target_path: PathBuf,
+    ) -> Result<(), RpcError> {
+        let tpath = target_path.to_str().unwrap().to_string();
+        let location_path = location_path.to_str().unwrap().to_string();
+        let init_req = UploadRequest {
+            data: Some(Data::Meta(UploadMetadata {
+                target_path: tpath,
+                location_path,
+            })),
+        };
+        let (tx, rx) = mpsc::channel::<UploadRequest>(100);
+        let mut client = self.client.lock().await;
+        let _ = client.upload(ReceiverStream::new(rx)).await?.into_inner();
+        let _ = tx.send(init_req).await;
+
+        let file = File::open(&target_path).await?;
+        let mut file = BufReader::new(file);
+
+        let mut buffer = bytes::BytesMut::with_capacity(1024 * 1024);
+        let res = loop {
+            let rb = match file.read_buf(&mut buffer).await {
+                Ok(rb) => rb,
+                Err(err) => {
+                    eprintln!(
+                        "ERROR : upload of {path} due to -> {err}",
+                        path = target_path.display()
+                    );
+                    match tx.send(UploadRequest { data: None }).await {
+                        Ok(_) => (),
+                        Err(err) => break Err(err),
+                    };
+                    break Ok(());
+                }
+            };
+            if rb == 0 {
+                break Ok(());
+            }
+            match tx
+                .send(UploadRequest {
+                    data: Some(Data::Chunk(buffer.to_vec())),
+                })
+                .await
+            {
+                Ok(_) => (),
+                Err(err) => break Err(err),
+            };
+            buffer.clear();
+        };
+
+        match res {
+            Ok(_) => Ok(()),
+            Err(err) => Err(RpcError::from(err.to_string())),
+        }
     }
 }

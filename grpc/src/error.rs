@@ -7,6 +7,13 @@ pub enum RpcError {
     Tonic(Arc<transport::Error>),
     Io(Arc<io::Error>),
     TonicStatus(tonic::Status),
+    Other(String),
+}
+
+impl From<String> for RpcError {
+    fn from(value: String) -> Self {
+        Self::Other(value)
+    }
 }
 
 impl From<AddrParseError> for RpcError {

@@ -2,14 +2,13 @@ use super::nav::nav_service_server::NavService;
 use crate::nav::upload_request::Data;
 use crate::nav::{
     DownloadRequest, DownloadResponse, FileSizeRequest, FileSizeResponse, ResumeDownloadRequest,
-    ResumeDownloadResponse, UploadRequest, UploadResponse,
+    ResumeDownloadResponse, UploadMetadata, UploadRequest, UploadResponse,
 };
 use crate::{
     error::RpcError,
     nav::{LsRequest, LsResponse, Unit, UnitKind, nav_service_server::NavServiceServer},
 };
 use common::{AUDIO_X, VIDEO_X};
-use std::env::home_dir;
 use std::io::SeekFrom;
 use std::pin::Pin;
 use std::{
@@ -162,13 +161,18 @@ impl NavService for RpcServer {
     ) -> Result<Response<UploadResponse>, Status> {
         let mut ri = req.into_inner();
         let Some(UploadRequest {
-            data: Some(Data::Path(path)),
+            data:
+                Some(Data::Meta(UploadMetadata {
+                    target_path,
+                    location_path,
+                })),
         }) = ri.next().await.transpose()?
         else {
             return Err(Status::cancelled("must recieve first message as path"));
         };
-        let Ok(path) = path.parse::<PathBuf>();
-        let path = home_dir().map(|x| x.join("Downloads")).unwrap().join(path);
+        let Ok(target_path) = target_path.parse::<PathBuf>();
+        let Ok(location_path) = location_path.parse::<PathBuf>();
+        let path = self.target_dir.join(location_path).join(target_path);
         create_dir_all(&path).await?;
         let _ = remove_file(&path).await;
         let file = File::create(&path).await?;

@@ -42,9 +42,14 @@ message DownloadResponse {
   bytes data = 1;
 }
 
+message UploadMetadata {
+    string target_path = 1;
+    string location_path = 2;
+}
+
 message UploadRequest {
   oneof data {
-    string path = 1;
+    UploadMetadata meta = 1;
     bytes chunk = 2;
   }  
 }
